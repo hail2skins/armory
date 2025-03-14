@@ -1,0 +1,34 @@
+package partials
+
+import (
+	"github.com/hail2skins/armory/cmd/web/views/data"
+)
+
+templ Nav(data data.AuthData) {
+	<nav class="bg-gray-800">
+		<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+			<div class="flex items-center justify-between h-16">
+				<div class="flex items-center">
+					<div class="flex-shrink-0">
+						<button onclick="window.location.href='/'" class="text-white font-bold text-xl border-0 bg-transparent cursor-pointer">Armory</button>
+					</div>
+					<div class="block">
+						<div class="ml-10 flex items-baseline space-x-4 relative z-10">
+							<button onclick="window.location.href='/'" class="text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium cursor-pointer border-0 bg-transparent">Home</button>
+							@NavAuth(data.Authenticated)
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</nav>
+}
+
+templ NavAuth(authenticated bool) {
+	if !authenticated {
+		<button onclick="window.location.href='/login'" class="text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium cursor-pointer border-0 bg-transparent">Login</button>
+		<button onclick="window.location.href='/register'" class="text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium cursor-pointer border-0 bg-transparent">Register</button>
+	} else {
+		<button onclick="window.location.href='/logout'" class="text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium cursor-pointer border-0 bg-transparent">Logout</button>
+	}
+} 

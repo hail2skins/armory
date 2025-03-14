@@ -9,7 +9,9 @@ import (
 	"io/fs"
 
 	"github.com/hail2skins/armory/cmd/web"
-	webviews "github.com/hail2skins/armory/cmd/web/views"
+	authviews "github.com/hail2skins/armory/cmd/web/views/auth"
+	"github.com/hail2skins/armory/cmd/web/views/data"
+	partialviews "github.com/hail2skins/armory/cmd/web/views/partials"
 	"github.com/hail2skins/armory/internal/controller"
 )
 
@@ -34,16 +36,44 @@ func (s *Server) RegisterRoutes() http.Handler {
 		AllowCredentials: true, // Enable cookies/auth
 	}))
 
-	// Create auth controller
+	// Create controllers
 	authController := controller.NewAuthController(s.db)
+	homeController := controller.NewHomeController(s.db)
+
+	// Store auth controller in context for home controller to access
+	r.Use(func(c *gin.Context) {
+		c.Set("authController", authController)
+		c.Next()
+	})
 
 	// Override the render methods to use our templates
-	authController.RenderLogin = func(c *gin.Context, data gin.H) {
-		webviews.Login(data).Render(c.Request.Context(), c.Writer)
+	authController.RenderLogin = func(c *gin.Context, d interface{}) {
+		loginData := d.(authviews.LoginData)
+		// Set authentication state
+		_, authenticated := authController.GetCurrentUser(c)
+		loginData.AuthData = data.AuthData{
+			Authenticated: authenticated,
+		}
+		authviews.Login(loginData).Render(c.Request.Context(), c.Writer)
 	}
 
-	authController.RenderRegister = func(c *gin.Context, data gin.H) {
-		webviews.Register(data).Render(c.Request.Context(), c.Writer)
+	authController.RenderRegister = func(c *gin.Context, d interface{}) {
+		registerData := d.(authviews.RegisterData)
+		// Set authentication state
+		_, authenticated := authController.GetCurrentUser(c)
+		registerData.AuthData = data.AuthData{
+			Authenticated: authenticated,
+		}
+		authviews.Register(registerData).Render(c.Request.Context(), c.Writer)
+	}
+
+	authController.RenderLogout = func(c *gin.Context, d interface{}) {
+		logoutData := d.(authviews.LogoutData)
+		// Set authentication state - should be false after logout
+		logoutData.AuthData = data.AuthData{
+			Authenticated: false,
+		}
+		authviews.Logout(logoutData).Render(c.Request.Context(), c.Writer)
 	}
 
 	// Health check
@@ -54,20 +84,7 @@ func (s *Server) RegisterRoutes() http.Handler {
 	r.StaticFS("/assets", http.FS(staticFiles))
 
 	// Home page
-	r.GET("/", func(c *gin.Context) {
-		// Check if user is authenticated
-		userInfo, authenticated := authController.GetCurrentUser(c)
-
-		data := gin.H{
-			"authenticated": authenticated,
-		}
-
-		if authenticated {
-			data["email"] = userInfo.GetUserName()
-		}
-
-		webviews.Home(data).Render(c.Request.Context(), c.Writer)
-	})
+	r.GET("/", homeController.HomeHandler)
 
 	// Auth routes
 	r.GET("/login", authController.LoginHandler)
@@ -80,7 +97,7 @@ func (s *Server) RegisterRoutes() http.Handler {
 	r.GET("/auth-links", func(c *gin.Context) {
 		_, authenticated := authController.GetCurrentUser(c)
 		c.Header("Content-Type", "text/html")
-		webviews.NavAuth(authenticated).Render(c.Request.Context(), c.Writer)
+		partialviews.NavAuth(authenticated).Render(c.Request.Context(), c.Writer)
 	})
 
 	return r

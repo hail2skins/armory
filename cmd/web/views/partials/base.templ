@@ -1,0 +1,28 @@
+package partials
+
+import (
+	"github.com/hail2skins/armory/cmd/web/views/data"
+)
+
+templ Base(data data.AuthData, children templ.Component) {
+	<!DOCTYPE html>
+	<html lang="en" class="h-screen">
+		<head>
+			<meta charset="utf-8"/>
+			<meta name="viewport" content="width=device-width,initial-scale=1"/>
+			<title>Armory</title>
+			<!-- Tailwind CDN -->
+			<script src="https://cdn.tailwindcss.com"></script>
+			<!-- Local CSS -->
+			<link href="assets/css/output.css" rel="stylesheet"/>
+			<script src="assets/js/htmx.min.js"></script>
+		</head>
+		<body class="bg-gray-100 flex flex-col h-screen">
+			@Nav(data)
+			<main class="flex-grow">
+				@children
+			</main>
+			@Footer()
+		</body>
+	</html>
+} 

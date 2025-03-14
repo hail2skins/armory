@@ -84,12 +84,12 @@ func TestAuthenticationFlow(t *testing.T) {
 		// Setup render functions to capture HTML output
 		var loginHTML, registerHTML string
 
-		authController.RenderLogin = func(c *gin.Context, data gin.H) {
+		authController.RenderLogin = func(c *gin.Context, data interface{}) {
 			loginHTML = "Login Form"
 			c.String(http.StatusOK, loginHTML)
 		}
 
-		authController.RenderRegister = func(c *gin.Context, data gin.H) {
+		authController.RenderRegister = func(c *gin.Context, data interface{}) {
 			registerHTML = "Register Form"
 			c.String(http.StatusOK, registerHTML)
 		}

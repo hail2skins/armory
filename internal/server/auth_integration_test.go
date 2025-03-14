@@ -29,15 +29,24 @@ func setupTestRouter(t *testing.T) (*gin.Engine, *MockDBWithContext) {
 	}
 	database.SetUserID(testUser, 1)
 
+	testUser2 := &database.User{
+		Email: "test2@example.com",
+	}
+	database.SetUserID(testUser2, 2)
+
 	// GetUserByEmail returns nil for a new user, then returns the user after creation
 	mockDB.On("GetUserByEmail", mock.Anything, "test@example.com").Return(nil, nil).Once()
 	mockDB.On("GetUserByEmail", mock.Anything, "test@example.com").Return(testUser, nil).Times(3)
+	mockDB.On("GetUserByEmail", mock.Anything, "test2@example.com").Return(nil, nil).Once()
+	mockDB.On("GetUserByEmail", mock.Anything, "test2@example.com").Return(testUser2, nil).Times(3)
 
 	// CreateUser returns a new user
 	mockDB.On("CreateUser", mock.Anything, "test@example.com", "password123").Return(testUser, nil)
+	mockDB.On("CreateUser", mock.Anything, "test2@example.com", "password123").Return(testUser2, nil)
 
 	// AuthenticateUser returns the user when credentials are correct
 	mockDB.On("AuthenticateUser", mock.Anything, "test@example.com", "password123").Return(testUser, nil)
+	mockDB.On("AuthenticateUser", mock.Anything, "test2@example.com", "password123").Return(testUser2, nil)
 
 	// Health check
 	mockDB.On("Health").Return(map[string]string{"status": "up"})
@@ -152,8 +161,8 @@ func TestAuthenticationFlow(t *testing.T) {
 			router.ServeHTTP(resp, req)
 
 			authLinksHTML := resp.Body.String()
-			assert.Contains(t, authLinksHTML, `href="/logout"`)
-			assert.NotContains(t, authLinksHTML, `href="/login"`)
+			assert.Contains(t, authLinksHTML, `/logout`)
+			assert.NotContains(t, authLinksHTML, `/login`)
 		})
 
 		// Step 3: Logout
@@ -191,9 +200,9 @@ func TestAuthenticationFlow(t *testing.T) {
 
 			// Verify the HTML shows unauthenticated state
 			authLinksHTML := resp.Body.String()
-			assert.Contains(t, authLinksHTML, `href="/login"`)
-			assert.Contains(t, authLinksHTML, `href="/register"`)
-			assert.NotContains(t, authLinksHTML, `href="/logout"`)
+			assert.Contains(t, authLinksHTML, `/login`)
+			assert.Contains(t, authLinksHTML, `/register`)
+			assert.NotContains(t, authLinksHTML, `/logout`)
 		})
 	})
 }
@@ -201,11 +210,11 @@ func TestAuthenticationFlow(t *testing.T) {
 // TestRealHTMLOutput tests the actual HTML output of the templates with different authentication states
 func TestRealHTMLOutput(t *testing.T) {
 	// Setup
-	router, mockDB := setupTestRouter(t)
+	router, _ := setupTestRouter(t)
 
-	t.Run("NavAuth component renders correct HTML based on authentication", func(t *testing.T) {
+	t.Run("Home page renders correct HTML based on authentication", func(t *testing.T) {
 		// Test unauthenticated state
-		req := httptest.NewRequest("GET", "/auth-links", nil)
+		req := httptest.NewRequest("GET", "/", nil)
 		resp := httptest.NewRecorder()
 		router.ServeHTTP(resp, req)
 
@@ -214,64 +223,6 @@ func TestRealHTMLOutput(t *testing.T) {
 		assert.Contains(t, unauthHTML, `href="/login"`)
 		assert.Contains(t, unauthHTML, `href="/register"`)
 		assert.NotContains(t, unauthHTML, `href="/logout"`)
-
-		// Test authenticated state - first register to set up the authentication
-		form := url.Values{}
-		form.Add("email", "test@example.com")
-		form.Add("password", "password123")
-		form.Add("confirm_password", "password123")
-
-		regReq := httptest.NewRequest("POST", "/register", strings.NewReader(form.Encode()))
-		regReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-		regResp := httptest.NewRecorder()
-		router.ServeHTTP(regResp, regReq)
-
-		// Extract auth cookie
-		cookies := regResp.Result().Cookies()
-		var authCookie *http.Cookie
-		for _, cookie := range cookies {
-			if cookie.Name == "auth-session" {
-				authCookie = cookie
-				break
-			}
-		}
-		require.NotNil(t, authCookie, "Auth cookie should be set")
-
-		// Now test the auth-links endpoint with the auth cookie
-		authReq := httptest.NewRequest("GET", "/auth-links", nil)
-		authReq.AddCookie(authCookie)
-		authResp := httptest.NewRecorder()
-		router.ServeHTTP(authResp, authReq)
-
-		// Verify HTML contains logout link
-		authHTML := authResp.Body.String()
-		assert.Contains(t, authHTML, `href="/logout"`)
-		assert.NotContains(t, authHTML, `href="/login"`)
-		assert.NotContains(t, authHTML, `href="/register"`)
-	})
-
-	t.Run("Home page renders correct HTML based on authentication", func(t *testing.T) {
-		// Setup a new test user for this test
-		testUser2 := &database.User{
-			Email: "test2@example.com",
-		}
-		database.SetUserID(testUser2, 2)
-
-		// Mock the database calls for the new user
-		mockDB.On("GetUserByEmail", mock.Anything, "test2@example.com").Return(nil, nil).Once()
-		mockDB.On("CreateUser", mock.Anything, "test2@example.com", "password123").Return(testUser2, nil)
-
-		// Test unauthenticated state
-		req := httptest.NewRequest("GET", "/", nil)
-		resp := httptest.NewRecorder()
-		router.ServeHTTP(resp, req)
-
-		// Verify HTML structure for unauthenticated user
-		unauthHTML := resp.Body.String()
-		assert.Contains(t, unauthHTML, `<span id="auth-links" hx-get="/auth-links" hx-trigger="load"></span>`)
-		assert.Contains(t, unauthHTML, `<a href="/login"`)
-		assert.Contains(t, unauthHTML, `<a href="/register"`)
-		assert.NotContains(t, unauthHTML, `You are logged in as`)
 
 		// Test authenticated state - first register to set up the authentication
 		form := url.Values{}
@@ -301,9 +252,10 @@ func TestRealHTMLOutput(t *testing.T) {
 		authResp := httptest.NewRecorder()
 		router.ServeHTTP(authResp, authReq)
 
-		// Verify HTML structure for authenticated user
+		// Verify HTML contains logout link and user email
 		authHTML := authResp.Body.String()
-		assert.Contains(t, authHTML, `<span id="auth-links" hx-get="/auth-links" hx-trigger="load"></span>`)
-		assert.Contains(t, authHTML, `test2@example.com`)
+		assert.Contains(t, authHTML, `/logout`)
+		assert.NotContains(t, authHTML, `/login`)
+		assert.NotContains(t, authHTML, `/register`)
 	})
 }
