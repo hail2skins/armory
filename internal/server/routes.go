@@ -117,6 +117,7 @@ func (s *Server) RegisterRoutes() http.Handler {
 
 	// Home page
 	r.GET("/", homeController.HomeHandler)
+	r.GET("/about", homeController.AboutHandler)
 
 	// Auth routes
 	r.GET("/login", authController.LoginHandler)

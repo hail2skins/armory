@@ -1,0 +1,139 @@
+package home
+
+import (
+	"github.com/hail2skins/armory/cmd/web/views/data"
+	"github.com/hail2skins/armory/cmd/web/views/partials"
+)
+
+type AboutData struct {
+	data.AuthData
+}
+
+templ About(data AboutData) {
+	@partials.Base(data.AuthData, aboutContent())
+}
+
+templ aboutContent() {
+	<div class="bg-cover bg-center py-16" style="background-image: url('/assets/background.jpg');">
+		<div class="container mx-auto px-4 sm:px-6 lg:px-8">
+			<div class="max-w-3xl bg-gunmetal-800 bg-opacity-80 p-8 rounded-lg shadow-xl mx-auto text-center">
+				<h1 class="text-4xl font-extrabold text-white mb-4">About The Virtual Armory</h1>
+				<p class="text-xl text-white">Your Arsenal. On Target.</p>
+			</div>
+		</div>
+	</div>
+
+	<div class="container mx-auto py-12 px-4 sm:px-6 lg:px-8">
+		<div class="grid grid-cols-1 md:grid-cols-2 items-center gap-12">
+			<div class="text-gunmetal-800">
+				<h2 class="text-3xl font-bold mb-6">Our Mission</h2>
+				<p class="text-lg mb-6">
+					The most important thing to know about us is that us is, currently, an I. I am Art. A gun owner like
+					you. I've seen some other desktop programs and some apps that do some of what I intend to do here but
+					I figured I'd do it myself. The reason I'm letting you know that we, here, is an I is because while I 
+					will be evolving the site and adding features, I'm just a guy with two kids, two cats and a job.
+				</p>
+				<p class="text-lg mb-6">
+					You can contact me via the contact form anytime. I'll get back to you as soon as I can. But though it's just
+					me, I've built the site to be secure and robust and have the ability to scale should people like it and the 
+					need arises. If you have ideas I should add, I'll get on it pretty quickly, depending on where I am in any given
+					feature I'm working on at the time.
+				</p>
+				<p class="text-lg mb-6">
+					The Virtual Armory was created with a simple mission: to provide firearm enthusiasts with a secure, 
+					private, and comprehensive platform to track their collections. Their ammo loadouts. Their modifications and 
+					goodies. To track how they are performing at the range. How up to date they are on taking care of their weapons.
+					To remind you it may be time to check the battery in that Surefire light on your home defense gun.
+				</p>
+				<p class="text-lg mb-6">
+					We understand the importance of responsible ownership and the pride that comes with building a 
+					collection. Our platform helps you maintain detailed records, track maintenance, and manage your 
+					arsenal with ease and security.
+				</p>
+				<div class="mt-8">
+					<a href="/register" class="bg-gunmetal-800 text-white hover:bg-gunmetal-700 font-medium py-3 px-6 rounded-lg transition duration-300">
+						Join The Virtual Armory
+						<span class="ml-2">→</span>
+					</a>
+				</div>
+			</div>
+			<div class="mt-10 md:mt-0">
+				<img src="/assets/virtualarmory.jpg" alt="The Virtual Armory" class="rounded-lg shadow-xl w-full h-auto object-cover" />
+			</div>
+		</div>
+
+		<div class="mt-20">
+			<h2 class="text-3xl font-bold text-center text-gunmetal-800 mb-12">Why Choose The Virtual Armory?</h2>
+			<div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+				<div class="bg-white p-6 rounded-lg shadow-md text-gunmetal-800">
+					<div class="text-brass-400 text-4xl mb-4">
+						<svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+						</svg>
+					</div>
+					<h3 class="text-xl font-bold mb-2">Privacy & Security</h3>
+					<p>
+						Your data is encrypted and secure. We prioritize your privacy and ensure your collection details remain confidential.
+						We will add Google auth, MFA, and other security features as we go.
+					</p>
+				</div>
+				<div class="bg-white p-6 rounded-lg shadow-md text-gunmetal-800">
+					<div class="text-brass-400 text-4xl mb-4">
+						<svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+						</svg>
+					</div>
+					<h3 class="text-xl font-bold mb-2">Comprehensive Tracking</h3>
+					<p>
+						Maintain detailed records of your firearms, including specifications, maintenance history, and acquisition details.
+						We may even have AI evaluate your collection and offer up suggestions on what to buy next. We anticipate members will
+						have a high divorce rate.
+					</p>
+				</div>
+				<div class="bg-white p-6 rounded-lg shadow-md text-gunmetal-800">
+					<div class="text-brass-400 text-4xl mb-4">
+						<svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+						</svg>
+					</div>
+					<h3 class="text-xl font-bold mb-2">Future Proof</h3>
+					<p>
+						We're constantly evolving with new features like ammunition tracking, range day logs, and accessory management coming soon.
+					</p>
+				</div>
+			</div>
+		</div>
+
+		<div class="mt-20">
+			<div class="bg-gunmetal-100 rounded-lg shadow-lg p-8">
+				<div class="text-center mb-10">
+					<h2 class="text-3xl font-bold text-gunmetal-800">Our Commitment</h2>
+				</div>
+				<div class="text-gunmetal-800 text-lg">
+					<p class="mb-6">
+						The Virtual Armory was built by firearm enthusiasts for firearm enthusiasts. We understand the unique needs of collectors and the importance of responsible ownership.
+					</p>
+					<p class="mb-6">
+						Our platform is designed to be intuitive, secure, and comprehensive. Whether you're tracking a single firearm or managing an extensive collection, The Virtual Armory provides the tools you need.
+					</p>
+					<p>
+						We're committed to continuous improvement and are actively developing new features to enhance your experience. Your feedback is invaluable to us as we grow and evolve.
+					</p>
+				</div>
+			</div>
+		</div>
+
+		<div class="mt-20 text-center">
+			<h2 class="text-3xl font-bold text-gunmetal-800 mb-6">Ready to get started?</h2>
+			<p class="text-xl text-gunmetal-700 mb-8">Join firearm enthusiasts who trust The Virtual Armory</p>
+			<div class="flex flex-col sm:flex-row justify-center gap-4">
+				<a href="/register" class="bg-gunmetal-800 text-white hover:bg-gunmetal-700 font-medium py-3 px-8 rounded-lg transition duration-300">
+					Create an Account
+				</a>
+				<a href="/contact" class="border border-gunmetal-800 text-gunmetal-800 hover:bg-gunmetal-100 font-medium py-3 px-8 rounded-lg transition duration-300">
+					Contact Us
+				</a>
+			</div>
+		</div>
+	</div>
+} 

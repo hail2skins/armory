@@ -98,3 +98,37 @@ func TestHomePageContent(t *testing.T) {
 		assert.Contains(t, html, "View Pricing")
 	})
 }
+
+func TestAboutPageContent(t *testing.T) {
+	// Test that the about page exists and contains the expected content
+	t.Run("About page has correct title and content", func(t *testing.T) {
+		// Create test data
+		authData := data.AuthData{
+			Authenticated: false,
+		}
+
+		// Create AboutData with the AuthData
+		aboutData := homeviews.AboutData{
+			AuthData: authData,
+		}
+
+		// Render the about page
+		buf := &bytes.Buffer{}
+		err := homeviews.About(aboutData).Render(context.Background(), buf)
+		assert.NoError(t, err)
+
+		// Check for the presence of key content
+		html := buf.String()
+
+		// Title should include "About"
+		assert.Contains(t, html, "About")
+
+		// Check for required content
+		assert.Contains(t, html, "Privacy & Security")
+		assert.Contains(t, html, "Comprehensive Tracking")
+		assert.Contains(t, html, "Future Proof")
+
+		// Should NOT contain "Join thousands"
+		assert.NotContains(t, html, "Join thousands")
+	})
+}
