@@ -5,30 +5,52 @@ import (
 )
 
 templ Nav(data data.AuthData) {
-	<nav class="bg-gray-800">
-		<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-			<div class="flex items-center justify-between h-16">
-				<div class="flex items-center">
-					<div class="flex-shrink-0">
-						<button onclick="window.location.href='/'" class="text-white font-bold text-xl border-0 bg-transparent cursor-pointer">Armory</button>
-					</div>
-					<div class="block">
-						<div class="ml-10 flex items-baseline space-x-4 relative z-10">
-							<button onclick="window.location.href='/'" class="text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium cursor-pointer border-0 bg-transparent">Home</button>
-							@NavAuth(data.Authenticated)
-						</div>
-					</div>
-				</div>
+	<nav id="header" class="fixed w-full z-30 top-0 text-white bg-gunmetal-800">
+		<div class="w-full container mx-auto flex flex-wrap items-center justify-between mt-0 py-2">
+			<div class="pl-4 flex items-center">
+				<a class="text-2xl font-bold text-white no-underline hover:text-brass-300 hover:no-underline" href="/">
+					The Virtual Armory
+				</a>
+			</div>
+			<div class="block lg:hidden pr-4">
+				<button id="nav-toggle" class="flex items-center p-1 text-pink-800 hover:text-gray-900 focus:outline-none focus:shadow-outline transform transition hover:scale-105 duration-300 ease-in-out">
+					<svg class="fill-current h-6 w-6" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+						<title>Menu</title>
+						<path d="M0 3h20v2H0V3zm0 6h20v2H0V9zm0 6h20v2H0v-2z"/>
+					</svg>
+				</button>
+			</div>
+			<div class="w-full flex-grow lg:flex lg:items-center lg:w-auto hidden mt-2 lg:mt-0 bg-gray-800 lg:bg-transparent text-black p-4 lg:p-0 z-20" id="nav-content">
+				<ul class="list-reset lg:flex justify-end flex-1 items-center">
+					<li class="mr-3">
+						<button class="inline-block py-2 px-4 text-white font-bold no-underline" onclick="window.location.href='/'">Home</button>
+					</li>
+					<li class="mr-3">
+						<button class="inline-block py-2 px-4 text-white font-bold no-underline" onclick="window.location.href='/about'">About</button>
+					</li>
+					<li class="mr-3">
+						<button class="inline-block py-2 px-4 text-white font-bold no-underline" onclick="window.location.href='/contact'">Contact</button>
+					</li>
+					<li class="mr-3">
+						<button class="inline-block py-2 px-4 text-white font-bold no-underline" onclick="window.location.href='/pricing'">Pricing</button>
+					</li>
+					if !data.Authenticated {
+						<li class="mr-3">
+							<button class="inline-block text-white no-underline hover:text-gray-200 hover:text-underline py-2 px-4" onclick="window.location.href='/login'">Login</button>
+						</li>
+						<li class="mr-3">
+							<button class="inline-block text-white no-underline hover:text-gray-200 hover:text-underline py-2 px-4" onclick="window.location.href='/register'">Register</button>
+						</li>
+					} else {
+						<li class="mr-3">
+							<button class="inline-block text-white no-underline hover:text-gray-200 hover:text-underline py-2 px-4" onclick="window.location.href='/logout'">Logout</button>
+						</li>
+					}
+				</ul>
 			</div>
 		</div>
+		<hr class="border-b border-gray-700 opacity-25 my-0 py-0" />
 	</nav>
-}
-
-templ NavAuth(authenticated bool) {
-	if !authenticated {
-		<button onclick="window.location.href='/login'" class="text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium cursor-pointer border-0 bg-transparent">Login</button>
-		<button onclick="window.location.href='/register'" class="text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium cursor-pointer border-0 bg-transparent">Register</button>
-	} else {
-		<button onclick="window.location.href='/logout'" class="text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium cursor-pointer border-0 bg-transparent">Logout</button>
-	}
+	<!-- Add padding to account for fixed navbar -->
+	<div class="pt-16"></div>
 } 

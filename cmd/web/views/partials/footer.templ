@@ -1,31 +1,30 @@
 package partials
 
+import "time"
+
+func getCurrentYear() string {
+	return time.Now().Format("2006")
+}
+
 templ Footer() {
-	<footer class="bg-gray-800 text-white">
-		<div class="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
-			<div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-				<div>
-					<h3 class="text-lg font-semibold mb-4">About Us</h3>
-					<p class="text-gray-300">The Virtual Armory is your premier destination for all things gaming and entertainment. We provide a secure and user-friendly platform for gamers worldwide.</p>
+	<footer class="bg-gray-700 text-white py-4">
+		<div class="container mx-auto px-8">
+			<div class="w-full flex flex-col md:flex-row py-2 justify-between">
+				<div class="mb-2 md:mb-0">
+					<a class="text-white no-underline hover:text-amber-300 font-bold text-2xl" href="/">The Virtual Armory</a>
+					<p class="text-gray-400 text-sm mt-1">Your Arsenal. On Target.</p>
 				</div>
-				<div>
-					<h3 class="text-lg font-semibold mb-4">Quick Links</h3>
-					<ul class="space-y-2">
-						<li><a href="/" class="text-gray-300 hover:text-white">Home</a></li>
-						<li><a href="/about" class="text-gray-300 hover:text-white">About</a></li>
-						<li><a href="/contact" class="text-gray-300 hover:text-white">Contact</a></li>
-					</ul>
-				</div>
-				<div>
-					<h3 class="text-lg font-semibold mb-4">Contact Us</h3>
-					<ul class="space-y-2 text-gray-300">
-						<li>Email: support@virtualarmory.com</li>
-						<li>Phone: (555) 123-4567</li>
-					</ul>
+				<div class="flex items-center">
+					<div class="flex flex-wrap gap-x-6 gap-y-1 justify-end">
+						<a href="/" class="no-underline hover:underline text-gray-300 hover:text-amber-300">Home</a>
+						<a href="/about" class="no-underline hover:underline text-gray-300 hover:text-amber-300">About</a>
+						<a href="/contact" class="no-underline hover:underline text-gray-300 hover:text-amber-300">Contact</a>
+						<a href="/pricing" class="no-underline hover:underline text-gray-300 hover:text-amber-300">Pricing</a>
+					</div>
 				</div>
 			</div>
-			<div class="mt-8 pt-8 border-t border-gray-700 text-center text-gray-300">
-				<p>&copy; 2024 The Virtual Armory. All rights reserved.</p>
+			<div class="text-center pt-2 mt-2 border-t border-gray-700">
+				<p class="text-sm">&copy; { getCurrentYear() } The Virtual Armory. All rights reserved.</p>
 			</div>
 		</div>
 	</footer>

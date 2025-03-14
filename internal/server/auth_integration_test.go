@@ -154,15 +154,11 @@ func TestAuthenticationFlow(t *testing.T) {
 			resp = httptest.NewRecorder()
 			router.ServeHTTP(resp, req)
 
-			// Check for auth-links endpoint with the cookie
-			req = httptest.NewRequest("GET", "/auth-links", nil)
-			req.AddCookie(authCookie)
-			resp = httptest.NewRecorder()
-			router.ServeHTTP(resp, req)
-
-			authLinksHTML := resp.Body.String()
-			assert.Contains(t, authLinksHTML, `/logout`)
-			assert.NotContains(t, authLinksHTML, `/login`)
+			// Check that the home page shows the logout link
+			homeHTML := resp.Body.String()
+			assert.Contains(t, homeHTML, `/logout`)
+			assert.NotContains(t, homeHTML, `/login`)
+			assert.NotContains(t, homeHTML, `/register`)
 		})
 
 		// Step 3: Logout
@@ -193,16 +189,16 @@ func TestAuthenticationFlow(t *testing.T) {
 			assert.Equal(t, "", authCookie.Value, "Auth cookie should be cleared")
 			assert.Less(t, authCookie.MaxAge, 0, "Auth cookie should be expired")
 
-			// Now check the auth-links endpoint again
-			req = httptest.NewRequest("GET", "/auth-links", nil)
+			// Now check the home page to verify unauthenticated state
+			req = httptest.NewRequest("GET", "/", nil)
 			resp = httptest.NewRecorder()
 			router.ServeHTTP(resp, req)
 
 			// Verify the HTML shows unauthenticated state
-			authLinksHTML := resp.Body.String()
-			assert.Contains(t, authLinksHTML, `/login`)
-			assert.Contains(t, authLinksHTML, `/register`)
-			assert.NotContains(t, authLinksHTML, `/logout`)
+			homeHTML := resp.Body.String()
+			assert.Contains(t, homeHTML, `/login`)
+			assert.Contains(t, homeHTML, `/register`)
+			assert.NotContains(t, homeHTML, `/logout`)
 		})
 	})
 }

@@ -11,7 +11,6 @@ import (
 	"github.com/hail2skins/armory/cmd/web"
 	authviews "github.com/hail2skins/armory/cmd/web/views/auth"
 	"github.com/hail2skins/armory/cmd/web/views/data"
-	partialviews "github.com/hail2skins/armory/cmd/web/views/partials"
 	"github.com/hail2skins/armory/internal/controller"
 )
 
@@ -40,9 +39,24 @@ func (s *Server) RegisterRoutes() http.Handler {
 	authController := controller.NewAuthController(s.db)
 	homeController := controller.NewHomeController(s.db)
 
-	// Store auth controller in context for home controller to access
+	// Set up middleware for auth data
 	r.Use(func(c *gin.Context) {
+		// Get the current user's authentication status and email
+		userInfo, authenticated := authController.GetCurrentUser(c)
+
+		// Create AuthData with authentication status and email
+		authData := data.NewAuthData()
+		authData.Authenticated = authenticated
+
+		// Set email if authenticated
+		if authenticated {
+			authData.Email = userInfo.GetUserName()
+		}
+
+		// Add authData to context
+		c.Set("authData", authData)
 		c.Set("authController", authController)
+
 		c.Next()
 	})
 
@@ -113,13 +127,6 @@ func (s *Server) RegisterRoutes() http.Handler {
 	r.GET("/register", authController.RegisterHandler)
 	r.POST("/register", authController.RegisterHandler)
 	r.GET("/logout", authController.LogoutHandler)
-
-	// Add auth-links endpoint for HTMX to load the appropriate nav links
-	r.GET("/auth-links", func(c *gin.Context) {
-		_, authenticated := authController.GetCurrentUser(c)
-		c.Header("Content-Type", "text/html")
-		partialviews.NavAuth(authenticated).Render(c.Request.Context(), c.Writer)
-	})
 
 	return r
 }

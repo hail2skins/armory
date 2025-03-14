@@ -23,12 +23,29 @@ templ Base(data data.AuthData, children templ.Component) {
 			<script src="assets/js/htmx.min.js"></script>
 		</head>
 		
-		<body class="bg-gray-100 flex flex-col h-screen">
+		<body class="bg-gray-100 flex flex-col min-h-screen">
 			@Nav(data)
 			<main class="flex-grow">
-				@children
+				<div class="container px-3 mx-auto">
+					@children
+				</div>
 			</main>
 			@Footer()
+			
+			<!-- JavaScript for mobile menu toggle -->
+			<script>
+				document.addEventListener('DOMContentLoaded', function() {
+					// Mobile menu toggle
+					const navToggle = document.getElementById('nav-toggle');
+					const navContent = document.getElementById('nav-content');
+					
+					if (navToggle && navContent) {
+						navToggle.addEventListener('click', function() {
+							navContent.classList.toggle('hidden');
+						});
+					}
+				});
+			</script>
 		</body>
 	</html>
 } 
