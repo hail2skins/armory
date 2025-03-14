@@ -25,10 +25,12 @@ func (h *HomeController) HomeHandler(c *gin.Context) {
 	userInfo, authenticated := c.MustGet("authController").(*AuthController).GetCurrentUser(c)
 
 	// Create HomeData with proper AuthData
+	authData := data.NewAuthData()
+	authData.Authenticated = authenticated
+	authData.Title = "Home"
+
 	homeData := home.HomeData{
-		AuthData: data.AuthData{
-			Authenticated: authenticated,
-		},
+		AuthData: authData,
 	}
 
 	// Set email if authenticated

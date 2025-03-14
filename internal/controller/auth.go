@@ -8,6 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	authviews "github.com/hail2skins/armory/cmd/web/views/auth"
+	"github.com/hail2skins/armory/cmd/web/views/data"
 	"github.com/hail2skins/armory/internal/database"
 	"github.com/shaj13/go-guardian/v2/auth"
 	"github.com/shaj13/go-guardian/v2/auth/strategies/basic"
@@ -88,7 +89,9 @@ func (a *AuthController) LoginHandler(c *gin.Context) {
 
 	// For GET requests, render the login form
 	if c.Request.Method == http.MethodGet {
-		a.RenderLogin(c, authviews.LoginData{})
+		a.RenderLogin(c, authviews.LoginData{
+			AuthData: data.NewAuthData().WithTitle("Login"),
+		})
 		return
 	}
 
@@ -96,8 +99,9 @@ func (a *AuthController) LoginHandler(c *gin.Context) {
 	var req LoginRequest
 	if err := c.ShouldBind(&req); err != nil {
 		a.RenderLogin(c, authviews.LoginData{
-			Error: "Invalid form data",
-			Email: req.Email,
+			AuthData: data.NewAuthData().WithTitle("Login"),
+			Error:    "Invalid form data",
+			Email:    req.Email,
 		})
 		return
 	}
@@ -106,8 +110,9 @@ func (a *AuthController) LoginHandler(c *gin.Context) {
 	user, err := a.db.AuthenticateUser(c.Request.Context(), req.Email, req.Password)
 	if err != nil || user == nil {
 		a.RenderLogin(c, authviews.LoginData{
-			Error: "Invalid email or password",
-			Email: req.Email,
+			AuthData: data.NewAuthData().WithTitle("Login"),
+			Error:    "Invalid email or password",
+			Email:    req.Email,
 		})
 		return
 	}
@@ -141,7 +146,9 @@ func (a *AuthController) RegisterHandler(c *gin.Context) {
 
 	// For GET requests, render the registration form
 	if c.Request.Method == http.MethodGet {
-		a.RenderRegister(c, authviews.RegisterData{})
+		a.RenderRegister(c, authviews.RegisterData{
+			AuthData: data.NewAuthData().WithTitle("Register"),
+		})
 		return
 	}
 
@@ -149,8 +156,9 @@ func (a *AuthController) RegisterHandler(c *gin.Context) {
 	var req RegisterRequest
 	if err := c.ShouldBind(&req); err != nil {
 		a.RenderRegister(c, authviews.RegisterData{
-			Error: "Invalid form data",
-			Email: req.Email,
+			AuthData: data.NewAuthData().WithTitle("Register"),
+			Error:    "Invalid form data",
+			Email:    req.Email,
 		})
 		return
 	}
@@ -159,16 +167,18 @@ func (a *AuthController) RegisterHandler(c *gin.Context) {
 	existingUser, err := a.db.GetUserByEmail(c.Request.Context(), req.Email)
 	if err != nil {
 		a.RenderRegister(c, authviews.RegisterData{
-			Error: "An error occurred",
-			Email: req.Email,
+			AuthData: data.NewAuthData().WithTitle("Register"),
+			Error:    "An error occurred",
+			Email:    req.Email,
 		})
 		return
 	}
 
 	if existingUser != nil {
 		a.RenderRegister(c, authviews.RegisterData{
-			Error: "Email already registered",
-			Email: req.Email,
+			AuthData: data.NewAuthData().WithTitle("Register"),
+			Error:    "Email already registered",
+			Email:    req.Email,
 		})
 		return
 	}
@@ -177,8 +187,9 @@ func (a *AuthController) RegisterHandler(c *gin.Context) {
 	user, err := a.db.CreateUser(c.Request.Context(), req.Email, req.Password)
 	if err != nil {
 		a.RenderRegister(c, authviews.RegisterData{
-			Error: "Failed to create user",
-			Email: req.Email,
+			AuthData: data.NewAuthData().WithTitle("Register"),
+			Error:    "Failed to create user",
+			Email:    req.Email,
 		})
 		return
 	}
@@ -220,20 +231,7 @@ func (a *AuthController) LogoutHandler(c *gin.Context) {
 		HttpOnly: true,
 	})
 
-	// For tests, check if we're in test mode
-	if gin.Mode() == gin.TestMode {
-		// Redirect to home page for tests
-		c.Redirect(http.StatusSeeOther, "/")
-		return
-	}
-
-	// If RenderLogout is set, use it to render the logout page
-	if a.RenderLogout != nil {
-		a.RenderLogout(c, authviews.LogoutData{})
-		return
-	}
-
-	// Otherwise, redirect to home page
+	// Redirect to home page
 	c.Redirect(http.StatusSeeOther, "/")
 }
 

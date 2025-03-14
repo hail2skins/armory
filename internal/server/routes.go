@@ -51,9 +51,16 @@ func (s *Server) RegisterRoutes() http.Handler {
 		loginData := d.(authviews.LoginData)
 		// Set authentication state
 		_, authenticated := authController.GetCurrentUser(c)
-		loginData.AuthData = data.AuthData{
-			Authenticated: authenticated,
+		// Preserve the Title field
+		title := loginData.Title
+		if title == "" {
+			title = "Login"
 		}
+		// Create new AuthData with all fields
+		authData := data.NewAuthData()
+		authData.Authenticated = authenticated
+		authData.Title = title
+		loginData.AuthData = authData
 		authviews.Login(loginData).Render(c.Request.Context(), c.Writer)
 	}
 
@@ -61,18 +68,32 @@ func (s *Server) RegisterRoutes() http.Handler {
 		registerData := d.(authviews.RegisterData)
 		// Set authentication state
 		_, authenticated := authController.GetCurrentUser(c)
-		registerData.AuthData = data.AuthData{
-			Authenticated: authenticated,
+		// Preserve the Title field
+		title := registerData.Title
+		if title == "" {
+			title = "Register"
 		}
+		// Create new AuthData with all fields
+		authData := data.NewAuthData()
+		authData.Authenticated = authenticated
+		authData.Title = title
+		registerData.AuthData = authData
 		authviews.Register(registerData).Render(c.Request.Context(), c.Writer)
 	}
 
 	authController.RenderLogout = func(c *gin.Context, d interface{}) {
 		logoutData := d.(authviews.LogoutData)
 		// Set authentication state - should be false after logout
-		logoutData.AuthData = data.AuthData{
-			Authenticated: false,
+		// Preserve the Title field
+		title := logoutData.Title
+		if title == "" {
+			title = "Logout"
 		}
+		// Create new AuthData with all fields
+		authData := data.NewAuthData()
+		authData.Authenticated = false
+		authData.Title = title
+		logoutData.AuthData = authData
 		authviews.Logout(logoutData).Render(c.Request.Context(), c.Writer)
 	}
 

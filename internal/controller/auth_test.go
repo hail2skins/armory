@@ -5,13 +5,16 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/gin-gonic/gin"
 	"github.com/hail2skins/armory/internal/database"
+	"github.com/hail2skins/armory/internal/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 )
 
 // MockDB is a mock implementation of the database.Service interface
@@ -235,4 +238,59 @@ func TestAuthenticationFlow(t *testing.T) {
 			assert.Contains(t, resp.Body.String(), `<a href="/register">Register</a>`)
 		})
 	})
+}
+
+func TestLogoutRedirectsToHome(t *testing.T) {
+	// Create a test database
+	db := testutils.NewTestService()
+	defer db.Close()
+
+	// Create a test user
+	ctx := context.Background()
+	user, err := testutils.CreateTestUser(ctx, db, "test@example.com", "password123")
+	require.NoError(t, err)
+	require.NotNil(t, user)
+
+	// Create a new auth controller
+	authController := NewAuthController(db)
+
+	// Create a new router
+	router := gin.New()
+
+	// Set up the routes
+	router.GET("/", func(c *gin.Context) {
+		c.String(http.StatusOK, "Home Page")
+	})
+	router.GET("/logout", authController.LogoutHandler)
+
+	// Create a request to logout
+	req, _ := http.NewRequest("GET", "/logout", nil)
+	// Add auth cookie
+	req.AddCookie(&http.Cookie{
+		Name:  "auth-session",
+		Value: strconv.FormatUint(uint64(user.ID), 10),
+	})
+
+	// Create a response recorder
+	resp := httptest.NewRecorder()
+
+	// Serve the request
+	router.ServeHTTP(resp, req)
+
+	// Check that we get redirected to the home page
+	assert.Equal(t, http.StatusSeeOther, resp.Code)
+	assert.Equal(t, "/", resp.Header().Get("Location"))
+
+	// Check that the auth cookie is cleared
+	cookies := resp.Result().Cookies()
+	var authCookie *http.Cookie
+	for _, cookie := range cookies {
+		if cookie.Name == "auth-session" {
+			authCookie = cookie
+			break
+		}
+	}
+	assert.NotNil(t, authCookie, "Auth cookie should be present")
+	assert.Equal(t, "", authCookie.Value, "Auth cookie should be cleared")
+	assert.Less(t, authCookie.MaxAge, 0, "Auth cookie should be expired")
 }

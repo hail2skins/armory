@@ -56,10 +56,16 @@ func TestNavBarAuthentication(t *testing.T) {
 		assert.NoError(t, err)
 
 		htmlUnauth := bufUnauth.String()
+		// Check for login/register buttons in the content area
 		assert.Contains(t, htmlUnauth, `href="/register"`)
 		assert.Contains(t, htmlUnauth, `href="/login"`)
+		// Check for absence of authenticated content
 		assert.NotContains(t, htmlUnauth, `href="/collection"`)
-		assert.NotContains(t, htmlUnauth, `href="/logout"`)
+		// Check for login/register in the nav bar
+		assert.Contains(t, htmlUnauth, `onclick="window.location.href=&#39;/login&#39;"`)
+		assert.Contains(t, htmlUnauth, `onclick="window.location.href=&#39;/register&#39;"`)
+		// Check for absence of logout in the nav bar
+		assert.NotContains(t, htmlUnauth, `onclick="window.location.href=&#39;/logout&#39;"`)
 
 		// Test authenticated state
 		authData := homeviews.HomeData{
@@ -74,10 +80,16 @@ func TestNavBarAuthentication(t *testing.T) {
 		assert.NoError(t, err)
 
 		htmlAuth := bufAuth.String()
+		// Check for authenticated content
 		assert.Contains(t, htmlAuth, `href="/collection"`)
-		assert.Contains(t, htmlAuth, `href="/logout"`)
+		// Check for logout in the nav bar
+		assert.Contains(t, htmlAuth, `onclick="window.location.href=&#39;/logout&#39;"`)
+		// Check for absence of login/register in the content
 		assert.NotContains(t, htmlAuth, `href="/register"`)
 		assert.NotContains(t, htmlAuth, `href="/login"`)
+		// Check for absence of login/register in the nav bar
+		assert.NotContains(t, htmlAuth, `onclick="window.location.href=&#39;/login&#39;"`)
+		assert.NotContains(t, htmlAuth, `onclick="window.location.href=&#39;/register&#39;"`)
 	})
 
 	// Test Base template with auth-links element
@@ -96,5 +108,41 @@ func TestNavBarAuthentication(t *testing.T) {
 
 		html := buf.String()
 		assert.Contains(t, html, `nav class="bg-gray-800"`)
+	})
+}
+
+func TestHomePageContent(t *testing.T) {
+	// Test that the home page contains the expected content from the reference template
+	t.Run("Home page contains Virtual Armory features", func(t *testing.T) {
+		// Create test data
+		homeData := homeviews.HomeData{
+			AuthData: data.AuthData{
+				Authenticated: false,
+			},
+		}
+
+		// Render the home page
+		buf := &bytes.Buffer{}
+		err := homeviews.Home(homeData).Render(context.Background(), buf)
+		assert.NoError(t, err)
+
+		// Check for the presence of key features
+		html := buf.String()
+
+		// Hero section
+		assert.Contains(t, html, "The Virtual Armory")
+		assert.Contains(t, html, "Your digital home for tracking your home arsenal safely and securely")
+
+		// Features section
+		assert.Contains(t, html, "Track Your Collection")
+		assert.Contains(t, html, "Maintenance Records")
+		assert.Contains(t, html, "Range Day Tracking")
+		assert.Contains(t, html, "Ammo Inventory")
+		assert.Contains(t, html, "Modding Paradise")
+
+		// CTA section
+		assert.Contains(t, html, "Ready to organize your collection?")
+		assert.Contains(t, html, "Join firearm enthusiasts and build your virtual armory")
+		assert.Contains(t, html, "View Pricing")
 	})
 }
