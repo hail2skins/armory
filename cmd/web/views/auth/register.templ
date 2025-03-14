@@ -8,14 +8,8 @@ import (
 	"github.com/hail2skins/armory/cmd/web/views/partials"
 )
 
-type RegisterData struct {
-	data.AuthData
-	Error string
-	Email string
-}
-
-templ Register(data RegisterData) {
-	@partials.Base(data.AuthData, templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+templ Register(data data.AuthData) {
+	@partials.Base(data, templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
 		_, err := io.WriteString(w, `<div class="min-h-full flex flex-col justify-center py-12 sm:px-6 lg:px-8">
 			<div class="sm:mx-auto sm:w-full sm:max-w-md">
 				<h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">Create your account</h2>

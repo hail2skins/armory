@@ -56,30 +56,98 @@ func (m *MockDB) AuthenticateUser(ctx context.Context, email, password string) (
 	return args.Get(0).(*database.User), args.Error(1)
 }
 
+func (m *MockDB) GetUserByRecoveryToken(ctx context.Context, token string) (*database.User, error) {
+	args := m.Called(ctx, token)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*database.User), args.Error(1)
+}
+
+func (m *MockDB) GetUserByVerificationToken(ctx context.Context, token string) (*database.User, error) {
+	args := m.Called(ctx, token)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*database.User), args.Error(1)
+}
+
+func (m *MockDB) VerifyUserEmail(ctx context.Context, token string) (*database.User, error) {
+	args := m.Called(ctx, token)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*database.User), args.Error(1)
+}
+
+func (m *MockDB) RequestPasswordReset(ctx context.Context, email string) (*database.User, error) {
+	args := m.Called(ctx, email)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*database.User), args.Error(1)
+}
+
+func (m *MockDB) ResetPassword(ctx context.Context, token, newPassword string) error {
+	args := m.Called(ctx, token, newPassword)
+	return args.Error(0)
+}
+
+func (m *MockDB) UpdateUser(ctx context.Context, user *database.User) error {
+	args := m.Called(ctx, user)
+	return args.Error(0)
+}
+
+// MockEmailService is a mock implementation of the email.EmailService interface
+type MockEmailService struct {
+	mock.Mock
+}
+
+func (m *MockEmailService) SendVerificationEmail(email, token string) error {
+	args := m.Called(email, token)
+	return args.Error(0)
+}
+
+func (m *MockEmailService) SendPasswordResetEmail(email, token string) error {
+	args := m.Called(email, token)
+	return args.Error(0)
+}
+
 func TestAuthenticationFlow(t *testing.T) {
 	// Setup
 	gin.SetMode(gin.TestMode)
 
 	t.Run("Authentication flow changes navigation bar", func(t *testing.T) {
 		mockDB := new(MockDB)
+		mockEmail := new(MockEmailService)
 
-		// Setup mock responses
+		// Create a test user
 		testUser := &database.User{
-			Email: "test@example.com",
+			Email:    "test@example.com",
+			Password: "$2a$10$1234567890123456789012", // Fake hashed password
+			Verified: false,
 		}
 		database.SetUserID(testUser, 1)
 
-		// GetUserByEmail returns nil for a new user
-		mockDB.On("GetUserByEmail", mock.Anything, "test@example.com").Return(nil, nil)
-
-		// CreateUser returns a new user
+		// Setup mock responses
+		mockDB.On("GetUserByEmail", mock.Anything, "test@example.com").Return(nil, nil).Once()
+		mockDB.On("GetUserByEmail", mock.Anything, "test@example.com").Return(testUser, nil).Times(3)
 		mockDB.On("CreateUser", mock.Anything, "test@example.com", "password123").Return(testUser, nil)
-
-		// AuthenticateUser returns the user when credentials are correct
 		mockDB.On("AuthenticateUser", mock.Anything, "test@example.com", "password123").Return(testUser, nil)
+		mockDB.On("GetUserByVerificationToken", mock.Anything, "test-token").Return(testUser, nil)
+		mockDB.On("VerifyUserEmail", mock.Anything, "test-token").Return(testUser, nil)
+
+		// Mock UpdateUser to return nil error
+		mockDB.On("UpdateUser", mock.Anything, mock.AnythingOfType("*database.User")).Return(nil)
+
+		// Mock email service
+		mockEmail.On("SendVerificationEmail", mock.Anything, mock.Anything).Return(nil)
 
 		// Create auth controller
 		authController := NewAuthController(mockDB)
+
+		// Set the email service
+		authController.emailService = mockEmail
 
 		// Create a test HTTP server
 		router := gin.New()
@@ -103,6 +171,10 @@ func TestAuthenticationFlow(t *testing.T) {
 		router.GET("/register", authController.RegisterHandler)
 		router.POST("/register", authController.RegisterHandler)
 		router.GET("/logout", authController.LogoutHandler)
+		router.GET("/verify-email", authController.VerifyEmailHandler)
+		router.GET("/verification-sent", func(c *gin.Context) {
+			c.String(http.StatusOK, "Verification email sent")
+		})
 
 		// Add auth-links endpoint
 		router.GET("/auth-links", func(c *gin.Context) {
@@ -159,11 +231,38 @@ func TestAuthenticationFlow(t *testing.T) {
 			form := url.Values{}
 			form.Add("email", "test@example.com")
 			form.Add("password", "password123")
-			form.Add("confirm_password", "password123")
+			form.Add("password_confirm", "password123")
 
 			req, _ := http.NewRequest("POST", "/register", strings.NewReader(form.Encode()))
 			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			// Don't set X-Test header so we get redirected to verification-sent page
 			resp := httptest.NewRecorder()
+			router.ServeHTTP(resp, req)
+
+			// Should redirect to verification-sent page
+			assert.Equal(t, http.StatusSeeOther, resp.Code)
+			assert.Equal(t, "/verification-sent", resp.Header().Get("Location"))
+		})
+
+		// Step 3: Verify email and login
+		t.Run("User can verify email and login", func(t *testing.T) {
+			// First verify the email
+			req, _ := http.NewRequest("GET", "/verify-email?token=test-token", nil)
+			resp := httptest.NewRecorder()
+			router.ServeHTTP(resp, req)
+
+			// Should redirect to login page
+			assert.Equal(t, http.StatusSeeOther, resp.Code)
+			assert.Equal(t, "/login?verified=true", resp.Header().Get("Location"))
+
+			// Now login
+			form := url.Values{}
+			form.Add("email", "test@example.com")
+			form.Add("password", "password123")
+
+			req, _ = http.NewRequest("POST", "/login", strings.NewReader(form.Encode()))
+			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			resp = httptest.NewRecorder()
 			router.ServeHTTP(resp, req)
 
 			// Should redirect to home page
@@ -179,10 +278,10 @@ func TestAuthenticationFlow(t *testing.T) {
 					break
 				}
 			}
-			assert.NotNil(t, authCookie, "Auth cookie should be set")
+			assert.NotNil(t, authCookie, "Auth cookie should be set after login")
 		})
 
-		// Step 3: Check authenticated state
+		// Step 4: Check authenticated state
 		t.Run("Authenticated user sees logout link", func(t *testing.T) {
 			req, _ := http.NewRequest("GET", "/auth-links", nil)
 			// Add auth cookie from previous step
@@ -198,7 +297,7 @@ func TestAuthenticationFlow(t *testing.T) {
 			assert.NotContains(t, resp.Body.String(), `<a href="/login">Login</a>`)
 		})
 
-		// Step 4: Logout
+		// Step 5: Logout
 		t.Run("User can logout", func(t *testing.T) {
 			req, _ := http.NewRequest("GET", "/logout", nil)
 			// Add auth cookie
@@ -227,7 +326,7 @@ func TestAuthenticationFlow(t *testing.T) {
 			assert.Less(t, authCookie.MaxAge, 0, "Auth cookie should be expired")
 		})
 
-		// Step 5: Check unauthenticated state again
+		// Step 6: Check unauthenticated state again
 		t.Run("After logout, user sees login and register links", func(t *testing.T) {
 			req, _ := http.NewRequest("GET", "/auth-links", nil)
 			resp := httptest.NewRecorder()
@@ -293,4 +392,111 @@ func TestLogoutRedirectsToHome(t *testing.T) {
 	assert.NotNil(t, authCookie, "Auth cookie should be present")
 	assert.Equal(t, "", authCookie.Value, "Auth cookie should be cleared")
 	assert.Less(t, authCookie.MaxAge, 0, "Auth cookie should be expired")
+}
+
+func TestEmailVerification(t *testing.T) {
+	// Setup
+	gin.SetMode(gin.TestMode)
+	mockDB := new(MockDB)
+
+	// Setup mock responses
+	testUser := &database.User{
+		Email:             "test@example.com",
+		VerificationToken: "test-token",
+		Verified:          false,
+	}
+	database.SetUserID(testUser, 1)
+
+	// Mock GetUserByVerificationToken
+	mockDB.On("GetUserByVerificationToken", mock.Anything, "test-token").Return(testUser, nil)
+	mockDB.On("GetUserByVerificationToken", mock.Anything, "invalid-token").Return(nil, nil)
+
+	// Mock VerifyUserEmail
+	mockDB.On("VerifyUserEmail", mock.Anything, "test-token").Return(testUser, nil)
+	mockDB.On("VerifyUserEmail", mock.Anything, "invalid-token").Return(nil, nil)
+
+	// Create auth controller
+	authController := NewAuthController(mockDB)
+
+	// Create a test HTTP server
+	router := gin.New()
+
+	// Setup routes
+	router.GET("/verify-email", authController.VerifyEmailHandler)
+
+	t.Run("User can verify email with valid token", func(t *testing.T) {
+		req, _ := http.NewRequest("GET", "/verify-email?token=test-token", nil)
+		resp := httptest.NewRecorder()
+		router.ServeHTTP(resp, req)
+
+		// Should redirect to login page with success message
+		assert.Equal(t, http.StatusSeeOther, resp.Code)
+		assert.Equal(t, "/login?verified=true", resp.Header().Get("Location"))
+	})
+
+	t.Run("Invalid verification token returns error", func(t *testing.T) {
+		req, _ := http.NewRequest("GET", "/verify-email?token=invalid-token", nil)
+		resp := httptest.NewRecorder()
+		router.ServeHTTP(resp, req)
+
+		assert.Equal(t, http.StatusBadRequest, resp.Code)
+		assert.Contains(t, resp.Body.String(), "Invalid verification token")
+	})
+}
+
+func TestRegisterUser(t *testing.T) {
+	// Create a test database
+	db := testutils.NewTestService()
+	defer db.Close()
+
+	// Create a new auth controller
+	authController := NewAuthController(db)
+
+	// Create a mock email service
+	mockEmail := new(MockEmailService)
+	mockEmail.On("SendVerificationEmail", mock.Anything, mock.Anything).Return(nil)
+	authController.SetEmailService(mockEmail)
+
+	// Create a new router
+	router := gin.New()
+
+	// Set up the routes
+	router.POST("/register", authController.RegisterHandler)
+	router.GET("/", func(c *gin.Context) {
+		c.String(http.StatusOK, "Home Page")
+	})
+
+	// Create registration form data
+	form := url.Values{}
+	form.Add("email", "newuser@example.com")
+	form.Add("password", "password123")
+	form.Add("password_confirm", "password123")
+
+	// Create a request to register
+	req, _ := http.NewRequest("POST", "/register", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	// Don't set X-Test header so we get redirected to verification-sent page
+
+	// Create a response recorder
+	resp := httptest.NewRecorder()
+
+	// Serve the request
+	router.ServeHTTP(resp, req)
+
+	// Check that we get redirected to the verification-sent page
+	assert.Equal(t, http.StatusSeeOther, resp.Code)
+	assert.Equal(t, "/verification-sent", resp.Header().Get("Location"))
+
+	// Verify the user was created in the database
+	ctx := context.Background()
+	user, err := db.GetUserByEmail(ctx, "newuser@example.com")
+	assert.NoError(t, err)
+	assert.NotNil(t, user)
+	assert.Equal(t, "newuser@example.com", user.Email)
+	assert.NotEmpty(t, user.Password, "Password should be hashed and stored")
+	assert.False(t, user.Verified, "User should not be verified initially")
+	assert.NotEmpty(t, user.VerificationToken, "Verification token should be generated")
+
+	// Verify that the verification email was sent
+	mockEmail.AssertCalled(t, "SendVerificationEmail", "newuser@example.com", mock.Anything)
 }

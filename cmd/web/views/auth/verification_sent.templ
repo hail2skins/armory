@@ -1,0 +1,67 @@
+package auth
+
+import (
+	"context"
+	"io"
+
+	"github.com/hail2skins/armory/cmd/web/views/data"
+	"github.com/hail2skins/armory/cmd/web/views/partials"
+)
+
+templ VerificationSent(data data.AuthData) {
+	@partials.Base(data, templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+		_, err := io.WriteString(w, `<div class="min-h-full flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+			<div class="sm:mx-auto sm:w-full sm:max-w-md">
+				<h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">Verification Email Sent</h2>
+				<p class="mt-2 text-center text-sm text-gray-600">
+					We've sent a verification email to your inbox.
+				</p>
+			</div>
+
+			<div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+				<div class="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+					<div class="text-center">
+						<p class="text-gray-700 mb-4">
+							A verification email has been sent to <span class="font-medium">` + data.Email + `</span>.
+							Please check your inbox and click the verification link to complete your registration.
+						</p>
+
+						` + func() string {
+							if data.Error != "" {
+								return `<div class="text-red-600 text-sm mb-4">` + data.Error + `</div>`
+							}
+							if data.Success != "" {
+								return `<div class="text-green-600 text-sm mb-4">` + data.Success + `</div>`
+							}
+							return ""
+						}() + `
+
+						<div class="mt-6">
+							<p class="text-gray-600 text-sm mb-4">Didn't receive the email? Check your spam folder or request a new verification email.</p>
+							
+							<form action="/resend-verification" method="POST" class="space-y-4">
+								<div>
+									<label for="email" class="sr-only">Email address</label>
+									<input id="email" name="email" type="email" autocomplete="email" required 
+										class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+										placeholder="Enter your email address" value="` + data.Email + `">
+								</div>
+								<div>
+									<button type="submit" 
+										class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+										Resend Verification Email
+									</button>
+								</div>
+							</form>
+							
+							<div class="mt-4">
+								<a href="/login" class="text-sm font-medium text-indigo-600 hover:text-indigo-500">Return to Login</a>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>`)
+		return err
+	}))
+} 

@@ -58,6 +58,8 @@ require (
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
+	github.com/mailjet/mailjet-apiv3-go v0.0.0-20201009050126-c24bc15a9394 // indirect
+	github.com/mailjet/mailjet-apiv3-go/v4 v4.0.7 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-sqlite3 v1.14.22 // indirect
 	github.com/moby/docker-image-spec v1.3.1 // indirect

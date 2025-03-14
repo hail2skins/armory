@@ -30,7 +30,7 @@ func TestBaseTemplateAndNavigation(t *testing.T) {
 		html := buf.String()
 		// Check navigation structure
 		assert.Contains(t, html, `nav id="header"`)
-		assert.Contains(t, html, `class="fixed w-full z-30 top-0 text-white bg-gray-800"`)
+		assert.Contains(t, html, `class="fixed w-full z-30 top-0 text-white bg-gunmetal-800"`)
 		// Check for navigation buttons
 		assert.Contains(t, html, `onclick="window.location.href=&#39;/&#39;"`)
 		assert.Contains(t, html, `onclick="window.location.href=&#39;/login&#39;"`)
@@ -54,7 +54,7 @@ func TestBaseTemplateAndNavigation(t *testing.T) {
 		html := buf.String()
 		// Check navigation structure
 		assert.Contains(t, html, `nav id="header"`)
-		assert.Contains(t, html, `class="fixed w-full z-30 top-0 text-white bg-gray-800"`)
+		assert.Contains(t, html, `class="fixed w-full z-30 top-0 text-white bg-gunmetal-800"`)
 		// Check for navigation buttons
 		assert.Contains(t, html, `onclick="window.location.href=&#39;/&#39;"`)
 		assert.Contains(t, html, `onclick="window.location.href=&#39;/logout&#39;"`)

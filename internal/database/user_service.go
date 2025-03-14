@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"errors"
+	"time"
 
 	"gorm.io/gorm"
 )
@@ -17,6 +18,24 @@ type UserService interface {
 
 	// AuthenticateUser authenticates a user with the given email and password
 	AuthenticateUser(ctx context.Context, email, password string) (*User, error)
+
+	// VerifyUserEmail verifies a user's email with the given token
+	VerifyUserEmail(ctx context.Context, token string) (*User, error)
+
+	// GetUserByVerificationToken gets a user by their verification token
+	GetUserByVerificationToken(ctx context.Context, token string) (*User, error)
+
+	// GetUserByRecoveryToken gets a user by their recovery token
+	GetUserByRecoveryToken(ctx context.Context, token string) (*User, error)
+
+	// UpdateUser updates a user's information
+	UpdateUser(ctx context.Context, user *User) error
+
+	// RequestPasswordReset initiates a password reset for a user
+	RequestPasswordReset(ctx context.Context, email string) (*User, error)
+
+	// ResetPassword resets a user's password using a recovery token
+	ResetPassword(ctx context.Context, token, newPassword string) error
 }
 
 // Ensure service implements UserService
@@ -73,4 +92,102 @@ func (s *service) AuthenticateUser(ctx context.Context, email, password string) 
 	}
 
 	return user, nil
+}
+
+// GetUserByVerificationToken retrieves a user by their verification token
+func (s *service) GetUserByVerificationToken(ctx context.Context, token string) (*User, error) {
+	var user User
+	result := s.db.WithContext(ctx).Where("verification_token = ?", token).First(&user)
+	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, result.Error
+	}
+	return &user, nil
+}
+
+// GetUserByRecoveryToken retrieves a user by their recovery token
+func (s *service) GetUserByRecoveryToken(ctx context.Context, token string) (*User, error) {
+	var user User
+	result := s.db.WithContext(ctx).Where("recovery_token = ?", token).First(&user)
+	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, result.Error
+	}
+	return &user, nil
+}
+
+// VerifyUserEmail verifies a user's email with the given token
+func (s *service) VerifyUserEmail(ctx context.Context, token string) (*User, error) {
+	user, err := s.GetUserByVerificationToken(ctx, token)
+	if err != nil {
+		return nil, err
+	}
+	if user == nil {
+		return nil, nil
+	}
+
+	if user.IsVerificationExpired() {
+		return nil, errors.New("verification token has expired")
+	}
+
+	user.VerifyEmail()
+	if err := s.UpdateUser(ctx, user); err != nil {
+		return nil, err
+	}
+
+	return user, nil
+}
+
+// UpdateUser updates a user's information
+func (s *service) UpdateUser(ctx context.Context, user *User) error {
+	return s.db.WithContext(ctx).Save(user).Error
+}
+
+// RequestPasswordReset initiates a password reset for a user
+func (s *service) RequestPasswordReset(ctx context.Context, email string) (*User, error) {
+	user, err := s.GetUserByEmail(ctx, email)
+	if err != nil {
+		return nil, err
+	}
+	if user == nil {
+		return nil, nil
+	}
+
+	user.GenerateRecoveryToken()
+	if err := s.UpdateUser(ctx, user); err != nil {
+		return nil, err
+	}
+
+	return user, nil
+}
+
+// ResetPassword resets a user's password using a recovery token
+func (s *service) ResetPassword(ctx context.Context, token, newPassword string) error {
+	user, err := s.GetUserByRecoveryToken(ctx, token)
+	if err != nil {
+		return err
+	}
+	if user == nil {
+		return errors.New("invalid recovery token")
+	}
+
+	if user.IsRecoveryExpired() {
+		return errors.New("recovery token has expired")
+	}
+
+	hashedPassword, err := HashPassword(newPassword)
+	if err != nil {
+		return err
+	}
+
+	user.Password = hashedPassword
+	user.RecoveryToken = ""
+	user.RecoveryTokenExpiry = time.Time{}
+	user.RecoverySentAt = time.Time{}
+
+	return s.UpdateUser(ctx, user)
 }

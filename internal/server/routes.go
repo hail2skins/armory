@@ -62,53 +62,50 @@ func (s *Server) RegisterRoutes() http.Handler {
 
 	// Override the render methods to use our templates
 	authController.RenderLogin = func(c *gin.Context, d interface{}) {
-		loginData := d.(authviews.LoginData)
+		authData := d.(data.AuthData)
 		// Set authentication state
 		_, authenticated := authController.GetCurrentUser(c)
-		// Preserve the Title field
-		title := loginData.Title
-		if title == "" {
-			title = "Login"
-		}
-		// Create new AuthData with all fields
-		authData := data.NewAuthData()
 		authData.Authenticated = authenticated
-		authData.Title = title
-		loginData.AuthData = authData
-		authviews.Login(loginData).Render(c.Request.Context(), c.Writer)
+		// Set default title if not set
+		if authData.Title == "" {
+			authData.Title = "Login"
+		}
+		authviews.Login(authData).Render(c.Request.Context(), c.Writer)
 	}
 
 	authController.RenderRegister = func(c *gin.Context, d interface{}) {
-		registerData := d.(authviews.RegisterData)
+		authData := d.(data.AuthData)
 		// Set authentication state
 		_, authenticated := authController.GetCurrentUser(c)
-		// Preserve the Title field
-		title := registerData.Title
-		if title == "" {
-			title = "Register"
-		}
-		// Create new AuthData with all fields
-		authData := data.NewAuthData()
 		authData.Authenticated = authenticated
-		authData.Title = title
-		registerData.AuthData = authData
-		authviews.Register(registerData).Render(c.Request.Context(), c.Writer)
+		// Set default title if not set
+		if authData.Title == "" {
+			authData.Title = "Register"
+		}
+		authviews.Register(authData).Render(c.Request.Context(), c.Writer)
 	}
 
 	authController.RenderLogout = func(c *gin.Context, d interface{}) {
-		logoutData := d.(authviews.LogoutData)
+		authData := d.(data.AuthData)
 		// Set authentication state - should be false after logout
-		// Preserve the Title field
-		title := logoutData.Title
-		if title == "" {
-			title = "Logout"
-		}
-		// Create new AuthData with all fields
-		authData := data.NewAuthData()
 		authData.Authenticated = false
-		authData.Title = title
-		logoutData.AuthData = authData
-		authviews.Logout(logoutData).Render(c.Request.Context(), c.Writer)
+		// Set default title if not set
+		if authData.Title == "" {
+			authData.Title = "Logout"
+		}
+		authviews.Logout(authData).Render(c.Request.Context(), c.Writer)
+	}
+
+	authController.RenderVerificationSent = func(c *gin.Context, d interface{}) {
+		authData := d.(data.AuthData)
+		// Set authentication state
+		_, authenticated := authController.GetCurrentUser(c)
+		authData.Authenticated = authenticated
+		// Set default title if not set
+		if authData.Title == "" {
+			authData.Title = "Verification Email Sent"
+		}
+		authviews.VerificationSent(authData).Render(c.Request.Context(), c.Writer)
 	}
 
 	// Health check
@@ -127,6 +124,25 @@ func (s *Server) RegisterRoutes() http.Handler {
 	r.GET("/register", authController.RegisterHandler)
 	r.POST("/register", authController.RegisterHandler)
 	r.GET("/logout", authController.LogoutHandler)
+	r.GET("/verification-sent", func(c *gin.Context) {
+		authData := data.NewAuthData().WithTitle("Verification Email Sent")
+		// Set authentication state
+		_, authenticated := authController.GetCurrentUser(c)
+		authData.Authenticated = authenticated
+		// Render the verification sent page
+		if authController.RenderVerificationSent != nil {
+			authController.RenderVerificationSent(c, authData)
+		} else {
+			// Fallback if the render function is not set
+			c.String(http.StatusOK, "Verification email sent. Please check your inbox to verify your email address.")
+		}
+	})
+	r.POST("/resend-verification", authController.ResendVerificationHandler)
+	r.GET("/verify-email", authController.VerifyEmailHandler)
+	r.GET("/forgot-password", authController.ForgotPasswordHandler)
+	r.POST("/forgot-password", authController.ForgotPasswordHandler)
+	r.GET("/reset-password", authController.ResetPasswordHandler)
+	r.POST("/reset-password", authController.ResetPasswordHandler)
 
 	return r
 }

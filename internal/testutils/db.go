@@ -2,6 +2,9 @@ package testutils
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/base64"
+	"errors"
 	"log"
 	"os"
 	"path/filepath"
@@ -152,4 +155,78 @@ func (s *TestService) AuthenticateUser(ctx context.Context, email, password stri
 	}
 
 	return user, nil
+}
+
+func (s *TestService) GetUserByRecoveryToken(ctx context.Context, token string) (*database.User, error) {
+	var user database.User
+	result := s.db.Where("recovery_token = ?", token).First(&user)
+	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, database.ErrInvalidToken
+		}
+		return nil, result.Error
+	}
+	return &user, nil
+}
+
+func (s *TestService) GetUserByVerificationToken(ctx context.Context, token string) (*database.User, error) {
+	var user database.User
+	result := s.db.Where("verification_token = ?", token).First(&user)
+	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, database.ErrInvalidToken
+		}
+		return nil, result.Error
+	}
+	return &user, nil
+}
+
+func (s *TestService) VerifyUserEmail(ctx context.Context, token string) (*database.User, error) {
+	user, err := s.GetUserByVerificationToken(ctx, token)
+	if err != nil {
+		return nil, err
+	}
+	user.Verified = true
+	user.VerificationToken = ""
+	if err := s.UpdateUser(ctx, user); err != nil {
+		return nil, err
+	}
+	return user, nil
+}
+
+func (s *TestService) RequestPasswordReset(ctx context.Context, email string) (*database.User, error) {
+	user, err := s.GetUserByEmail(ctx, email)
+	if err != nil {
+		return nil, err
+	}
+	token := make([]byte, 32)
+	if _, err := rand.Read(token); err != nil {
+		return nil, err
+	}
+	user.RecoveryToken = base64.URLEncoding.EncodeToString(token)
+	user.RecoveryTokenExpiry = time.Now().Add(1 * time.Hour)
+	if err := s.UpdateUser(ctx, user); err != nil {
+		return nil, err
+	}
+	return user, nil
+}
+
+func (s *TestService) ResetPassword(ctx context.Context, token, newPassword string) error {
+	user, err := s.GetUserByRecoveryToken(ctx, token)
+	if err != nil {
+		return err
+	}
+	if time.Now().After(user.RecoveryTokenExpiry) {
+		return database.ErrTokenExpired
+	}
+	if err := user.SetPassword(newPassword); err != nil {
+		return err
+	}
+	user.RecoveryToken = ""
+	user.RecoveryTokenExpiry = time.Time{}
+	return s.UpdateUser(ctx, user)
+}
+
+func (s *TestService) UpdateUser(ctx context.Context, user *database.User) error {
+	return s.db.Save(user).Error
 }
