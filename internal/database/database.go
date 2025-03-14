@@ -2,14 +2,17 @@ package database
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"log"
 	"os"
 	"strconv"
+	"sync"
 	"time"
 
-	_ "github.com/jackc/pgx/v5/stdlib"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
+
 	_ "github.com/joho/godotenv/autoload"
 )
 
@@ -22,10 +25,14 @@ type Service interface {
 	// Close terminates the database connection.
 	// It returns an error if the connection cannot be closed.
 	Close() error
+
+	// Include UserService methods
+	UserService
 }
 
 type service struct {
-	db *sql.DB
+	db *gorm.DB
+	mu sync.Mutex // Mutex to protect the db instance
 }
 
 var (
@@ -36,38 +43,88 @@ var (
 	host       = os.Getenv("DB_HOST")
 	schema     = os.Getenv("DB_SCHEMA")
 	dbInstance *service
+	mu         sync.Mutex // Mutex to protect the dbInstance
 )
 
 func New() Service {
+	mu.Lock()
+	defer mu.Unlock()
+
 	// Reuse Connection
-	if dbInstance != nil {
+	if dbInstance != nil && dbInstance.db != nil {
 		return dbInstance
 	}
-	connStr := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable&search_path=%s", username, password, host, port, database, schema)
-	db, err := sql.Open("pgx", connStr)
-	if err != nil {
-		log.Fatal(err)
+
+	// Set default schema if not provided
+	searchPath := schema
+	if searchPath == "" {
+		searchPath = "public"
 	}
+
+	// Create DSN string for PostgreSQL
+	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable search_path=%s",
+		host, username, password, database, port, searchPath)
+
+	// Configure GORM logger
+	gormLogger := logger.New(
+		log.New(os.Stdout, "\r\n", log.LstdFlags), // io writer
+		logger.Config{
+			SlowThreshold:             time.Second, // Slow SQL threshold
+			LogLevel:                  logger.Info, // Log level
+			IgnoreRecordNotFoundError: true,        // Ignore ErrRecordNotFound error for logger
+			Colorful:                  true,        // Enable color
+		},
+	)
+
+	// Open connection to database
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
+		Logger: gormLogger,
+	})
+	if err != nil {
+		log.Fatalf("Failed to connect to database: %v", err)
+	}
+
+	// Create service instance
 	dbInstance = &service{
 		db: db,
 	}
+
+	// Auto migrate the schema
+	if err := dbInstance.AutoMigrate(); err != nil {
+		log.Printf("Error auto migrating schema: %v", err)
+	}
+
 	return dbInstance
+}
+
+// AutoMigrate automatically migrates the schema
+func (s *service) AutoMigrate() error {
+	return s.db.AutoMigrate(&User{})
 }
 
 // Health checks the health of the database connection by pinging the database.
 // It returns a map with keys indicating various health statistics.
 func (s *service) Health() map[string]string {
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
-	defer cancel()
-
 	stats := make(map[string]string)
 
-	// Ping the database
-	err := s.db.PingContext(ctx)
+	// Get SQL DB instance
+	sqlDB, err := s.db.DB()
 	if err != nil {
 		stats["status"] = "down"
 		stats["error"] = fmt.Sprintf("db down: %v", err)
-		log.Fatalf("db down: %v", err) // Log the error and terminate the program
+		log.Printf("db down: %v", err)
+		return stats
+	}
+
+	// Ping the database
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+
+	err = sqlDB.PingContext(ctx)
+	if err != nil {
+		stats["status"] = "down"
+		stats["error"] = fmt.Sprintf("db down: %v", err)
+		log.Printf("db down: %v", err)
 		return stats
 	}
 
@@ -76,7 +133,7 @@ func (s *service) Health() map[string]string {
 	stats["message"] = "It's healthy"
 
 	// Get database stats (like open connections, in use, idle, etc.)
-	dbStats := s.db.Stats()
+	dbStats := sqlDB.Stats()
 	stats["open_connections"] = strconv.Itoa(dbStats.OpenConnections)
 	stats["in_use"] = strconv.Itoa(dbStats.InUse)
 	stats["idle"] = strconv.Itoa(dbStats.Idle)
@@ -110,6 +167,25 @@ func (s *service) Health() map[string]string {
 // If the connection is successfully closed, it returns nil.
 // If an error occurs while closing the connection, it returns the error.
 func (s *service) Close() error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.db == nil {
+		return nil // Already closed
+	}
+
 	log.Printf("Disconnected from database: %s", database)
-	return s.db.Close()
+
+	// Get SQL DB instance
+	sqlDB, err := s.db.DB()
+	if err != nil {
+		return err
+	}
+
+	err = sqlDB.Close()
+	if err == nil {
+		// Only set db to nil if close was successful
+		s.db = nil
+	}
+	return err
 }

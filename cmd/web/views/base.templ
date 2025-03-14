@@ -6,14 +6,43 @@ templ Base() {
 		<head>
 			<meta charset="utf-8"/>
 			<meta name="viewport" content="width=device-width,initial-scale=1"/>
-			<title>Go Blueprint Hello</title>
+			<title>Armory</title>
 			<link href="assets/css/output.css" rel="stylesheet"/>
 			<script src="assets/js/htmx.min.js"></script>
 		</head>
-		<body class="bg-gray-100">
-			<main class="max-w-sm mx-auto p-4">
+		<body class="bg-gray-100 flex flex-col h-screen">
+			<nav class="bg-gray-800">
+				<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+					<div class="flex items-center justify-between h-16">
+						<div class="flex items-center">
+							<div class="flex-shrink-0">
+								<a href="/" class="text-white font-bold text-xl">Armory</a>
+							</div>
+							<div class="hidden md:block">
+								<div class="ml-10 flex items-baseline space-x-4">
+									<a href="/" class="text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Home</a>
+									<span id="auth-links" hx-get="/auth-links" hx-trigger="load"></span>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</nav>
+			<main class="flex-grow max-w-7xl w-full mx-auto p-4">
 				{ children... }
 			</main>
+			<footer class="bg-gray-800 text-white text-center py-4">
+				<p>&copy; 2024 Armory. All rights reserved.</p>
+			</footer>
 		</body>
 	</html>
+}
+
+templ NavAuth(authenticated bool) {
+	if !authenticated {
+		<a href="/login" class="text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Login</a>
+		<a href="/register" class="text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Register</a>
+	} else {
+		<a href="/logout" class="text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Logout</a>
+	}
 }
