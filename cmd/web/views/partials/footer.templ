@@ -2,24 +2,25 @@ package partials
 
 import "time"
 
+// getCurrentYear returns the current year as a string
 func getCurrentYear() string {
 	return time.Now().Format("2006")
 }
 
 templ Footer() {
-	<footer class="bg-gray-700 text-white py-4">
+	<footer class="bg-gunmetal-700 text-white py-4">
 		<div class="container mx-auto px-8">
 			<div class="w-full flex flex-col md:flex-row py-2 justify-between">
 				<div class="mb-2 md:mb-0">
-					<a class="text-white no-underline hover:text-amber-300 font-bold text-2xl" href="/">The Virtual Armory</a>
+					<a class="text-white no-underline hover:text-brass-300 font-bold text-2xl" href="/">The Virtual Armory</a>
 					<p class="text-gray-400 text-sm mt-1">Your Arsenal. On Target.</p>
 				</div>
 				<div class="flex items-center">
 					<div class="flex flex-wrap gap-x-6 gap-y-1 justify-end">
-						<a href="/" class="no-underline hover:underline text-gray-300 hover:text-amber-300">Home</a>
-						<a href="/about" class="no-underline hover:underline text-gray-300 hover:text-amber-300">About</a>
-						<a href="/contact" class="no-underline hover:underline text-gray-300 hover:text-amber-300">Contact</a>
-						<a href="/pricing" class="no-underline hover:underline text-gray-300 hover:text-amber-300">Pricing</a>
+						<a href="/" class="no-underline hover:underline text-gray-300 hover:text-brass-300">Home</a>
+						<a href="/about" class="no-underline hover:underline text-gray-300 hover:text-brass-300">About</a>
+						<a href="/contact" class="no-underline hover:underline text-gray-300 hover:text-brass-300">Contact</a>
+						<a href="/pricing" class="no-underline hover:underline text-gray-300 hover:text-brass-300">Pricing</a>
 					</div>
 				</div>
 			</div>

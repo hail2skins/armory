@@ -18,12 +18,44 @@ templ Base(data data.AuthData, children templ.Component) {
 			<link rel="icon" href="/favicon.ico" type="image/x-icon"/>
 			<!-- Tailwind CDN -->
 			<script src="https://cdn.tailwindcss.com"></script>
+			<script>
+				tailwind.config = {
+					theme: {
+						extend: {
+							colors: {
+								gunmetal: {
+									100: '#f5f5f5',
+									200: '#e5e5e5',
+									300: '#d4d4d4',
+									400: '#a3a3a3',
+									500: '#737373',
+									600: '#525252',
+									700: '#404040',
+									800: '#262626',
+									900: '#171717',
+								},
+								brass: {
+									100: '#fff7e6',
+									200: '#ffeacc',
+									300: '#ffd699',
+									400: '#ffc266',
+									500: '#ffad33',
+									600: '#e69500',
+									700: '#b37400',
+									800: '#805300',
+									900: '#4d3200',
+								}
+							}
+						}
+					}
+				}
+			</script>
 			<!-- Local CSS -->
 			<link href="assets/css/output.css" rel="stylesheet"/>
 			<script src="assets/js/htmx.min.js"></script>
 		</head>
 		
-		<body class="bg-gray-100 flex flex-col min-h-screen">
+		<body class="leading-normal tracking-normal text-white bg-gunmetal-100 font-sans">
 			@Nav(data)
 			<main class="flex-grow">
 				<div class="container px-3 mx-auto">
