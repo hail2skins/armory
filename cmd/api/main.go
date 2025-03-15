@@ -3,12 +3,12 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/http"
 	"os/signal"
 	"syscall"
 	"time"
 
+	"github.com/hail2skins/armory/internal/logger"
 	"github.com/hail2skins/armory/internal/server"
 )
 
@@ -20,25 +20,28 @@ func gracefulShutdown(apiServer *http.Server, done chan bool) {
 	// Listen for the interrupt signal.
 	<-ctx.Done()
 
-	log.Println("shutting down gracefully, press Ctrl+C again to force")
+	logger.Info("Shutting down gracefully, press Ctrl+C again to force", nil)
 
 	// The context is used to inform the server it has 5 seconds to finish
 	// the request it is currently handling
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if err := apiServer.Shutdown(ctx); err != nil {
-		log.Printf("Server forced to shutdown with error: %v", err)
+		logger.Error("Server forced to shutdown", err, nil)
 	}
 
-	log.Println("Server exiting")
+	logger.Info("Server exiting", nil)
 
 	// Notify the main goroutine that the shutdown is complete
 	done <- true
 }
 
 func main() {
-
+	// Initialize the server (which also sets up logging)
 	server := server.NewServer()
+
+	// Ensure logger is reset when the application exits
+	defer logger.ResetLogging()
 
 	// Create a done channel to signal when the shutdown is complete
 	done := make(chan bool, 1)
@@ -46,12 +49,14 @@ func main() {
 	// Run graceful shutdown in a separate goroutine
 	go gracefulShutdown(server, done)
 
+	logger.Info("Starting server", nil)
 	err := server.ListenAndServe()
 	if err != nil && err != http.ErrServerClosed {
+		logger.Error("HTTP server error", err, nil)
 		panic(fmt.Sprintf("http server error: %s", err))
 	}
 
 	// Wait for the graceful shutdown to complete
 	<-done
-	log.Println("Graceful shutdown complete.")
+	logger.Info("Graceful shutdown complete", nil)
 }

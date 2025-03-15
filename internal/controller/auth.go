@@ -10,6 +10,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/hail2skins/armory/cmd/web/views/data"
 	"github.com/hail2skins/armory/internal/database"
+	customerrors "github.com/hail2skins/armory/internal/errors"
+	"github.com/hail2skins/armory/internal/logger"
 	"github.com/hail2skins/armory/internal/services/email"
 	"github.com/shaj13/go-guardian/v2/auth"
 	"github.com/shaj13/go-guardian/v2/auth/strategies/basic"
@@ -86,8 +88,12 @@ func NewAuthController(db database.Service) *AuthController {
 	emailService, err := email.NewMailjetService()
 	if err != nil {
 		// Log the error but continue - email functionality will be disabled
-		// TODO: Add proper logging
+		logger.Warn("Email service initialization failed", map[string]interface{}{
+			"error": err.Error(),
+		})
 	}
+
+	logger.Info("Auth controller initialized", nil)
 
 	// Create default render functions that do nothing
 	defaultRender := func(c *gin.Context, data interface{}) {
@@ -127,6 +133,15 @@ func (a *AuthController) LoginHandler(c *gin.Context) {
 	// For POST requests, process the login form
 	var req LoginRequest
 	if err := c.ShouldBind(&req); err != nil {
+		logger.Warn("Invalid login form data", map[string]interface{}{
+			"error": err.Error(),
+			"email": req.Email,
+		})
+
+		// Use our custom validation error
+		c.Error(customerrors.NewValidationError("Invalid form data"))
+
+		// Also render the form with the error
 		authData := data.NewAuthData().WithTitle("Login").WithError("Invalid form data")
 		authData.Email = req.Email
 		a.RenderLogin(c, authData)
@@ -136,6 +151,14 @@ func (a *AuthController) LoginHandler(c *gin.Context) {
 	// Authenticate the user
 	user, err := a.db.AuthenticateUser(c.Request.Context(), req.Email, req.Password)
 	if err != nil || user == nil {
+		logger.Warn("Authentication failed", map[string]interface{}{
+			"email": req.Email,
+		})
+
+		// Use our custom auth error
+		c.Error(customerrors.NewAuthError("Invalid email or password"))
+
+		// Also render the form with the error
 		authData := data.NewAuthData().WithTitle("Login").WithError("Invalid email or password")
 		authData.Email = req.Email
 		a.RenderLogin(c, authData)
@@ -155,6 +178,11 @@ func (a *AuthController) LoginHandler(c *gin.Context) {
 		Path:     "/",
 		HttpOnly: true,
 		MaxAge:   int(24 * time.Hour.Seconds()),
+	})
+
+	logger.Info("User logged in", map[string]interface{}{
+		"user_id": user.ID,
+		"email":   user.Email,
 	})
 
 	// Redirect to home page
@@ -441,7 +469,7 @@ func (a *AuthController) ResetPasswordHandler(c *gin.Context) {
 			}
 			errMsg = "Invalid recovery token"
 		} else {
-			errMsg = "Failed to reset password"
+			errMsg = "An error occurred while resetting your password"
 		}
 		authData := data.NewAuthData().WithTitle("Reset Password").WithError(errMsg)
 		authData.Token = req.Token

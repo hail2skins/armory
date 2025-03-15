@@ -12,6 +12,7 @@ import (
 	authviews "github.com/hail2skins/armory/cmd/web/views/auth"
 	"github.com/hail2skins/armory/cmd/web/views/data"
 	"github.com/hail2skins/armory/internal/controller"
+	"github.com/hail2skins/armory/internal/middleware"
 )
 
 // HTMLRender is an interface for HTML renderers
@@ -27,6 +28,9 @@ type Render interface {
 
 func (s *Server) RegisterRoutes() http.Handler {
 	r := gin.Default()
+
+	// Set up error handling middleware
+	middleware.SetupErrorHandling(r)
 
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"http://localhost:5173"}, // Add your frontend URL
