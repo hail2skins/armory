@@ -27,6 +27,11 @@ func (m *mockEmailService) SendPasswordResetEmail(email, token string) error {
 	return args.Error(0)
 }
 
+func (m *mockEmailService) SendContactEmail(name, email, subject, message string) error {
+	args := m.Called(name, email, subject, message)
+	return args.Error(0)
+}
+
 func TestVerificationFlow(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	mockDB := new(MockDB)

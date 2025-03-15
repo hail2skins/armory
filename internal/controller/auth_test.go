@@ -113,6 +113,11 @@ func (m *MockEmailService) SendPasswordResetEmail(email, token string) error {
 	return args.Error(0)
 }
 
+func (m *MockEmailService) SendContactEmail(name, email, subject, message string) error {
+	args := m.Called(name, email, subject, message)
+	return args.Error(0)
+}
+
 func TestAuthenticationFlow(t *testing.T) {
 	// Setup
 	gin.SetMode(gin.TestMode)

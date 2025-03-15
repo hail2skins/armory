@@ -19,6 +19,7 @@ var (
 type EmailService interface {
 	SendVerificationEmail(email, token string) error
 	SendPasswordResetEmail(email, token string) error
+	SendContactEmail(name, email, subject, message string) error
 }
 
 // MailjetService implements EmailService using Mailjet
@@ -27,6 +28,7 @@ type MailjetService struct {
 	senderName  string
 	senderEmail string
 	baseURL     string
+	adminEmail  string
 }
 
 // NewMailjetService creates a new MailjetService
@@ -36,6 +38,7 @@ func NewMailjetService() (*MailjetService, error) {
 	senderEmail := os.Getenv("MAILJET_SENDER_EMAIL")
 	senderName := os.Getenv("MAILJET_SENDER_NAME")
 	baseURL := os.Getenv("APP_BASE_URL")
+	adminEmail := os.Getenv("ADMIN_EMAIL")
 
 	if apiKey == "" || apiSecret == "" {
 		return nil, errors.New("Mailjet API key and secret are required")
@@ -46,6 +49,9 @@ func NewMailjetService() (*MailjetService, error) {
 	if baseURL == "" {
 		return nil, errors.New("APP_BASE_URL is required")
 	}
+	if adminEmail == "" {
+		return nil, errors.New("ADMIN_EMAIL is required")
+	}
 
 	client := mailjet.NewMailjetClient(apiKey, apiSecret)
 	return &MailjetService{
@@ -53,6 +59,7 @@ func NewMailjetService() (*MailjetService, error) {
 		senderName:  senderName,
 		senderEmail: senderEmail,
 		baseURL:     baseURL,
+		adminEmail:  adminEmail,
 	}, nil
 }
 
@@ -117,6 +124,54 @@ func (s *MailjetService) SendPasswordResetEmail(email, token string) error {
 			<p><a href="%s/reset-password?token=%s">Reset Password</a></p>
 			<p>If you did not request this password reset, please ignore this email.</p>
 		`, s.baseURL, token),
+	}
+
+	messages := &mailjet.MessagesV31{Info: []mailjet.InfoMessagesV31{*data}}
+	_, err := s.client.SendMailV31(messages)
+	if err != nil {
+		return fmt.Errorf("%w: %v", ErrEmailSendFailed, err)
+	}
+
+	return nil
+}
+
+// SendContactEmail sends a contact form submission to the admin
+func (s *MailjetService) SendContactEmail(name, email, subject, message string) error {
+	// Check if the service is properly configured
+	if s.client == nil || s.adminEmail == "" {
+		return ErrEmailServiceNotConfigured
+	}
+
+	// Create the email content
+	emailSubject := fmt.Sprintf("Contact Form: %s", subject)
+	textContent := fmt.Sprintf("Name: %s\nEmail: %s\nSubject: %s\nMessage: %s", name, email, subject, message)
+	htmlContent := fmt.Sprintf(`
+		<h3>Contact Form Submission</h3>
+		<p><strong>Name:</strong> %s</p>
+		<p><strong>Email:</strong> %s</p>
+		<p><strong>Subject:</strong> %s</p>
+		<p><strong>Message:</strong></p>
+		<p>%s</p>
+	`, name, email, subject, message)
+
+	// Create the email data
+	data := &mailjet.InfoMessagesV31{
+		From: &mailjet.RecipientV31{
+			Email: s.senderEmail,
+			Name:  s.senderName,
+		},
+		To: &mailjet.RecipientsV31{
+			mailjet.RecipientV31{
+				Email: s.adminEmail,
+			},
+		},
+		ReplyTo: &mailjet.RecipientV31{
+			Email: email,
+			Name:  name,
+		},
+		Subject:  emailSubject,
+		TextPart: textContent,
+		HTMLPart: htmlContent,
 	}
 
 	messages := &mailjet.MessagesV31{Info: []mailjet.InfoMessagesV31{*data}}

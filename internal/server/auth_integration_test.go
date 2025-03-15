@@ -35,6 +35,13 @@ type MockEmailService struct {
 
 	IsConfiguredCalled bool
 	IsConfiguredResult bool
+
+	SendContactEmailCalled  bool
+	SendContactEmailName    string
+	SendContactEmailEmail   string
+	SendContactEmailSubject string
+	SendContactEmailMessage string
+	SendContactEmailError   error
 }
 
 // SendVerificationEmail is a mock implementation that records the call
@@ -51,6 +58,16 @@ func (m *MockEmailService) SendPasswordResetEmail(email, token string) error {
 	m.SendPasswordResetEmailEmail = email
 	m.SendPasswordResetEmailToken = token
 	return m.SendPasswordResetEmailError
+}
+
+// SendContactEmail is a mock implementation that records the call
+func (m *MockEmailService) SendContactEmail(name, email, subject, message string) error {
+	m.SendContactEmailCalled = true
+	m.SendContactEmailName = name
+	m.SendContactEmailEmail = email
+	m.SendContactEmailSubject = subject
+	m.SendContactEmailMessage = message
+	return m.SendContactEmailError
 }
 
 // MockDBWithContext is a mock implementation of the database.Service interface with context

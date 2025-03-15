@@ -7,6 +7,7 @@ require (
 	github.com/gin-contrib/cors v1.7.3
 	github.com/gin-gonic/gin v1.10.0
 	github.com/joho/godotenv v1.5.1
+	github.com/mailjet/mailjet-apiv3-go/v4 v4.0.7
 	github.com/shaj13/go-guardian/v2 v2.11.6
 	github.com/shaj13/libcache v1.2.1
 	github.com/stretchr/testify v1.10.0
@@ -14,6 +15,7 @@ require (
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.35.0
 	golang.org/x/crypto v0.36.0
 	gorm.io/driver/postgres v1.5.11
+	gorm.io/driver/sqlite v1.5.7
 	gorm.io/gorm v1.25.12
 )
 
@@ -58,8 +60,6 @@ require (
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
-	github.com/mailjet/mailjet-apiv3-go v0.0.0-20201009050126-c24bc15a9394 // indirect
-	github.com/mailjet/mailjet-apiv3-go/v4 v4.0.7 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-sqlite3 v1.14.22 // indirect
 	github.com/moby/docker-image-spec v1.3.1 // indirect
@@ -96,5 +96,4 @@ require (
 	golang.org/x/text v0.23.0 // indirect
 	google.golang.org/protobuf v1.36.5 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	gorm.io/driver/sqlite v1.5.7 // indirect
 )
