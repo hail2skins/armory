@@ -11,6 +11,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/hail2skins/armory/internal/database"
+	"github.com/hail2skins/armory/internal/models"
 	"github.com/hail2skins/armory/internal/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -139,6 +140,107 @@ func (m *MockDB) GetUserByStripeCustomerID(customerID string) (*database.User, e
 		return nil, args.Error(1)
 	}
 	return args.Get(0).(*database.User), args.Error(1)
+}
+
+// Add admin methods to MockDB
+
+// FindAllManufacturers retrieves all manufacturers
+func (m *MockDB) FindAllManufacturers() ([]models.Manufacturer, error) {
+	args := m.Called()
+	return args.Get(0).([]models.Manufacturer), args.Error(1)
+}
+
+// FindManufacturerByID retrieves a manufacturer by ID
+func (m *MockDB) FindManufacturerByID(id uint) (*models.Manufacturer, error) {
+	args := m.Called(id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*models.Manufacturer), args.Error(1)
+}
+
+// CreateManufacturer creates a new manufacturer
+func (m *MockDB) CreateManufacturer(manufacturer *models.Manufacturer) error {
+	args := m.Called(manufacturer)
+	return args.Error(0)
+}
+
+// UpdateManufacturer updates a manufacturer
+func (m *MockDB) UpdateManufacturer(manufacturer *models.Manufacturer) error {
+	args := m.Called(manufacturer)
+	return args.Error(0)
+}
+
+// DeleteManufacturer deletes a manufacturer
+func (m *MockDB) DeleteManufacturer(id uint) error {
+	args := m.Called(id)
+	return args.Error(0)
+}
+
+// FindAllCalibers retrieves all calibers
+func (m *MockDB) FindAllCalibers() ([]models.Caliber, error) {
+	args := m.Called()
+	return args.Get(0).([]models.Caliber), args.Error(1)
+}
+
+// FindCaliberByID retrieves a caliber by ID
+func (m *MockDB) FindCaliberByID(id uint) (*models.Caliber, error) {
+	args := m.Called(id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*models.Caliber), args.Error(1)
+}
+
+// CreateCaliber creates a new caliber
+func (m *MockDB) CreateCaliber(caliber *models.Caliber) error {
+	args := m.Called(caliber)
+	return args.Error(0)
+}
+
+// UpdateCaliber updates a caliber
+func (m *MockDB) UpdateCaliber(caliber *models.Caliber) error {
+	args := m.Called(caliber)
+	return args.Error(0)
+}
+
+// DeleteCaliber deletes a caliber
+func (m *MockDB) DeleteCaliber(id uint) error {
+	args := m.Called(id)
+	return args.Error(0)
+}
+
+// FindAllWeaponTypes retrieves all weapon types
+func (m *MockDB) FindAllWeaponTypes() ([]models.WeaponType, error) {
+	args := m.Called()
+	return args.Get(0).([]models.WeaponType), args.Error(1)
+}
+
+// FindWeaponTypeByID retrieves a weapon type by ID
+func (m *MockDB) FindWeaponTypeByID(id uint) (*models.WeaponType, error) {
+	args := m.Called(id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*models.WeaponType), args.Error(1)
+}
+
+// CreateWeaponType creates a new weapon type
+func (m *MockDB) CreateWeaponType(weaponType *models.WeaponType) error {
+	args := m.Called(weaponType)
+	return args.Error(0)
+}
+
+// UpdateWeaponType updates a weapon type
+func (m *MockDB) UpdateWeaponType(weaponType *models.WeaponType) error {
+	args := m.Called(weaponType)
+	return args.Error(0)
+}
+
+// DeleteWeaponType deletes a weapon type
+func (m *MockDB) DeleteWeaponType(id uint) error {
+	args := m.Called(id)
+	return args.Error(0)
 }
 
 // MockEmailService is a mock implementation of the email.EmailService interface

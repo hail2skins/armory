@@ -13,6 +13,7 @@ import (
 	"github.com/hail2skins/armory/cmd/web/views/data"
 	"github.com/hail2skins/armory/internal/controller"
 	"github.com/hail2skins/armory/internal/database"
+	"github.com/hail2skins/armory/internal/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -192,6 +193,107 @@ func (m *MockDBWithContext) GetUserByStripeCustomerID(customerID string) (*datab
 		return nil, args.Error(1)
 	}
 	return args.Get(0).(*database.User), args.Error(1)
+}
+
+// Add admin methods to MockDBWithContext
+
+// FindAllManufacturers retrieves all manufacturers
+func (m *MockDBWithContext) FindAllManufacturers() ([]models.Manufacturer, error) {
+	args := m.Called()
+	return args.Get(0).([]models.Manufacturer), args.Error(1)
+}
+
+// FindManufacturerByID retrieves a manufacturer by ID
+func (m *MockDBWithContext) FindManufacturerByID(id uint) (*models.Manufacturer, error) {
+	args := m.Called(id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*models.Manufacturer), args.Error(1)
+}
+
+// CreateManufacturer creates a new manufacturer
+func (m *MockDBWithContext) CreateManufacturer(manufacturer *models.Manufacturer) error {
+	args := m.Called(manufacturer)
+	return args.Error(0)
+}
+
+// UpdateManufacturer updates a manufacturer
+func (m *MockDBWithContext) UpdateManufacturer(manufacturer *models.Manufacturer) error {
+	args := m.Called(manufacturer)
+	return args.Error(0)
+}
+
+// DeleteManufacturer deletes a manufacturer
+func (m *MockDBWithContext) DeleteManufacturer(id uint) error {
+	args := m.Called(id)
+	return args.Error(0)
+}
+
+// FindAllCalibers retrieves all calibers
+func (m *MockDBWithContext) FindAllCalibers() ([]models.Caliber, error) {
+	args := m.Called()
+	return args.Get(0).([]models.Caliber), args.Error(1)
+}
+
+// FindCaliberByID retrieves a caliber by ID
+func (m *MockDBWithContext) FindCaliberByID(id uint) (*models.Caliber, error) {
+	args := m.Called(id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*models.Caliber), args.Error(1)
+}
+
+// CreateCaliber creates a new caliber
+func (m *MockDBWithContext) CreateCaliber(caliber *models.Caliber) error {
+	args := m.Called(caliber)
+	return args.Error(0)
+}
+
+// UpdateCaliber updates a caliber
+func (m *MockDBWithContext) UpdateCaliber(caliber *models.Caliber) error {
+	args := m.Called(caliber)
+	return args.Error(0)
+}
+
+// DeleteCaliber deletes a caliber
+func (m *MockDBWithContext) DeleteCaliber(id uint) error {
+	args := m.Called(id)
+	return args.Error(0)
+}
+
+// FindAllWeaponTypes retrieves all weapon types
+func (m *MockDBWithContext) FindAllWeaponTypes() ([]models.WeaponType, error) {
+	args := m.Called()
+	return args.Get(0).([]models.WeaponType), args.Error(1)
+}
+
+// FindWeaponTypeByID retrieves a weapon type by ID
+func (m *MockDBWithContext) FindWeaponTypeByID(id uint) (*models.WeaponType, error) {
+	args := m.Called(id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*models.WeaponType), args.Error(1)
+}
+
+// CreateWeaponType creates a new weapon type
+func (m *MockDBWithContext) CreateWeaponType(weaponType *models.WeaponType) error {
+	args := m.Called(weaponType)
+	return args.Error(0)
+}
+
+// UpdateWeaponType updates a weapon type
+func (m *MockDBWithContext) UpdateWeaponType(weaponType *models.WeaponType) error {
+	args := m.Called(weaponType)
+	return args.Error(0)
+}
+
+// DeleteWeaponType deletes a weapon type
+func (m *MockDBWithContext) DeleteWeaponType(id uint) error {
+	args := m.Called(id)
+	return args.Error(0)
 }
 
 // setupTestRouter creates a test router with real authentication handling

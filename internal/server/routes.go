@@ -46,6 +46,9 @@ func (s *Server) RegisterRoutes() http.Handler {
 	// Register payment routes
 	s.RegisterPaymentRoutes(r, paymentController)
 
+	// Register admin routes
+	s.RegisterAdminRoutes(r, authController)
+
 	return r
 }
 

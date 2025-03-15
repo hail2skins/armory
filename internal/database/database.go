@@ -13,6 +13,8 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 
+	"github.com/hail2skins/armory/internal/database/seed"
+	"github.com/hail2skins/armory/internal/models"
 	_ "github.com/joho/godotenv/autoload"
 )
 
@@ -28,6 +30,9 @@ type Service interface {
 
 	// Include UserService methods
 	UserService
+
+	// Include AdminService methods
+	AdminService
 
 	// Payment-related methods
 	CreatePayment(payment *Payment) error
@@ -104,12 +109,15 @@ func New() Service {
 		log.Printf("Error auto migrating schema: %v", err)
 	}
 
+	// Seed the database with initial data
+	seed.RunSeeds(dbInstance.db)
+
 	return dbInstance
 }
 
 // AutoMigrate automatically migrates the schema
 func (s *service) AutoMigrate() error {
-	return s.db.AutoMigrate(&User{}, &Payment{})
+	return s.db.AutoMigrate(&User{}, &Payment{}, &models.Manufacturer{}, &models.Caliber{}, &models.WeaponType{})
 }
 
 // Health checks the health of the database connection by pinging the database.

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/hail2skins/armory/internal/database"
+	"github.com/hail2skins/armory/internal/models"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -52,7 +53,7 @@ func NewTestDB() *TestDB {
 	}
 
 	// Auto migrate the schema
-	if err := db.AutoMigrate(&database.User{}); err != nil {
+	if err := db.AutoMigrate(&database.User{}, &models.Manufacturer{}, &models.Caliber{}, &models.WeaponType{}); err != nil {
 		log.Fatalf("Error auto migrating schema: %v", err)
 	}
 
@@ -157,95 +158,154 @@ func (s *TestService) AuthenticateUser(ctx context.Context, email, password stri
 	return user, nil
 }
 
-func (s *TestService) GetUserByRecoveryToken(ctx context.Context, token string) (*database.User, error) {
-	var user database.User
-	result := s.db.Where("recovery_token = ?", token).First(&user)
-	if result.Error != nil {
-		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			return nil, database.ErrInvalidToken
-		}
-		return nil, result.Error
-	}
-	return &user, nil
-}
-
+// GetUserByVerificationToken gets a user by verification token
 func (s *TestService) GetUserByVerificationToken(ctx context.Context, token string) (*database.User, error) {
 	var user database.User
-	result := s.db.Where("verification_token = ?", token).First(&user)
-	if result.Error != nil {
-		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			return nil, database.ErrInvalidToken
+	if err := s.db.Where("verification_token = ?", token).First(&user).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, nil
 		}
-		return nil, result.Error
+		return nil, err
 	}
 	return &user, nil
 }
 
+// GetUserByRecoveryToken gets a user by recovery token
+func (s *TestService) GetUserByRecoveryToken(ctx context.Context, token string) (*database.User, error) {
+	var user database.User
+	if err := s.db.Where("recovery_token = ?", token).First(&user).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &user, nil
+}
+
+// VerifyUserEmail verifies a user's email
 func (s *TestService) VerifyUserEmail(ctx context.Context, token string) (*database.User, error) {
 	user, err := s.GetUserByVerificationToken(ctx, token)
 	if err != nil {
 		return nil, err
 	}
+	if user == nil {
+		return nil, nil
+	}
+
+	// Check if the token is expired
+	if user.VerificationTokenExpiry.Before(time.Now()) {
+		return nil, errors.New("verification token has expired")
+	}
+
+	// Mark the user as verified
 	user.Verified = true
 	user.VerificationToken = ""
+	user.VerificationTokenExpiry = time.Time{}
+
+	// Update the user
 	if err := s.UpdateUser(ctx, user); err != nil {
 		return nil, err
 	}
+
 	return user, nil
 }
 
+// UpdateUser updates a user
+func (s *TestService) UpdateUser(ctx context.Context, user *database.User) error {
+	return s.db.Save(user).Error
+}
+
+// RequestPasswordReset requests a password reset
 func (s *TestService) RequestPasswordReset(ctx context.Context, email string) (*database.User, error) {
 	user, err := s.GetUserByEmail(ctx, email)
 	if err != nil {
 		return nil, err
 	}
+	if user == nil {
+		return nil, nil
+	}
+
+	// Generate a recovery token
 	token := make([]byte, 32)
 	if _, err := rand.Read(token); err != nil {
 		return nil, err
 	}
-	user.RecoveryToken = base64.URLEncoding.EncodeToString(token)
-	user.RecoveryTokenExpiry = time.Now().Add(1 * time.Hour)
+	recoveryToken := base64.URLEncoding.EncodeToString(token)
+
+	// Set the recovery token and expiry
+	user.RecoveryToken = recoveryToken
+	user.RecoveryTokenExpiry = time.Now().Add(24 * time.Hour)
+
+	// Update the user
 	if err := s.UpdateUser(ctx, user); err != nil {
 		return nil, err
 	}
+
 	return user, nil
 }
 
+// ResetPassword resets a user's password
 func (s *TestService) ResetPassword(ctx context.Context, token, newPassword string) error {
 	user, err := s.GetUserByRecoveryToken(ctx, token)
 	if err != nil {
 		return err
 	}
-	if time.Now().After(user.RecoveryTokenExpiry) {
-		return database.ErrTokenExpired
+	if user == nil {
+		return errors.New("invalid recovery token")
 	}
-	if err := user.SetPassword(newPassword); err != nil {
+
+	// Check if the token is expired
+	if user.RecoveryTokenExpiry.Before(time.Now()) {
+		return errors.New("recovery token has expired")
+	}
+
+	// Hash the new password
+	hashedPassword, err := database.HashPassword(newPassword)
+	if err != nil {
 		return err
 	}
+
+	// Update the user
+	user.Password = hashedPassword
 	user.RecoveryToken = ""
 	user.RecoveryTokenExpiry = time.Time{}
+
 	return s.UpdateUser(ctx, user)
 }
 
-func (s *TestService) UpdateUser(ctx context.Context, user *database.User) error {
-	return s.db.Save(user).Error
+// GetUserByID gets a user by ID
+func (s *TestService) GetUserByID(id uint) (*database.User, error) {
+	var user database.User
+	if err := s.db.First(&user, id).Error; err != nil {
+		return nil, err
+	}
+	return &user, nil
 }
 
-// CreatePayment creates a new payment record
+// GetUserByStripeCustomerID gets a user by Stripe customer ID
+func (s *TestService) GetUserByStripeCustomerID(customerID string) (*database.User, error) {
+	var user database.User
+	if err := s.db.Where("stripe_customer_id = ?", customerID).First(&user).Error; err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
+// CreatePayment creates a payment
 func (s *TestService) CreatePayment(payment *database.Payment) error {
 	return s.db.Create(payment).Error
 }
 
-// GetPaymentsByUserID retrieves all payments for a user
+// GetPaymentsByUserID gets payments by user ID
 func (s *TestService) GetPaymentsByUserID(userID uint) ([]database.Payment, error) {
 	var payments []database.Payment
-	if err := s.db.Where("user_id = ?", userID).Order("created_at desc").Find(&payments).Error; err != nil {
+	if err := s.db.Where("user_id = ?", userID).Find(&payments).Error; err != nil {
 		return nil, err
 	}
 	return payments, nil
 }
 
-// FindPaymentByID retrieves a payment by its ID
+// FindPaymentByID finds a payment by ID
 func (s *TestService) FindPaymentByID(id uint) (*database.Payment, error) {
 	var payment database.Payment
 	if err := s.db.First(&payment, id).Error; err != nil {
@@ -254,31 +314,106 @@ func (s *TestService) FindPaymentByID(id uint) (*database.Payment, error) {
 	return &payment, nil
 }
 
-// UpdatePayment updates an existing payment in the database
+// UpdatePayment updates a payment
 func (s *TestService) UpdatePayment(payment *database.Payment) error {
 	return s.db.Save(payment).Error
 }
 
-// GetUserByID retrieves a user by their ID
-func (s *TestService) GetUserByID(id uint) (*database.User, error) {
-	var user database.User
-	if err := s.db.First(&user, id).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, nil
-		}
+// FindAllManufacturers retrieves all manufacturers
+func (s *TestService) FindAllManufacturers() ([]models.Manufacturer, error) {
+	var manufacturers []models.Manufacturer
+	if err := s.db.Find(&manufacturers).Error; err != nil {
 		return nil, err
 	}
-	return &user, nil
+	return manufacturers, nil
 }
 
-// GetUserByStripeCustomerID retrieves a user by their Stripe customer ID
-func (s *TestService) GetUserByStripeCustomerID(customerID string) (*database.User, error) {
-	var user database.User
-	if err := s.db.Where("stripe_customer_id = ?", customerID).First(&user).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, nil
-		}
+// FindManufacturerByID retrieves a manufacturer by ID
+func (s *TestService) FindManufacturerByID(id uint) (*models.Manufacturer, error) {
+	var manufacturer models.Manufacturer
+	if err := s.db.First(&manufacturer, id).Error; err != nil {
 		return nil, err
 	}
-	return &user, nil
+	return &manufacturer, nil
+}
+
+// CreateManufacturer creates a new manufacturer
+func (s *TestService) CreateManufacturer(manufacturer *models.Manufacturer) error {
+	return s.db.Create(manufacturer).Error
+}
+
+// UpdateManufacturer updates a manufacturer
+func (s *TestService) UpdateManufacturer(manufacturer *models.Manufacturer) error {
+	return s.db.Save(manufacturer).Error
+}
+
+// DeleteManufacturer deletes a manufacturer
+func (s *TestService) DeleteManufacturer(id uint) error {
+	return s.db.Delete(&models.Manufacturer{}, id).Error
+}
+
+// FindAllCalibers retrieves all calibers
+func (s *TestService) FindAllCalibers() ([]models.Caliber, error) {
+	var calibers []models.Caliber
+	if err := s.db.Find(&calibers).Error; err != nil {
+		return nil, err
+	}
+	return calibers, nil
+}
+
+// FindCaliberByID retrieves a caliber by ID
+func (s *TestService) FindCaliberByID(id uint) (*models.Caliber, error) {
+	var caliber models.Caliber
+	if err := s.db.First(&caliber, id).Error; err != nil {
+		return nil, err
+	}
+	return &caliber, nil
+}
+
+// CreateCaliber creates a new caliber
+func (s *TestService) CreateCaliber(caliber *models.Caliber) error {
+	return s.db.Create(caliber).Error
+}
+
+// UpdateCaliber updates a caliber
+func (s *TestService) UpdateCaliber(caliber *models.Caliber) error {
+	return s.db.Save(caliber).Error
+}
+
+// DeleteCaliber deletes a caliber
+func (s *TestService) DeleteCaliber(id uint) error {
+	return s.db.Delete(&models.Caliber{}, id).Error
+}
+
+// FindAllWeaponTypes retrieves all weapon types
+func (s *TestService) FindAllWeaponTypes() ([]models.WeaponType, error) {
+	var weaponTypes []models.WeaponType
+	if err := s.db.Find(&weaponTypes).Error; err != nil {
+		return nil, err
+	}
+	return weaponTypes, nil
+}
+
+// FindWeaponTypeByID retrieves a weapon type by ID
+func (s *TestService) FindWeaponTypeByID(id uint) (*models.WeaponType, error) {
+	var weaponType models.WeaponType
+	if err := s.db.First(&weaponType, id).Error; err != nil {
+		return nil, err
+	}
+	return &weaponType, nil
+}
+
+// CreateWeaponType creates a new weapon type
+func (s *TestService) CreateWeaponType(weaponType *models.WeaponType) error {
+	return s.db.Create(weaponType).Error
+}
+
+// UpdateWeaponType updates a weapon type
+func (s *TestService) UpdateWeaponType(weaponType *models.WeaponType) error {
+	return s.db.Save(weaponType).Error
+}
+
+// DeleteWeaponType deletes a weapon type
+func (s *TestService) DeleteWeaponType(id uint) error {
+	return s.db.Delete(&models.WeaponType{}, id).Error
 }
