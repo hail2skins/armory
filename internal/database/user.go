@@ -32,6 +32,22 @@ type User struct {
 	RecoverySentAt          time.Time
 	LoginAttempts           int `gorm:"default:0"`
 	LastLoginAttempt        time.Time
+	// Stripe-related fields
+	StripeCustomerID     string
+	StripeSubscriptionID string
+	SubscriptionTier     string `gorm:"default:'free'"`
+	SubscriptionStatus   string
+	SubscriptionEndDate  time.Time
+}
+
+// GetUserName returns the user's email
+func (u *User) GetUserName() string {
+	return u.Email
+}
+
+// GetID returns the user's ID
+func (u *User) GetID() uint {
+	return u.ID
 }
 
 // BeforeCreate is a GORM hook that hashes the password before creating a user
@@ -141,4 +157,46 @@ func (u *User) IsLocked() bool {
 		return true
 	}
 	return false
+}
+
+// HasActiveSubscription returns true if the user has an active subscription
+func (u *User) HasActiveSubscription() bool {
+	if u.SubscriptionTier == "free" {
+		return false
+	}
+
+	// Lifetime subscriptions are always active
+	if u.SubscriptionTier == "lifetime" || u.SubscriptionTier == "premium_lifetime" {
+		return true
+	}
+
+	// Check if subscription is active based on status and end date
+	if u.SubscriptionStatus == "active" && (u.SubscriptionEndDate.IsZero() || time.Now().Before(u.SubscriptionEndDate)) {
+		return true
+	}
+
+	return false
+}
+
+// CanSubscribeToTier checks if a user can subscribe to a specific tier based on their current subscription
+func (u *User) CanSubscribeToTier(tier string) bool {
+	// Users can always upgrade to a higher tier
+	switch u.SubscriptionTier {
+	case "free":
+		return true // Free users can subscribe to any tier
+	case "monthly":
+		// Monthly users can upgrade to yearly, lifetime, or premium_lifetime
+		return tier != "monthly"
+	case "yearly":
+		// Yearly users can upgrade to lifetime or premium_lifetime
+		return tier != "monthly" && tier != "yearly"
+	case "lifetime":
+		// Lifetime users can only upgrade to premium_lifetime
+		return tier == "premium_lifetime"
+	case "premium_lifetime":
+		// Premium lifetime users cannot subscribe to any other tier
+		return false
+	default:
+		return true
+	}
 }

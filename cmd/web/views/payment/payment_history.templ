@@ -1,0 +1,113 @@
+package payment
+
+import (
+	"fmt"
+	"github.com/hail2skins/armory/cmd/web/views/data"
+	"github.com/hail2skins/armory/cmd/web/views/partials"
+	"github.com/hail2skins/armory/internal/database"
+)
+
+// PaymentHistoryData is the data for the payment history page
+type PaymentHistoryData struct {
+	data.AuthData
+	Payments []database.Payment
+}
+
+// Helper functions
+templ formatAmount(amount int64, currency string) {
+	if currency == "usd" {
+		{ fmt.Sprintf("$%.2f", float64(amount) / 100.0) }
+	} else {
+		{ fmt.Sprintf("%.2f %s", float64(amount) / 100.0, currency) }
+	}
+}
+
+templ formatSubscriptionTier(tier string) {
+	if tier == "free" {
+		{ "Free Tier" }
+	} else if tier == "monthly" {
+		{ "Liking It" }
+	} else if tier == "yearly" {
+		{ "Loving It" }
+	} else if tier == "lifetime" {
+		{ "Supporter" }
+	} else if tier == "premium_lifetime" {
+		{ "Big Baller" }
+	} else {
+		{ "Unknown Tier" }
+	}
+}
+
+templ statusBadge(status string) {
+	if status == "succeeded" {
+		<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+			{ status }
+		</span>
+	} else if status == "pending" {
+		<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
+			{ status }
+		</span>
+	} else if status == "failed" {
+		<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
+			{ status }
+		</span>
+	} else if status == "refunded" {
+		<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+			{ status }
+		</span>
+	} else {
+		<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
+			{ status }
+		</span>
+	}
+}
+
+// PaymentHistory renders the payment history page
+templ PaymentHistory(data PaymentHistoryData) {
+	@partials.Base(data.AuthData, paymentHistoryContent(data))
+}
+
+templ paymentHistoryContent(data PaymentHistoryData) {
+	<div class="bg-white py-12">
+		<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+			<h1 class="text-3xl font-extrabold text-gray-900 mb-8">Payment History</h1>
+			
+			if len(data.Payments) == 0 {
+				<div class="text-center py-8">
+					<p class="text-gray-500">You don't have any payments yet.</p>
+				</div>
+			} else {
+				<div class="overflow-x-auto">
+					<table class="min-w-full divide-y divide-gray-200">
+						<thead class="bg-gray-50">
+							<tr>
+								<th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+								<th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+								<th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+								<th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+							</tr>
+						</thead>
+						<tbody class="bg-white divide-y divide-gray-200">
+							for _, payment := range data.Payments {
+								<tr class="hover:bg-gray-50">
+									<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+										{ payment.CreatedAt.Format("Jan 2, 2006") }
+									</td>
+									<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+										{ payment.Description }
+									</td>
+									<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+										@formatAmount(payment.Amount, payment.Currency)
+									</td>
+									<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+										@statusBadge(payment.Status)
+									</td>
+								</tr>
+							}
+						</tbody>
+					</table>
+				</div>
+			}
+		</div>
+	</div>
+} 

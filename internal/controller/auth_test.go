@@ -98,6 +98,49 @@ func (m *MockDB) UpdateUser(ctx context.Context, user *database.User) error {
 	return args.Error(0)
 }
 
+// Payment-related methods
+func (m *MockDB) CreatePayment(payment *database.Payment) error {
+	args := m.Called(payment)
+	return args.Error(0)
+}
+
+func (m *MockDB) GetPaymentsByUserID(userID uint) ([]database.Payment, error) {
+	args := m.Called(userID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]database.Payment), args.Error(1)
+}
+
+func (m *MockDB) FindPaymentByID(id uint) (*database.Payment, error) {
+	args := m.Called(id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*database.Payment), args.Error(1)
+}
+
+func (m *MockDB) UpdatePayment(payment *database.Payment) error {
+	args := m.Called(payment)
+	return args.Error(0)
+}
+
+func (m *MockDB) GetUserByID(id uint) (*database.User, error) {
+	args := m.Called(id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*database.User), args.Error(1)
+}
+
+func (m *MockDB) GetUserByStripeCustomerID(customerID string) (*database.User, error) {
+	args := m.Called(customerID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*database.User), args.Error(1)
+}
+
 // MockEmailService is a mock implementation of the email.EmailService interface
 type MockEmailService struct {
 	mock.Mock

@@ -230,3 +230,55 @@ func (s *TestService) ResetPassword(ctx context.Context, token, newPassword stri
 func (s *TestService) UpdateUser(ctx context.Context, user *database.User) error {
 	return s.db.Save(user).Error
 }
+
+// CreatePayment creates a new payment record
+func (s *TestService) CreatePayment(payment *database.Payment) error {
+	return s.db.Create(payment).Error
+}
+
+// GetPaymentsByUserID retrieves all payments for a user
+func (s *TestService) GetPaymentsByUserID(userID uint) ([]database.Payment, error) {
+	var payments []database.Payment
+	if err := s.db.Where("user_id = ?", userID).Order("created_at desc").Find(&payments).Error; err != nil {
+		return nil, err
+	}
+	return payments, nil
+}
+
+// FindPaymentByID retrieves a payment by its ID
+func (s *TestService) FindPaymentByID(id uint) (*database.Payment, error) {
+	var payment database.Payment
+	if err := s.db.First(&payment, id).Error; err != nil {
+		return nil, err
+	}
+	return &payment, nil
+}
+
+// UpdatePayment updates an existing payment in the database
+func (s *TestService) UpdatePayment(payment *database.Payment) error {
+	return s.db.Save(payment).Error
+}
+
+// GetUserByID retrieves a user by their ID
+func (s *TestService) GetUserByID(id uint) (*database.User, error) {
+	var user database.User
+	if err := s.db.First(&user, id).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &user, nil
+}
+
+// GetUserByStripeCustomerID retrieves a user by their Stripe customer ID
+func (s *TestService) GetUserByStripeCustomerID(customerID string) (*database.User, error) {
+	var user database.User
+	if err := s.db.Where("stripe_customer_id = ?", customerID).First(&user).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &user, nil
+}

@@ -28,6 +28,16 @@ type Service interface {
 
 	// Include UserService methods
 	UserService
+
+	// Payment-related methods
+	CreatePayment(payment *Payment) error
+	GetPaymentsByUserID(userID uint) ([]Payment, error)
+	FindPaymentByID(id uint) (*Payment, error)
+	UpdatePayment(payment *Payment) error
+
+	// Additional user methods
+	GetUserByID(id uint) (*User, error)
+	GetUserByStripeCustomerID(customerID string) (*User, error)
 }
 
 type service struct {
@@ -99,7 +109,7 @@ func New() Service {
 
 // AutoMigrate automatically migrates the schema
 func (s *service) AutoMigrate() error {
-	return s.db.AutoMigrate(&User{})
+	return s.db.AutoMigrate(&User{}, &Payment{})
 }
 
 // Health checks the health of the database connection by pinging the database.

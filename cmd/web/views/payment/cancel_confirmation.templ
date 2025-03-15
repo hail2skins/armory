@@ -1,0 +1,47 @@
+package payment
+
+import (
+	"github.com/hail2skins/armory/cmd/web/views/data"
+	"github.com/hail2skins/armory/cmd/web/views/partials"
+)
+
+// CancelConfirmationData is the data for the subscription cancellation confirmation page
+type CancelConfirmationData struct {
+	data.AuthData
+	SubscriptionTier string
+}
+
+// CancelConfirmation renders the subscription cancellation confirmation page
+templ CancelConfirmation(data CancelConfirmationData) {
+	@partials.Base(data.AuthData, cancelConfirmationContent(data))
+}
+
+templ cancelConfirmationContent(data CancelConfirmationData) {
+	<div class="bg-white py-12">
+		<div class="max-w-md mx-auto px-4 sm:px-6 lg:px-8">
+			<div class="text-center">
+				<h1 class="text-3xl font-extrabold text-gray-900 mb-4">Cancel Subscription</h1>
+				<p class="text-gray-500 mb-8">Are you sure you want to cancel your subscription?</p>
+				
+				<div class="bg-red-50 border border-red-200 rounded-lg p-6 mb-8">
+					<h2 class="text-lg font-medium text-red-800 mb-2">Important Information</h2>
+					<p class="text-sm text-red-700">
+						If you cancel your subscription, you will still have access until the end of your current billing period. After that, your account will revert to the free plan with limited features.
+					</p>
+				</div>
+				
+				<div class="flex flex-col space-y-4">
+					<form action="/subscription/cancel" method="POST">
+						<button type="submit" class="w-full bg-red-600 text-white font-semibold py-2 px-4 rounded hover:bg-red-700 transition duration-200">
+							Yes, Cancel My Subscription
+						</button>
+					</form>
+					
+					<a href="/dashboard" class="w-full bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded hover:bg-gray-300 transition duration-200 text-center">
+						No, Keep My Subscription
+					</a>
+				</div>
+			</div>
+		</div>
+	</div>
+} 

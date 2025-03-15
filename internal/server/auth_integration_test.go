@@ -151,6 +151,49 @@ func (m *MockDBWithContext) ResetPassword(ctx context.Context, token, newPasswor
 	return args.Error(0)
 }
 
+// Payment-related methods
+func (m *MockDBWithContext) CreatePayment(payment *database.Payment) error {
+	args := m.Called(payment)
+	return args.Error(0)
+}
+
+func (m *MockDBWithContext) GetPaymentsByUserID(userID uint) ([]database.Payment, error) {
+	args := m.Called(userID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]database.Payment), args.Error(1)
+}
+
+func (m *MockDBWithContext) FindPaymentByID(id uint) (*database.Payment, error) {
+	args := m.Called(id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*database.Payment), args.Error(1)
+}
+
+func (m *MockDBWithContext) UpdatePayment(payment *database.Payment) error {
+	args := m.Called(payment)
+	return args.Error(0)
+}
+
+func (m *MockDBWithContext) GetUserByID(id uint) (*database.User, error) {
+	args := m.Called(id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*database.User), args.Error(1)
+}
+
+func (m *MockDBWithContext) GetUserByStripeCustomerID(customerID string) (*database.User, error) {
+	args := m.Called(customerID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*database.User), args.Error(1)
+}
+
 // setupTestRouter creates a test router with real authentication handling
 func setupTestRouter(t *testing.T) (*gin.Engine, *MockDBWithContext, *MockEmailService) {
 	// Set Gin to test mode

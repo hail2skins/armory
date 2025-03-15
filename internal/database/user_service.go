@@ -36,6 +36,12 @@ type UserService interface {
 
 	// ResetPassword resets a user's password using a recovery token
 	ResetPassword(ctx context.Context, token, newPassword string) error
+
+	// GetUserByID retrieves a user by their ID
+	GetUserByID(id uint) (*User, error)
+
+	// GetUserByStripeCustomerID retrieves a user by their Stripe customer ID
+	GetUserByStripeCustomerID(customerID string) (*User, error)
 }
 
 // Ensure service implements UserService
@@ -190,4 +196,22 @@ func (s *service) ResetPassword(ctx context.Context, token, newPassword string) 
 	user.RecoverySentAt = time.Time{}
 
 	return s.UpdateUser(ctx, user)
+}
+
+// GetUserByID retrieves a user by their ID
+func (s *service) GetUserByID(id uint) (*User, error) {
+	var user User
+	if err := s.db.First(&user, id).Error; err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
+// GetUserByStripeCustomerID retrieves a user by their Stripe customer ID
+func (s *service) GetUserByStripeCustomerID(customerID string) (*User, error) {
+	var user User
+	if err := s.db.Where("stripe_customer_id = ?", customerID).First(&user).Error; err != nil {
+		return nil, err
+	}
+	return &user, nil
 }
