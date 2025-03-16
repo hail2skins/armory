@@ -9,8 +9,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/hail2skins/armory/internal/database"
 	"github.com/hail2skins/armory/internal/models"
+	"github.com/hail2skins/armory/internal/testutils/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
 
@@ -753,4 +755,196 @@ func TestUnauthenticatedRedirectToLoginWithMessage(t *testing.T) {
 
 	// Verify that all expectations were met
 	mockAuthController.AssertExpectations(t)
+}
+
+// TestOwnerLandingPageShowLinks tests that the owner landing page has show links for guns
+func TestOwnerLandingPageShowLinks(t *testing.T) {
+	// Setup
+	gin.SetMode(gin.TestMode)
+
+	// Create a new mock DB
+	mockDB := new(mocks.MockDB)
+
+	// Create a new mock auth controller
+	mockAuthController := new(mocks.MockAuthController)
+
+	// Create a test user
+	user := &database.User{
+		Model: gorm.Model{
+			ID: 1,
+		},
+		Email: "test@example.com",
+	}
+
+	// Create test guns
+	guns := []models.Gun{
+		{
+			Model: gorm.Model{
+				ID: 1,
+			},
+			Name:         "Test Gun 1",
+			SerialNumber: "123456",
+			OwnerID:      1,
+			WeaponType: models.WeaponType{
+				ID:   1,
+				Type: "Rifle",
+			},
+			Caliber: models.Caliber{
+				Model:   gorm.Model{ID: 1},
+				Caliber: ".223",
+			},
+			Manufacturer: models.Manufacturer{
+				Model: gorm.Model{ID: 1},
+				Name:  "Colt",
+			},
+		},
+		{
+			Model: gorm.Model{
+				ID: 2,
+			},
+			Name:         "Test Gun 2",
+			SerialNumber: "654321",
+			OwnerID:      1,
+			WeaponType: models.WeaponType{
+				ID:   2,
+				Type: "Pistol",
+			},
+			Caliber: models.Caliber{
+				Model:   gorm.Model{ID: 2},
+				Caliber: "9mm",
+			},
+			Manufacturer: models.Manufacturer{
+				Model: gorm.Model{ID: 2},
+				Name:  "Glock",
+			},
+		},
+	}
+
+	// Set up expectations
+	mockAuthInfo := &mocks.MockAuthInfo{}
+	mockAuthInfo.SetUserName("test@example.com")
+
+	// Expect GetCurrentUser to be called and return the mock auth info and true
+	mockAuthController.On("GetCurrentUser", mock.Anything).Return(mockAuthInfo, true)
+
+	// Expect GetUserByEmail to be called with the user's email and return the user
+	mockDB.On("GetUserByEmail", mock.Anything, "test@example.com").Return(user, nil)
+
+	// Create a mock DB connection
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	assert.NoError(t, err)
+
+	// Migrate the schema
+	err = db.AutoMigrate(&models.Gun{}, &models.WeaponType{}, &models.Caliber{}, &models.Manufacturer{})
+	assert.NoError(t, err)
+
+	// Create the guns in the database
+	for _, gun := range guns {
+		err = db.Create(&gun).Error
+		assert.NoError(t, err)
+	}
+
+	// Expect GetDB to be called and return the mock DB connection
+	mockDB.On("GetDB").Return(db)
+
+	// Create a new owner controller with the mock DB
+	ownerController := NewOwnerController(mockDB)
+
+	// Create a new gin context
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+
+	// Create a new request
+	req, _ := http.NewRequest("GET", "/owner", nil)
+	c.Request = req
+
+	// Set the auth controller in the context
+	c.Set("authController", mockAuthController)
+
+	// Call the LandingPage method
+	ownerController.LandingPage(c)
+
+	// Assert that the response code is 200
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	// Assert that the response body contains the expected content
+	body := w.Body.String()
+
+	// Check for the "Show" link in the actions column
+	assert.Contains(t, body, `<a href="/owner/guns/1" class="text-green-600 hover:text-green-800">`)
+	assert.Contains(t, body, `Show`)
+
+	// Check that the last added gun name is a link
+	assert.Contains(t, body, `<a href="/owner/guns/1" class="text-blue-600 hover:underline">`)
+	assert.Contains(t, body, `Test Gun 1`)
+
+	// Verify expectations
+	mockAuthController.AssertExpectations(t)
+	mockDB.AssertExpectations(t)
+}
+
+// TestOwnerLandingPageViewArsenalButton tests that the owner landing page has a View Arsenal button
+func TestOwnerLandingPageViewArsenalButton(t *testing.T) {
+	// Setup
+	gin.SetMode(gin.TestMode)
+
+	// Create a new mock DB
+	mockDB := new(mocks.MockDB)
+
+	// Create a new mock auth controller
+	mockAuthController := new(mocks.MockAuthController)
+
+	// Create a test user
+	user := &database.User{
+		Model: gorm.Model{
+			ID: 1,
+		},
+		Email: "test@example.com",
+	}
+
+	// Set up expectations
+	mockAuthInfo := &mocks.MockAuthInfo{}
+	mockAuthInfo.SetUserName("test@example.com")
+
+	// Expect GetCurrentUser to be called and return the mock auth info and true
+	mockAuthController.On("GetCurrentUser", mock.Anything).Return(mockAuthInfo, true)
+
+	// Expect GetUserByEmail to be called with the user's email and return the user
+	mockDB.On("GetUserByEmail", mock.Anything, "test@example.com").Return(user, nil)
+
+	// Create a mock DB connection
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	assert.NoError(t, err)
+
+	// Expect GetDB to be called and return the mock DB connection
+	mockDB.On("GetDB").Return(db)
+
+	// Create a new owner controller with the mock DB
+	ownerController := NewOwnerController(mockDB)
+
+	// Create a new gin context
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+
+	// Create a new request
+	req, _ := http.NewRequest("GET", "/owner", nil)
+	c.Request = req
+
+	// Set the auth controller in the context
+	c.Set("authController", mockAuthController)
+
+	// Call the LandingPage method
+	ownerController.LandingPage(c)
+
+	// Assert that the response code is 200
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	// Assert that the response body contains the View Arsenal button
+	body := w.Body.String()
+	assert.Contains(t, body, `View Arsenal`)
+	assert.Contains(t, body, `href="/owner/guns/arsenal"`)
+
+	// Verify expectations
+	mockAuthController.AssertExpectations(t)
+	mockDB.AssertExpectations(t)
 }

@@ -15,7 +15,7 @@ templ New(data *data.OwnerData) {
 		<div class="container mx-auto px-4 py-8">
 			<div class="flex justify-between items-center mb-6">
 				<h1 class="text-3xl font-bold text-gunmetal-800">Add New Firearm</h1>
-				<a href="/owner" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded">
+				<a href="/owner" class="bg-gunmetal-500 hover:bg-gunmetal-600 text-white font-bold py-2 px-4 rounded">
 					Back to Dashboard
 				</a>
 			</div>
@@ -39,7 +39,7 @@ templ New(data *data.OwnerData) {
 		<div class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
 			<form action="/owner/guns" method="post">
 				<div class="mb-4">
-					<label class="block text-gray-700 text-sm font-bold mb-2" for="name">
+					<label class="block text-gunmetal-700 text-sm font-bold mb-2" for="name">
 						Name
 					</label>
 					<input class="shadow appearance-none border rounded w-full py-2 px-3 text-gunmetal-800 leading-tight focus:outline-none focus:shadow-outline" 
@@ -61,7 +61,7 @@ templ New(data *data.OwnerData) {
 		_, err = io.WriteString(w, `
 				</div>
 				<div class="mb-4">
-					<label class="block text-gray-700 text-sm font-bold mb-2" for="serial_number">
+					<label class="block text-gunmetal-700 text-sm font-bold mb-2" for="serial_number">
 						Serial Number (Optional)
 					</label>
 					<input class="shadow appearance-none border rounded w-full py-2 px-3 text-gunmetal-800 leading-tight focus:outline-none focus:shadow-outline" 
@@ -83,14 +83,14 @@ templ New(data *data.OwnerData) {
 		_, err = io.WriteString(w, `
 				</div>
 				<div class="mb-4">
-					<label class="block text-gray-700 text-sm font-bold mb-2" for="acquired_date">
+					<label class="block text-gunmetal-700 text-sm font-bold mb-2" for="acquired_date">
 						Acquired Date
 					</label>
 					<input class="shadow appearance-none border rounded w-full py-2 px-3 text-gunmetal-800 leading-tight focus:outline-none focus:shadow-outline" 
 						id="acquired_date" type="date" name="acquired_date">
 				</div>
 				<div class="mb-4">
-					<label class="block text-gray-700 text-sm font-bold mb-2" for="weapon_type_id">
+					<label class="block text-gunmetal-700 text-sm font-bold mb-2" for="weapon_type_id">
 						Weapon Type
 					</label>
 					<select class="shadow appearance-none border rounded w-full py-2 px-3 text-gunmetal-800 leading-tight focus:outline-none focus:shadow-outline filterable-select" 
@@ -134,7 +134,7 @@ templ New(data *data.OwnerData) {
 		_, err = io.WriteString(w, `
 				</div>
 				<div class="mb-4">
-					<label class="block text-gray-700 text-sm font-bold mb-2" for="caliber_id">
+					<label class="block text-gunmetal-700 text-sm font-bold mb-2" for="caliber_id">
 						Caliber
 					</label>
 					<select class="shadow appearance-none border rounded w-full py-2 px-3 text-gunmetal-800 leading-tight focus:outline-none focus:shadow-outline filterable-select" 
@@ -178,7 +178,7 @@ templ New(data *data.OwnerData) {
 		_, err = io.WriteString(w, `
 				</div>
 				<div class="mb-4">
-					<label class="block text-gray-700 text-sm font-bold mb-2" for="manufacturer_id">
+					<label class="block text-gunmetal-700 text-sm font-bold mb-2" for="manufacturer_id">
 						Manufacturer
 					</label>
 					<select class="shadow appearance-none border rounded w-full py-2 px-3 text-gunmetal-800 leading-tight focus:outline-none focus:shadow-outline filterable-select" 
@@ -253,20 +253,22 @@ templ New(data *data.OwnerData) {
 								
 								// Add back all options
 								allOptions.forEach(option => {
-									select.add(option.cloneNode(true));
+									select.add(option);
 								});
 							}
 							
 							// Filter options based on search text
-							Array.from(select.options).forEach(option => {
-								// Skip the first "Select a..." option
-								if (option.value === '') return;
+							if (searchText.length > 0) {
+								// Get all options that don't match the search text
+								const optionsToRemove = Array.from(select.options).filter(option => {
+									return !option.text.toLowerCase().includes(searchText);
+								});
 								
-								const optionText = option.text.toLowerCase();
-								if (!optionText.includes(searchText)) {
+								// Remove non-matching options
+								optionsToRemove.forEach(option => {
 									select.remove(select.options.indexOf(option));
-								}
-							});
+								});
+							}
 						});
 					});
 				});

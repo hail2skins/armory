@@ -50,6 +50,9 @@ func RegisterOwnerRoutes(router *gin.Engine, db database.Service, authController
 			// List all guns for the owner
 			gunGroup.GET("", ownerController.Index)
 
+			// Arsenal view - shows all guns with sorting and searching
+			gunGroup.GET("/arsenal", ownerController.Arsenal)
+
 			// Create a new gun
 			gunGroup.GET("/new", ownerController.New)
 			gunGroup.POST("", ownerController.Create)

@@ -632,15 +632,37 @@ func (o *OwnerController) Show(c *gin.Context) {
 		var gun models.Gun
 		db := o.db.GetDB()
 		if err := db.Preload("WeaponType").Preload("Caliber").Preload("Manufacturer").Where("id = ? AND owner_id = ?", gunID, dbUser.ID).First(&gun).Error; err != nil {
-			c.Redirect(http.StatusSeeOther, "/owner/guns")
+			c.Redirect(http.StatusSeeOther, "/owner")
 			return
 		}
 
-		// Render the gun show page with the data
-		c.JSON(200, gin.H{
-			"gun":  gun,
-			"user": dbUser,
-		})
+		// Format subscription end date if available
+		var subscriptionEndsAt string
+		if !dbUser.SubscriptionEndDate.IsZero() {
+			subscriptionEndsAt = dbUser.SubscriptionEndDate.Format("January 2, 2006")
+		}
+
+		// Create owner data
+		ownerData := data.NewOwnerData().
+			WithTitle("Firearm Details").
+			WithAuthenticated(authenticated).
+			WithUser(dbUser).
+			WithGun(&gun).
+			WithSubscriptionInfo(
+				dbUser.HasActiveSubscription(),
+				dbUser.SubscriptionTier,
+				subscriptionEndsAt,
+			)
+
+		// Check for flash message from cookie
+		if flashCookie, err := c.Cookie("flash"); err == nil && flashCookie != "" {
+			// Clear the flash cookie
+			c.SetCookie("flash", "", -1, "/", "", false, true)
+			ownerData.WithSuccess(flashCookie)
+		}
+
+		// Render the gun show page
+		gunView.Show(ownerData).Render(c.Request.Context(), c.Writer)
 		return
 	}
 
@@ -665,15 +687,37 @@ func (o *OwnerController) Show(c *gin.Context) {
 	var gun models.Gun
 	db := o.db.GetDB()
 	if err := db.Preload("WeaponType").Preload("Caliber").Preload("Manufacturer").Where("id = ? AND owner_id = ?", gunID, dbUser.ID).First(&gun).Error; err != nil {
-		c.Redirect(http.StatusSeeOther, "/owner/guns")
+		c.Redirect(http.StatusSeeOther, "/owner")
 		return
 	}
 
-	// Render the gun show page with the data
-	c.JSON(200, gin.H{
-		"gun":  gun,
-		"user": dbUser,
-	})
+	// Format subscription end date if available
+	var subscriptionEndsAt string
+	if !dbUser.SubscriptionEndDate.IsZero() {
+		subscriptionEndsAt = dbUser.SubscriptionEndDate.Format("January 2, 2006")
+	}
+
+	// Create owner data
+	ownerData := data.NewOwnerData().
+		WithTitle("Firearm Details").
+		WithAuthenticated(authenticated).
+		WithUser(dbUser).
+		WithGun(&gun).
+		WithSubscriptionInfo(
+			dbUser.HasActiveSubscription(),
+			dbUser.SubscriptionTier,
+			subscriptionEndsAt,
+		)
+
+	// Check for flash message from cookie
+	if flashCookie, err := c.Cookie("flash"); err == nil && flashCookie != "" {
+		// Clear the flash cookie
+		c.SetCookie("flash", "", -1, "/", "", false, true)
+		ownerData.WithSuccess(flashCookie)
+	}
+
+	// Render the gun show page
+	gunView.Show(ownerData).Render(c.Request.Context(), c.Writer)
 }
 
 // Edit handles the edit gun route
@@ -698,4 +742,116 @@ func (o *OwnerController) Delete(c *gin.Context) {
 func (o *OwnerController) SearchCalibers(c *gin.Context) {
 	// This will be implemented later
 	c.JSON(200, gin.H{"message": "Search calibers"})
+}
+
+// Arsenal handles the arsenal view route
+func (o *OwnerController) Arsenal(c *gin.Context) {
+	// Get the current user's authentication status and email
+	authController, ok := c.MustGet("authController").(AuthControllerInterface)
+	if !ok {
+		// Try to cast to the concrete type as a fallback
+		concreteAuthController, ok := c.MustGet("authController").(*AuthController)
+		if !ok {
+			c.Redirect(http.StatusSeeOther, "/login")
+			return
+		}
+		userInfo, authenticated := concreteAuthController.GetCurrentUser(c)
+		if !authenticated {
+			c.Redirect(http.StatusSeeOther, "/login")
+			return
+		}
+
+		// Get the user from the database
+		ctx := context.Background()
+		dbUser, err := o.db.GetUserByEmail(ctx, userInfo.GetUserName())
+		if err != nil {
+			c.Redirect(http.StatusSeeOther, "/login")
+			return
+		}
+
+		// Get all guns for this owner
+		var guns []models.Gun
+		db := o.db.GetDB()
+		if err := db.Preload("WeaponType").Preload("Caliber").Preload("Manufacturer").Where("owner_id = ?", dbUser.ID).Order("name ASC").Find(&guns).Error; err != nil {
+			guns = []models.Gun{}
+		}
+
+		// Format subscription end date if available
+		var subscriptionEndsAt string
+		if !dbUser.SubscriptionEndDate.IsZero() {
+			subscriptionEndsAt = dbUser.SubscriptionEndDate.Format("January 2, 2006")
+		}
+
+		// Create owner data
+		ownerData := data.NewOwnerData().
+			WithTitle("Your Arsenal").
+			WithAuthenticated(authenticated).
+			WithUser(dbUser).
+			WithGuns(guns).
+			WithSubscriptionInfo(
+				dbUser.HasActiveSubscription(),
+				dbUser.SubscriptionTier,
+				subscriptionEndsAt,
+			)
+
+		// Check for flash message from cookie
+		if flashCookie, err := c.Cookie("flash"); err == nil && flashCookie != "" {
+			// Clear the flash cookie
+			c.SetCookie("flash", "", -1, "/", "", false, true)
+			ownerData.WithSuccess(flashCookie)
+		}
+
+		// Render the arsenal page
+		gunView.Arsenal(ownerData).Render(c.Request.Context(), c.Writer)
+		return
+	}
+
+	userInfo, authenticated := authController.GetCurrentUser(c)
+	if !authenticated {
+		c.Redirect(http.StatusSeeOther, "/login")
+		return
+	}
+
+	// Get the user from the database
+	ctx := context.Background()
+	dbUser, err := o.db.GetUserByEmail(ctx, userInfo.GetUserName())
+	if err != nil {
+		c.Redirect(http.StatusSeeOther, "/login")
+		return
+	}
+
+	// Get all guns for this owner
+	var guns []models.Gun
+	db := o.db.GetDB()
+	if err := db.Preload("WeaponType").Preload("Caliber").Preload("Manufacturer").Where("owner_id = ?", dbUser.ID).Order("name ASC").Find(&guns).Error; err != nil {
+		guns = []models.Gun{}
+	}
+
+	// Format subscription end date if available
+	var subscriptionEndsAt string
+	if !dbUser.SubscriptionEndDate.IsZero() {
+		subscriptionEndsAt = dbUser.SubscriptionEndDate.Format("January 2, 2006")
+	}
+
+	// Create owner data
+	ownerData := data.NewOwnerData().
+		WithTitle("Your Arsenal").
+		WithAuthenticated(authenticated).
+		WithUser(dbUser).
+		WithGuns(guns).
+		WithSubscriptionInfo(
+			dbUser.HasActiveSubscription(),
+			dbUser.SubscriptionTier,
+			subscriptionEndsAt,
+		)
+
+	// Check for flash message from cookie
+	if flashCookie, err := c.Cookie("flash"); err == nil && flashCookie != "" {
+		// Clear the flash cookie
+		c.SetCookie("flash", "", -1, "/", "", false, true)
+		ownerData.WithSuccess(flashCookie)
+	}
+
+	// Render the arsenal page
+	gunView.Arsenal(ownerData).Render(c.Request.Context(), c.Writer)
 }

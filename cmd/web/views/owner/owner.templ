@@ -66,7 +66,11 @@ templ Owner(data *data.OwnerData) {
 						<h3 class="font-semibold text-lg text-gunmetal-800 mb-2">Last Added</h3>
 						` + func() string {
 							if len(data.Guns) > 0 {
-								result := `<p class="text-gunmetal-800 font-medium">` + data.Guns[0].Name + `</p>`
+								result := `<p class="text-gunmetal-800 font-medium">
+									<a href="/owner/guns/` + strconv.FormatUint(uint64(data.Guns[0].ID), 10) + `" class="text-blue-600 hover:underline">
+										` + data.Guns[0].Name + `
+									</a>
+								</p>`
 								if data.Guns[0].Acquired != nil {
 									result += `<p class="text-sm text-gunmetal-600">` + data.Guns[0].Acquired.Format("Jan 2, 2006") + `</p>`
 								}
@@ -93,9 +97,14 @@ templ Owner(data *data.OwnerData) {
 			<div class="bg-white shadow-md rounded-lg p-6">
 				<div class="flex justify-between items-center mb-4">
 					<h2 class="text-xl font-semibold text-gunmetal-800">Your Firearms</h2>
-					<a href="/owner/guns/new" class="bg-gunmetal-700 hover:bg-gunmetal-800 text-white font-bold py-2 px-4 rounded">
-						Add New Firearm
-					</a>
+					<div class="flex space-x-2">
+						<a href="/owner/guns/arsenal" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+							View Arsenal
+						</a>
+						<a href="/owner/guns/new" class="bg-gunmetal-700 hover:bg-gunmetal-800 text-white font-bold py-2 px-4 rounded">
+							Add New Firearm
+						</a>
+					</div>
 				</div>
 				
 				` + func() string {
@@ -135,6 +144,9 @@ templ Owner(data *data.OwnerData) {
 							result += `</td>
 								<td class="py-2 px-4">
 									<div class="flex space-x-2">
+										<a href="/owner/guns/` + strconv.FormatUint(uint64(gun.ID), 10) + `" class="text-green-600 hover:text-green-800">
+											Show
+										</a>
 										<a href="/owner/guns/` + strconv.FormatUint(uint64(gun.ID), 10) + `/edit" class="text-blue-600 hover:text-blue-800">
 											Edit
 										</a>

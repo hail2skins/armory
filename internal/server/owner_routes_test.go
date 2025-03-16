@@ -36,6 +36,7 @@ func TestOwnerGunRoutes(t *testing.T) {
 	}{
 		{"GET", "/owner/guns/new", http.StatusOK},
 		{"POST", "/owner/guns", http.StatusOK},
+		{"GET", "/owner/guns/1", http.StatusOK},
 	}
 
 	for _, route := range routes {
@@ -89,6 +90,32 @@ func TestOwnerRouteRedirectWithFlashMessage(t *testing.T) {
 
 	// Assert that we have a flash or session cookie
 	assert.NotNil(t, flashCookie, "Flash or session cookie should be set")
+}
+
+// TestOwnerArsenalRoute tests that the arsenal route is properly registered
+func TestOwnerArsenalRoute(t *testing.T) {
+	// Setup
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+
+	// Create mock DB
+	mockDB := new(mocks.MockDB)
+
+	// Create mock auth controller
+	mockAuthController := controller.NewAuthController(mockDB)
+
+	// Register routes
+	RegisterOwnerRoutes(router, mockDB, mockAuthController)
+
+	// Create request
+	req, _ := http.NewRequest("GET", "/owner/guns/arsenal", nil)
+	resp := httptest.NewRecorder()
+
+	// Perform request
+	router.ServeHTTP(resp, req)
+
+	// Assert route exists (we don't care about the response code here, just that the route is registered)
+	assert.NotEqual(t, http.StatusNotFound, resp.Code, "Route GET /owner/guns/arsenal not found")
 }
 
 // NewTestServer creates a new test server with mocked dependencies

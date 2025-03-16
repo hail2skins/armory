@@ -1,0 +1,98 @@
+package gun
+
+import (
+	"context"
+	"io"
+	"strconv"
+
+	"github.com/hail2skins/armory/cmd/web/views/data"
+	"github.com/hail2skins/armory/cmd/web/views/partials"
+)
+
+// Show displays a gun's details
+templ Show(data *data.OwnerData) {
+	@partials.Base(data.Auth, templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+		_, err := io.WriteString(w, `
+		<div class="container mx-auto px-4 py-8">
+			<div class="bg-white shadow-md rounded-lg overflow-hidden">
+				<div class="bg-gunmetal-700 text-white px-6 py-4">
+					<h1 class="text-2xl font-bold">Firearm Details</h1>
+				</div>
+				
+				<div class="p-6">
+					<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+						<div>
+							<h2 class="text-xl font-semibold text-gunmetal-800 mb-4">Basic Information</h2>
+							<div class="space-y-3">
+								<div>
+									<span class="font-medium text-gunmetal-600">Name:</span>
+									<span class="ml-2 text-gunmetal-800">`+data.Gun.Name+`</span>
+								</div>
+								<div>
+									<span class="font-medium text-gunmetal-600">Serial Number:</span>
+									<span class="ml-2 text-gunmetal-800">`+data.Gun.SerialNumber+`</span>
+								</div>
+								<div>
+									<span class="font-medium text-gunmetal-600">Acquired:</span>
+									`)
+		if err != nil {
+			return err
+		}
+
+		if data.Gun.Acquired != nil {
+			_, err = io.WriteString(w, `
+									<span class="ml-2 text-gunmetal-800">`+data.Gun.Acquired.Format("January 2, 2006")+`</span>
+									`)
+		} else {
+			_, err = io.WriteString(w, `
+									<span class="ml-2 text-gunmetal-500">Not specified</span>
+									`)
+		}
+		if err != nil {
+			return err
+		}
+
+		_, err = io.WriteString(w, `
+								</div>
+							</div>
+						</div>
+						
+						<div>
+							<h2 class="text-xl font-semibold text-gunmetal-800 mb-4">Specifications</h2>
+							<div class="space-y-3">
+								<div>
+									<span class="font-medium text-gunmetal-600">Type:</span>
+									<span class="ml-2 text-gunmetal-800">`+data.Gun.WeaponType.Type+`</span>
+								</div>
+								<div>
+									<span class="font-medium text-gunmetal-600">Caliber:</span>
+									<span class="ml-2 text-gunmetal-800">`+data.Gun.Caliber.Caliber+`</span>
+								</div>
+								<div>
+									<span class="font-medium text-gunmetal-600">Manufacturer:</span>
+									<span class="ml-2 text-gunmetal-800">`+data.Gun.Manufacturer.Name+`</span>
+								</div>
+							</div>
+						</div>
+					</div>
+					
+					<div class="mt-8 flex flex-wrap gap-3">
+						<a href="/owner" class="bg-gunmetal-600 hover:bg-gunmetal-700 text-white font-bold py-2 px-4 rounded">
+							Back to Dashboard
+						</a>
+						<a href="/owner/guns/`+strconv.FormatUint(uint64(data.Gun.ID), 10)+`/edit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+							Edit Firearm
+						</a>
+						<form method="POST" action="/owner/guns/`+strconv.FormatUint(uint64(data.Gun.ID), 10)+`/delete" class="inline">
+							<button type="submit" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded" onclick="return confirm('Are you sure you want to delete this firearm?')">
+								Delete Firearm
+							</button>
+						</form>
+					</div>
+				</div>
+			</div>
+		</div>
+		`)
+		return err
+	}))
+} 

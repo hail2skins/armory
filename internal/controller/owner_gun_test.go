@@ -385,3 +385,314 @@ func TestOwnerGunCreateValidation(t *testing.T) {
 	mockAuthController.AssertExpectations(t)
 	mockDB.AssertExpectations(t)
 }
+
+// TestOwnerGunShow tests the Show function for displaying a gun
+func TestOwnerGunShow(t *testing.T) {
+	// Setup
+	gin.SetMode(gin.TestMode)
+
+	// Create a new mock DB
+	mockDB := new(mocks.MockDB)
+
+	// Create a new mock auth controller
+	mockAuthController := new(mocks.MockAuthController)
+
+	// Create a test user
+	user := &database.User{
+		Model: gorm.Model{
+			ID: 1,
+		},
+		Email: "test@example.com",
+	}
+
+	// Create a test gun with preloaded relationships
+	gun := models.Gun{
+		Model: gorm.Model{
+			ID: 1,
+		},
+		Name:         "Test Gun",
+		SerialNumber: "123456",
+		OwnerID:      1,
+		WeaponTypeID: 1,
+		WeaponType: models.WeaponType{
+			ID:   1,
+			Type: "Rifle",
+		},
+		CaliberID: 1,
+		Caliber: models.Caliber{
+			Model:   gorm.Model{ID: 1},
+			Caliber: ".223",
+		},
+		ManufacturerID: 1,
+		Manufacturer: models.Manufacturer{
+			Model: gorm.Model{ID: 1},
+			Name:  "Colt",
+		},
+	}
+
+	// Create a mock DB that will return our gun
+	db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{})
+	assert.NoError(t, err)
+
+	// Migrate the schema
+	err = db.AutoMigrate(&models.Gun{}, &models.WeaponType{}, &models.Caliber{}, &models.Manufacturer{})
+	assert.NoError(t, err)
+
+	// Create the gun in the database
+	err = db.Create(&gun).Error
+	assert.NoError(t, err)
+
+	// Set up expectations
+	mockAuthInfo := &mocks.MockAuthInfo{}
+	mockAuthInfo.SetUserName("test@example.com")
+
+	// Expect GetCurrentUser to be called and return the mock auth info and true
+	mockAuthController.On("GetCurrentUser", mock.Anything).Return(mockAuthInfo, true)
+
+	// Expect GetUserByEmail to be called with the user's email and return the user
+	mockDB.On("GetUserByEmail", mock.Anything, "test@example.com").Return(user, nil)
+
+	// Expect GetDB to be called and return the test DB
+	mockDB.On("GetDB").Return(db)
+
+	// Create a new owner controller with the mock DB
+	ownerController := NewOwnerController(mockDB)
+
+	// Create a new gin context
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+
+	// Create a new request
+	req, _ := http.NewRequest("GET", "/owner/guns/1", nil)
+	c.Request = req
+	c.Params = []gin.Param{{Key: "id", Value: "1"}}
+
+	// Set the auth controller in the context
+	c.Set("authController", mockAuthController)
+
+	// Call the Show method
+	ownerController.Show(c)
+
+	// Assert that the response code is 200
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	// Assert that the response body contains the expected content
+	assert.Contains(t, w.Body.String(), "Firearm Details")
+	assert.Contains(t, w.Body.String(), "Test Gun")
+	assert.Contains(t, w.Body.String(), "123456")
+	assert.Contains(t, w.Body.String(), "Rifle")
+	assert.Contains(t, w.Body.String(), ".223")
+	assert.Contains(t, w.Body.String(), "Colt")
+
+	// Verify expectations
+	mockAuthController.AssertExpectations(t)
+	mockDB.AssertExpectations(t)
+}
+
+// TestOwnerGunShowUnauthenticated tests the Show function when the user is not authenticated
+func TestOwnerGunShowUnauthenticated(t *testing.T) {
+	// Setup
+	gin.SetMode(gin.TestMode)
+
+	// Create a new mock DB
+	mockDB := new(mocks.MockDB)
+
+	// Create a new mock auth controller
+	mockAuthController := new(mocks.MockAuthController)
+
+	// Set up expectations
+	// Expect GetCurrentUser to be called and return nil and false (not authenticated)
+	mockAuthController.On("GetCurrentUser", mock.Anything).Return(nil, false)
+
+	// Create a new owner controller with the mock DB
+	ownerController := NewOwnerController(mockDB)
+
+	// Create a new gin context
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+
+	// Create a new request
+	req, _ := http.NewRequest("GET", "/owner/guns/1", nil)
+	c.Request = req
+	c.Params = []gin.Param{{Key: "id", Value: "1"}}
+
+	// Set the auth controller in the context
+	c.Set("authController", mockAuthController)
+
+	// Call the Show method
+	ownerController.Show(c)
+
+	// Assert that the response is a redirect to login
+	assert.Equal(t, http.StatusSeeOther, w.Code)
+	assert.Equal(t, "/login", w.Header().Get("Location"))
+
+	// Verify expectations
+	mockAuthController.AssertExpectations(t)
+}
+
+// TestOwnerGunArsenal tests the Arsenal function for displaying all guns
+func TestOwnerGunArsenal(t *testing.T) {
+	// Setup
+	gin.SetMode(gin.TestMode)
+
+	// Create a new mock DB
+	mockDB := new(mocks.MockDB)
+
+	// Create a new mock auth controller
+	mockAuthController := new(mocks.MockAuthController)
+
+	// Create a test user
+	user := &database.User{
+		Model: gorm.Model{
+			ID: 1,
+		},
+		Email: "test@example.com",
+	}
+
+	// Create test guns
+	guns := []models.Gun{
+		{
+			Name:         "Test Gun 1",
+			SerialNumber: "123456",
+			OwnerID:      1,
+			WeaponTypeID: 1,
+			WeaponType: models.WeaponType{
+				ID:   1,
+				Type: "Rifle",
+			},
+			CaliberID: 1,
+			Caliber: models.Caliber{
+				Model:   gorm.Model{ID: 1},
+				Caliber: ".223",
+			},
+			ManufacturerID: 1,
+			Manufacturer: models.Manufacturer{
+				Model: gorm.Model{ID: 1},
+				Name:  "Colt",
+			},
+		},
+		{
+			Name:         "Test Gun 2",
+			SerialNumber: "654321",
+			OwnerID:      1,
+			WeaponTypeID: 2,
+			WeaponType: models.WeaponType{
+				ID:   2,
+				Type: "Pistol",
+			},
+			CaliberID: 2,
+			Caliber: models.Caliber{
+				Model:   gorm.Model{ID: 2},
+				Caliber: "9mm",
+			},
+			ManufacturerID: 2,
+			Manufacturer: models.Manufacturer{
+				Model: gorm.Model{ID: 2},
+				Name:  "Glock",
+			},
+		},
+	}
+
+	// Create a mock DB that will return our guns
+	db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{})
+	assert.NoError(t, err)
+
+	// Migrate the schema
+	err = db.AutoMigrate(&models.Gun{}, &models.WeaponType{}, &models.Caliber{}, &models.Manufacturer{})
+	assert.NoError(t, err)
+
+	// Create the guns in the database
+	for _, gun := range guns {
+		err = db.Create(&gun).Error
+		assert.NoError(t, err)
+	}
+
+	// Set up expectations
+	mockAuthInfo := &mocks.MockAuthInfo{}
+	mockAuthInfo.SetUserName("test@example.com")
+
+	// Expect GetCurrentUser to be called and return the mock auth info and true
+	mockAuthController.On("GetCurrentUser", mock.Anything).Return(mockAuthInfo, true)
+
+	// Expect GetUserByEmail to be called with the user's email and return the user
+	mockDB.On("GetUserByEmail", mock.Anything, "test@example.com").Return(user, nil)
+
+	// Expect GetDB to be called and return the test DB
+	mockDB.On("GetDB").Return(db)
+
+	// Create a new owner controller with the mock DB
+	ownerController := NewOwnerController(mockDB)
+
+	// Create a new gin context
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+
+	// Create a new request
+	req, _ := http.NewRequest("GET", "/owner/guns/arsenal", nil)
+	c.Request = req
+
+	// Set the auth controller in the context
+	c.Set("authController", mockAuthController)
+
+	// Call the Arsenal method
+	ownerController.Arsenal(c)
+
+	// Assert that the response code is 200
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	// Assert that the response body contains the expected content
+	body := w.Body.String()
+	assert.Contains(t, body, "Your Arsenal")
+	assert.Contains(t, body, "Test Gun 1")
+	assert.Contains(t, body, "Test Gun 2")
+	assert.Contains(t, body, "Rifle")
+	assert.Contains(t, body, "Pistol")
+	assert.Contains(t, body, ".223")
+	assert.Contains(t, body, "9mm")
+	assert.Contains(t, body, "Colt")
+	assert.Contains(t, body, "Glock")
+
+	// Verify expectations
+	mockAuthController.AssertExpectations(t)
+	mockDB.AssertExpectations(t)
+}
+
+// TestOwnerGunArsenalUnauthenticated tests the Arsenal function when the user is not authenticated
+func TestOwnerGunArsenalUnauthenticated(t *testing.T) {
+	// Setup
+	gin.SetMode(gin.TestMode)
+
+	// Create a new mock DB
+	mockDB := new(mocks.MockDB)
+
+	// Create a new mock auth controller
+	mockAuthController := new(mocks.MockAuthController)
+
+	// Set up expectations
+	// Expect GetCurrentUser to be called and return nil and false (not authenticated)
+	mockAuthController.On("GetCurrentUser", mock.Anything).Return(nil, false)
+
+	// Create a new owner controller with the mock DB
+	ownerController := NewOwnerController(mockDB)
+
+	// Create a new gin context
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+
+	// Create a new request
+	req, _ := http.NewRequest("GET", "/owner/guns/arsenal", nil)
+	c.Request = req
+
+	// Set the auth controller in the context
+	c.Set("authController", mockAuthController)
+
+	// Call the Arsenal method
+	ownerController.Arsenal(c)
+
+	// Assert that the response is a redirect to login
+	assert.Equal(t, http.StatusSeeOther, w.Code)
+	assert.Equal(t, "/login", w.Header().Get("Location"))
+
+	// Verify expectations
+	mockAuthController.AssertExpectations(t)
+}
