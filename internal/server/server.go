@@ -21,21 +21,6 @@ type Server struct {
 
 func NewServer() *http.Server {
 	// Initialize logger
-	logPath := os.Getenv("LOG_FILE")
-	if logPath == "" {
-		logPath = "logs/app.log"
-	}
-
-	// Ensure logs directory exists
-	os.MkdirAll("logs", 0755)
-
-	// Setup file logging
-	err := logger.SetupFileLogging(logPath)
-	if err != nil {
-		logger.Error("Failed to set up file logging", err, nil)
-		// Continue with console logging
-	}
-
 	logger.Info("Initializing server", nil)
 
 	port, _ := strconv.Atoi(os.Getenv("PORT"))
