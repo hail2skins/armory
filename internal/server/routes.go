@@ -49,6 +49,9 @@ func (s *Server) RegisterRoutes() http.Handler {
 	// Register admin routes
 	s.RegisterAdminRoutes(r, authController)
 
+	// Register owner routes
+	RegisterOwnerRoutes(r, s.db, authController)
+
 	return r
 }
 

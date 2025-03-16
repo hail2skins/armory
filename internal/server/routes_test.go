@@ -15,6 +15,7 @@ import (
 	"github.com/hail2skins/armory/internal/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"gorm.io/gorm"
 )
 
 func TestNavBarAuthentication(t *testing.T) {
@@ -170,7 +171,11 @@ func TestAllRoutes(t *testing.T) {
 	router := gin.New()
 
 	// Create controllers
-	mockDB := new(MockDBWithContext)
+	mockDB := new(MockDB)
+	mockDB.On("Health").Return(map[string]string{"status": "ok"})
+	mockDB.On("GetUserByEmail", mock.Anything, mock.Anything).Return(nil, nil)
+	mockDB.On("AuthenticateUser", mock.Anything, mock.Anything, mock.Anything).Return(nil, nil)
+	mockDB.On("GetDB").Return(&gorm.DB{}).Maybe()
 	authController := controller.NewAuthController(mockDB)
 	homeController := controller.NewHomeController(mockDB)
 
@@ -251,9 +256,46 @@ func TestAllRoutes(t *testing.T) {
 		}
 		database.SetUserID(testUser, 1)
 
-		// Mock authentication
+		// Reset mock expectations
+		mockDB := new(MockDB)
+		mockDB.On("Health").Return(map[string]string{"status": "ok"})
+		mockDB.On("GetDB").Return(&gorm.DB{})
 		mockDB.On("GetUserByEmail", mock.Anything, "test@example.com").Return(testUser, nil)
 		mockDB.On("AuthenticateUser", mock.Anything, "test@example.com", "password123").Return(testUser, nil)
+
+		// Create new controllers with the fresh mock
+		authController := controller.NewAuthController(mockDB)
+		homeController := controller.NewHomeController(mockDB)
+
+		// Create a new router for this test
+		testRouter := gin.New()
+
+		// Set up middleware
+		testRouter.Use(func(c *gin.Context) {
+			// Get the current user's authentication status and email
+			userInfo, authenticated := authController.GetCurrentUser(c)
+
+			// Create AuthData with authentication status and email
+			authData := data.NewAuthData()
+			authData.Authenticated = authenticated
+
+			// Set email if authenticated
+			if authenticated {
+				authData.Email = userInfo.GetUserName()
+			}
+
+			// Add authData to context
+			c.Set("authData", authData)
+			c.Set("authController", authController)
+
+			c.Next()
+		})
+
+		// Set up routes
+		testRouter.GET("/", homeController.HomeHandler)
+		testRouter.GET("/login", authController.LoginHandler)
+		testRouter.POST("/login", authController.LoginHandler)
+		testRouter.GET("/logout", authController.LogoutHandler)
 
 		// Login first
 		form := url.Values{}
@@ -263,7 +305,11 @@ func TestAllRoutes(t *testing.T) {
 		req, _ := http.NewRequest("POST", "/login", strings.NewReader(form.Encode()))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		resp := httptest.NewRecorder()
-		router.ServeHTTP(resp, req)
+		testRouter.ServeHTTP(resp, req)
+
+		// Verify login response
+		assert.Equal(t, http.StatusSeeOther, resp.Code, "Login should redirect")
+		assert.Equal(t, "/owner", resp.Header().Get("Location"), "Should redirect to owner page after login")
 
 		// Get the auth cookie
 		cookies := resp.Result().Cookies()
@@ -276,21 +322,34 @@ func TestAllRoutes(t *testing.T) {
 		}
 		assert.NotNil(t, authCookie, "Auth cookie should be set after login")
 
-		// Test logout with auth cookie
-		req, _ = http.NewRequest("GET", "/logout", nil)
-		req.AddCookie(authCookie)
-		resp = httptest.NewRecorder()
-		router.ServeHTTP(resp, req)
-		assert.Equal(t, http.StatusSeeOther, resp.Code)
-		assert.Equal(t, "/", resp.Header().Get("Location"))
+		// Now check the home page to verify we see the logout link
+		if authCookie != nil {
+			req, _ = http.NewRequest("GET", "/", nil)
+			req.AddCookie(authCookie)
+			resp = httptest.NewRecorder()
+			testRouter.ServeHTTP(resp, req)
 
-		// Verify the auth cookie is cleared
-		cookies = resp.Result().Cookies()
-		for _, cookie := range cookies {
-			if cookie.Name == "auth-session" {
-				assert.Equal(t, "", cookie.Value, "Auth cookie should be cleared")
-				assert.Less(t, cookie.MaxAge, 0, "Auth cookie should be expired")
-				break
+			assert.Equal(t, http.StatusOK, resp.Code)
+			assert.Contains(t, resp.Body.String(), "Logout", "Home page should show Logout link when authenticated")
+			assert.NotContains(t, resp.Body.String(), "Login", "Home page should not show Login link when authenticated")
+			assert.NotContains(t, resp.Body.String(), "Register", "Home page should not show Register link when authenticated")
+
+			// Test logout with auth cookie
+			req, _ = http.NewRequest("GET", "/logout", nil)
+			req.AddCookie(authCookie)
+			resp = httptest.NewRecorder()
+			testRouter.ServeHTTP(resp, req)
+			assert.Equal(t, http.StatusSeeOther, resp.Code)
+			assert.Equal(t, "/", resp.Header().Get("Location"))
+
+			// Verify the auth cookie is cleared
+			cookies = resp.Result().Cookies()
+			for _, cookie := range cookies {
+				if cookie.Name == "auth-session" {
+					assert.Equal(t, "", cookie.Value, "Auth cookie should be cleared")
+					assert.Less(t, cookie.MaxAge, 0, "Auth cookie should be expired")
+					break
+				}
 			}
 		}
 	})
@@ -319,7 +378,7 @@ func TestAboutRoute(t *testing.T) {
 	r := gin.New()
 
 	// Create a mock database
-	mockDB := new(MockDBWithContext)
+	mockDB := new(MockDB)
 
 	// Create controllers
 	homeController := controller.NewHomeController(mockDB)
@@ -714,4 +773,10 @@ func (m *MockDB) UpdateWeaponType(weaponType *models.WeaponType) error {
 func (m *MockDB) DeleteWeaponType(id uint) error {
 	args := m.Called(id)
 	return args.Error(0)
+}
+
+// GetDB returns the underlying *gorm.DB instance
+func (m *MockDB) GetDB() *gorm.DB {
+	args := m.Called()
+	return args.Get(0).(*gorm.DB)
 }

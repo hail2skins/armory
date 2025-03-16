@@ -10,8 +10,8 @@ import (
 type Payment struct {
 	gorm.Model
 	UserID      uint
-	User        User  `gorm:"foreignKey:UserID"`
-	Amount      int64 // Amount in cents
+	User        interface{} `gorm:"-"` // This will be populated by the application, not stored in DB
+	Amount      int64       // Amount in cents
 	Currency    string
 	PaymentType string // "subscription", "one-time", etc.
 	Status      string // "succeeded", "failed", "pending", etc.

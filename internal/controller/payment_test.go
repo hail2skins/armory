@@ -12,6 +12,7 @@ import (
 	"github.com/hail2skins/armory/internal/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"gorm.io/gorm"
 )
 
 // MockDB is a mock implementation of the database.Service interface
@@ -288,6 +289,12 @@ func (m *MockDB) UpdateWeaponType(weaponType *models.WeaponType) error {
 func (m *MockDB) DeleteWeaponType(id uint) error {
 	args := m.Called(id)
 	return args.Error(0)
+}
+
+// GetDB returns the underlying *gorm.DB instance
+func (m *MockDB) GetDB() *gorm.DB {
+	args := m.Called()
+	return args.Get(0).(*gorm.DB)
 }
 
 func TestPaymentController_PricingHandler(t *testing.T) {

@@ -1,0 +1,97 @@
+package data
+
+import (
+	"time"
+
+	"github.com/hail2skins/armory/internal/database"
+	"github.com/hail2skins/armory/internal/models"
+)
+
+// UserViewModel represents user data for display in views
+type UserViewModel struct {
+	Email              string
+	CreatedAt          time.Time
+	SubscriptionTier   string
+	SubscriptionStatus string
+}
+
+// OwnerData contains data for owner views
+type OwnerData struct {
+	// Auth information
+	Auth AuthData
+
+	// User information
+	User *UserViewModel
+
+	// For guns
+	Guns []models.Gun
+	Gun  *models.Gun
+
+	// For subscription information
+	HasActiveSubscription bool
+	SubscriptionTier      string
+	SubscriptionEndsAt    string
+}
+
+// NewOwnerData creates a new OwnerData with default values
+func NewOwnerData() *OwnerData {
+	return &OwnerData{
+		Auth: NewAuthData(),
+	}
+}
+
+// WithTitle returns a copy of the OwnerData with the specified title
+func (o *OwnerData) WithTitle(title string) *OwnerData {
+	o.Auth.Title = title
+	return o
+}
+
+// WithSuccess returns a copy of the OwnerData with a success message
+func (o *OwnerData) WithSuccess(msg string) *OwnerData {
+	o.Auth.Success = msg
+	return o
+}
+
+// WithError returns a copy of the OwnerData with an error message
+func (o *OwnerData) WithError(err string) *OwnerData {
+	o.Auth.Error = err
+	return o
+}
+
+// WithAuthenticated returns a copy of the OwnerData with authentication status
+func (o *OwnerData) WithAuthenticated(authenticated bool) *OwnerData {
+	o.Auth.Authenticated = authenticated
+	return o
+}
+
+// WithUser returns a copy of the OwnerData with user information
+func (o *OwnerData) WithUser(dbUser *database.User) *OwnerData {
+	o.User = &UserViewModel{
+		Email:              dbUser.Email,
+		CreatedAt:          dbUser.CreatedAt,
+		SubscriptionTier:   dbUser.SubscriptionTier,
+		SubscriptionStatus: dbUser.SubscriptionStatus,
+	}
+	o.Auth.Email = dbUser.Email
+	return o
+}
+
+// WithGuns returns a copy of the OwnerData with guns
+func (o *OwnerData) WithGuns(guns []models.Gun) *OwnerData {
+	o.Guns = guns
+	return o
+}
+
+// WithGun returns a copy of the OwnerData with a gun
+func (o *OwnerData) WithGun(gun *models.Gun) *OwnerData {
+	o.Gun = gun
+	return o
+}
+
+// WithSubscriptionInfo returns a copy of the OwnerData with subscription information
+func (o *OwnerData) WithSubscriptionInfo(hasActiveSubscription bool, tier string, endsAt string) *OwnerData {
+	o.HasActiveSubscription = hasActiveSubscription
+	o.SubscriptionTier = tier
+	o.SubscriptionEndsAt = endsAt
+	return o
+}

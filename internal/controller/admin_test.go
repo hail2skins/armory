@@ -271,6 +271,12 @@ func (m *MockAdminDB) UpdateWeaponType(weaponType *models.WeaponType) error {
 	return args.Error(0)
 }
 
+// GetDB returns the underlying *gorm.DB instance
+func (m *MockAdminDB) GetDB() *gorm.DB {
+	args := m.Called()
+	return args.Get(0).(*gorm.DB)
+}
+
 // DeleteWeaponType deletes a weapon type
 func (m *MockAdminDB) DeleteWeaponType(id uint) error {
 	args := m.Called(id)
@@ -330,6 +336,7 @@ func TestAdminManufacturerRoutes(t *testing.T) {
 	mockDB.On("CreateManufacturer", mock.AnythingOfType("*models.Manufacturer")).Return(nil)
 	mockDB.On("UpdateManufacturer", mock.AnythingOfType("*models.Manufacturer")).Return(nil)
 	mockDB.On("DeleteManufacturer", uint(1)).Return(nil)
+	mockDB.On("GetDB").Return(&gorm.DB{}).Maybe()
 
 	// Create a test HTTP server
 	router := gin.New()

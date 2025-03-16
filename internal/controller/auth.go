@@ -185,8 +185,13 @@ func (a *AuthController) LoginHandler(c *gin.Context) {
 		"email":   user.Email,
 	})
 
-	// Redirect to home page
-	c.Redirect(http.StatusSeeOther, "/")
+	// Set welcome message
+	if setFlash, exists := c.Get("setFlash"); exists {
+		setFlash.(func(string))("Welcome back, " + user.Email)
+	}
+
+	// Redirect to owner page
+	c.Redirect(http.StatusSeeOther, "/owner")
 }
 
 // RegisterHandler handles user registration

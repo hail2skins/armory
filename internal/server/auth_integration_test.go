@@ -17,6 +17,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"gorm.io/gorm"
 )
 
 // MockEmailService is a mock implementation of the EmailService interface for testing
@@ -296,6 +297,12 @@ func (m *MockDBWithContext) DeleteWeaponType(id uint) error {
 	return args.Error(0)
 }
 
+// GetDB returns the underlying *gorm.DB instance
+func (m *MockDBWithContext) GetDB() *gorm.DB {
+	args := m.Called()
+	return args.Get(0).(*gorm.DB)
+}
+
 // setupTestRouter creates a test router with real authentication handling
 func setupTestRouter(t *testing.T) (*gin.Engine, *MockDBWithContext, *MockEmailService) {
 	// Set Gin to test mode
@@ -351,6 +358,9 @@ func setupTestRouter(t *testing.T) (*gin.Engine, *MockDBWithContext, *MockEmailS
 
 	// Health check
 	mockDB.On("Health").Return(map[string]string{"status": "up"})
+
+	// Mock GetDB
+	mockDB.On("GetDB").Return(&gorm.DB{}).Maybe()
 
 	// Create a new router
 	router := gin.New()
@@ -517,9 +527,9 @@ func TestAuthenticationFlow(t *testing.T) {
 			resp = httptest.NewRecorder()
 			router.ServeHTTP(resp, req)
 
-			// Should redirect to home page
+			// Should redirect to owner page
 			require.Equal(t, http.StatusSeeOther, resp.Code)
-			require.Equal(t, "/", resp.Header().Get("Location"))
+			require.Equal(t, "/owner", resp.Header().Get("Location"))
 
 			// Extract auth cookie
 			cookies := resp.Result().Cookies()
@@ -643,9 +653,9 @@ func TestRealHTMLOutput(t *testing.T) {
 		loginResp := httptest.NewRecorder()
 		router.ServeHTTP(loginResp, loginReq)
 
-		// Should redirect to home page
+		// Should redirect to owner page
 		require.Equal(t, http.StatusSeeOther, loginResp.Code)
-		require.Equal(t, "/", loginResp.Header().Get("Location"))
+		require.Equal(t, "/owner", loginResp.Header().Get("Location"))
 
 		// Extract auth cookie
 		cookies := loginResp.Result().Cookies()
@@ -911,9 +921,9 @@ func TestRegistrationWithoutAuthentication(t *testing.T) {
 		loginResp := httptest.NewRecorder()
 		router.ServeHTTP(loginResp, loginReq)
 
-		// Should redirect to home page
+		// Should redirect to owner page
 		require.Equal(t, http.StatusSeeOther, loginResp.Code)
-		require.Equal(t, "/", loginResp.Header().Get("Location"))
+		require.Equal(t, "/owner", loginResp.Header().Get("Location"))
 
 		// Check that auth cookie is now set
 		loginCookies := loginResp.Result().Cookies()

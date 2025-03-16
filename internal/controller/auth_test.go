@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"gorm.io/gorm"
 )
 
 // MockDB is a mock implementation of the database.Service interface
@@ -243,6 +244,12 @@ func (m *MockDB) DeleteWeaponType(id uint) error {
 	return args.Error(0)
 }
 
+// GetDB returns the underlying *gorm.DB instance
+func (m *MockDB) GetDB() *gorm.DB {
+	args := m.Called()
+	return args.Get(0).(*gorm.DB)
+}
+
 // MockEmailService is a mock implementation of the email.EmailService interface
 type MockEmailService struct {
 	mock.Mock
@@ -396,39 +403,27 @@ func TestAuthenticationFlow(t *testing.T) {
 
 		// Step 3: Verify email and login
 		t.Run("User can verify email and login", func(t *testing.T) {
-			// First verify the email
+			// Verify the email
 			req, _ := http.NewRequest("GET", "/verify-email?token=test-token", nil)
 			resp := httptest.NewRecorder()
 			router.ServeHTTP(resp, req)
 
-			// Should redirect to login page
-			assert.Equal(t, http.StatusSeeOther, resp.Code)
+			// Check that the user is redirected to the login page
+			assert.Equal(t, 303, resp.Code)
 			assert.Equal(t, "/login?verified=true", resp.Header().Get("Location"))
 
-			// Now login
-			form := url.Values{}
-			form.Add("email", "test@example.com")
-			form.Add("password", "password123")
-
-			req, _ = http.NewRequest("POST", "/login", strings.NewReader(form.Encode()))
+			// Login with the verified user
+			loginForm := url.Values{}
+			loginForm.Add("email", "test@example.com")
+			loginForm.Add("password", "password123")
+			req, _ = http.NewRequest("POST", "/login", strings.NewReader(loginForm.Encode()))
 			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 			resp = httptest.NewRecorder()
 			router.ServeHTTP(resp, req)
 
-			// Should redirect to home page
-			assert.Equal(t, http.StatusSeeOther, resp.Code)
-			assert.Equal(t, "/", resp.Header().Get("Location"))
-
-			// Check for auth cookie
-			cookies := resp.Result().Cookies()
-			var authCookie *http.Cookie
-			for _, cookie := range cookies {
-				if cookie.Name == "auth-session" {
-					authCookie = cookie
-					break
-				}
-			}
-			assert.NotNil(t, authCookie, "Auth cookie should be set after login")
+			// Check that the user is redirected to the owner page
+			assert.Equal(t, 303, resp.Code)
+			assert.Equal(t, "/owner", resp.Header().Get("Location"))
 		})
 
 		// Step 4: Check authenticated state
@@ -649,4 +644,106 @@ func TestRegisterUser(t *testing.T) {
 
 	// Verify that the verification email was sent
 	mockEmail.AssertCalled(t, "SendVerificationEmail", "newuser@example.com", mock.Anything)
+}
+
+// TestLoginRedirectsToOwner tests that users are redirected to /owner after successful login
+func TestLoginRedirectsToOwner(t *testing.T) {
+	// Setup
+	gin.SetMode(gin.TestMode)
+
+	// Create mock objects
+	mockDB := new(MockDB)
+
+	// Create a test user
+	testUser := &database.User{
+		Model: gorm.Model{
+			ID: 1,
+		},
+		Email:    "test@example.com",
+		Password: "hashed_password",
+	}
+
+	// Setup expectations
+	mockDB.On("AuthenticateUser", mock.Anything, "test@example.com", "password123").Return(testUser, nil)
+
+	// Create the controller
+	authController := NewAuthController(mockDB)
+
+	// Setup router
+	router := gin.Default()
+	router.POST("/login", authController.LoginHandler)
+
+	// Create a login request
+	form := url.Values{}
+	form.Add("email", "test@example.com")
+	form.Add("password", "password123")
+	req, _ := http.NewRequest("POST", "/login", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	resp := httptest.NewRecorder()
+
+	// Serve the request
+	router.ServeHTTP(resp, req)
+
+	// Check the response - should be a redirect to /owner
+	assert.Equal(t, 303, resp.Code)
+	assert.Equal(t, "/owner", resp.Header().Get("Location"))
+
+	// Verify that all expectations were met
+	mockDB.AssertExpectations(t)
+}
+
+// TestLoginRedirectsToOwnerWithWelcomeMessage tests that users are redirected to /owner after successful login with a welcome message
+func TestLoginRedirectsToOwnerWithWelcomeMessage(t *testing.T) {
+	// Setup
+	gin.SetMode(gin.TestMode)
+
+	// Create mock objects
+	mockDB := new(MockDB)
+
+	// Create a test user
+	testUser := &database.User{
+		Model: gorm.Model{
+			ID: 1,
+		},
+		Email:    "test@example.com",
+		Password: "hashed_password",
+	}
+
+	// Setup expectations
+	mockDB.On("AuthenticateUser", mock.Anything, "test@example.com", "password123").Return(testUser, nil)
+
+	// Create the controller
+	authController := NewAuthController(mockDB)
+
+	// Setup router with a custom middleware to capture flash messages
+	router := gin.Default()
+	var capturedFlash string
+	router.Use(func(c *gin.Context) {
+		c.Set("setFlash", func(msg string) {
+			capturedFlash = msg
+		})
+		c.Next()
+	})
+	router.POST("/login", authController.LoginHandler)
+
+	// Create a login request
+	form := url.Values{}
+	form.Add("email", "test@example.com")
+	form.Add("password", "password123")
+	req, _ := http.NewRequest("POST", "/login", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	resp := httptest.NewRecorder()
+
+	// Serve the request
+	router.ServeHTTP(resp, req)
+
+	// Check the response - should be a redirect to /owner
+	assert.Equal(t, 303, resp.Code)
+	assert.Equal(t, "/owner", resp.Header().Get("Location"))
+
+	// Check that a welcome flash message was set
+	assert.Contains(t, capturedFlash, "Welcome back")
+
+	// Verify that all expectations were met
+	mockDB.AssertExpectations(t)
 }

@@ -43,6 +43,9 @@ type Service interface {
 	// Additional user methods
 	GetUserByID(id uint) (*User, error)
 	GetUserByStripeCustomerID(customerID string) (*User, error)
+
+	// GetDB returns the underlying *gorm.DB instance
+	GetDB() *gorm.DB
 }
 
 type service struct {
@@ -117,7 +120,14 @@ func New() Service {
 
 // AutoMigrate automatically migrates the schema
 func (s *service) AutoMigrate() error {
-	return s.db.AutoMigrate(&User{}, &Payment{}, &models.Manufacturer{}, &models.Caliber{}, &models.WeaponType{})
+	return s.db.AutoMigrate(
+		&User{},
+		&Payment{},
+		&models.Manufacturer{},
+		&models.Caliber{},
+		&models.WeaponType{},
+		&models.Gun{},
+	)
 }
 
 // Health checks the health of the database connection by pinging the database.
@@ -206,4 +216,9 @@ func (s *service) Close() error {
 		s.db = nil
 	}
 	return err
+}
+
+// GetDB returns the underlying *gorm.DB instance
+func (s *service) GetDB() *gorm.DB {
+	return s.db
 }

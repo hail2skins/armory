@@ -53,7 +53,7 @@ func NewTestDB() *TestDB {
 	}
 
 	// Auto migrate the schema
-	if err := db.AutoMigrate(&database.User{}, &models.Manufacturer{}, &models.Caliber{}, &models.WeaponType{}); err != nil {
+	if err := db.AutoMigrate(&database.User{}, &models.Manufacturer{}, &models.Caliber{}, &models.WeaponType{}, &models.Gun{}); err != nil {
 		log.Fatalf("Error auto migrating schema: %v", err)
 	}
 
@@ -416,4 +416,9 @@ func (s *TestService) UpdateWeaponType(weaponType *models.WeaponType) error {
 // DeleteWeaponType deletes a weapon type
 func (s *TestService) DeleteWeaponType(id uint) error {
 	return s.db.Delete(&models.WeaponType{}, id).Error
+}
+
+// GetDB returns the underlying *gorm.DB instance
+func (s *TestService) GetDB() *gorm.DB {
+	return s.db
 }

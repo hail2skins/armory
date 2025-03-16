@@ -54,9 +54,9 @@ func TestUserRegistration(t *testing.T) {
 	// Serve the login request
 	router.ServeHTTP(loginResp, loginReq)
 
-	// Check that we get redirected to the home page
+	// Check that we get redirected to the owner page
 	assert.Equal(t, http.StatusSeeOther, loginResp.Code)
-	assert.Equal(t, "/", loginResp.Header().Get("Location"))
+	assert.Equal(t, "/owner", loginResp.Header().Get("Location"))
 
 	// Check that the auth cookie is set after login
 	loginCookies := loginResp.Result().Cookies()
