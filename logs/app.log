@@ -1907,3 +1907,745 @@
 2025/03/15 18:58:59 Updated popularity for weapon type: Battle Rifle
 2025/03/15 18:58:59 Updated popularity for weapon type: Precision Rifle
 2025/03/15 18:58:59 Database seeding completed
+2025/03/15 19:46:27 Starting database seeding...
+2025/03/15 19:46:27 Seeding manufacturers...
+2025/03/15 19:46:27 Updated popularity for manufacturer: Other
+2025/03/15 19:46:27 Updated popularity for manufacturer: Glock
+2025/03/15 19:46:27 Updated popularity for manufacturer: Smith & Wesson
+2025/03/15 19:46:27 Updated popularity for manufacturer: Sig Sauer
+2025/03/15 19:46:27 Updated popularity for manufacturer: Colt's Manufacturing Company
+2025/03/15 19:46:27 Updated popularity for manufacturer: Remington Arms
+2025/03/15 19:46:27 Updated popularity for manufacturer: Winchester Repeating Arms
+2025/03/15 19:46:27 Updated popularity for manufacturer: Sturm, Ruger & Co.
+2025/03/15 19:46:27 Updated popularity for manufacturer: Beretta
+2025/03/15 19:46:27 Updated popularity for manufacturer: Browning
+2025/03/15 19:46:27 Updated popularity for manufacturer: Heckler & Koch
+2025/03/15 19:46:27 Updated popularity for manufacturer: Taurus
+2025/03/15 19:46:27 Updated popularity for manufacturer: Kimber Manufacturing
+2025/03/15 19:46:27 Updated popularity for manufacturer: Springfield Armory
+2025/03/15 19:46:27 Updated popularity for manufacturer: Barrett Firearms Manufacturing
+2025/03/15 19:46:27 Updated popularity for manufacturer: Bushmaster Firearms International
+2025/03/15 19:46:27 Updated popularity for manufacturer: Franklin Armory
+2025/03/15 19:46:27 Updated popularity for manufacturer: Accuracy International
+2025/03/15 19:46:27 Updated popularity for manufacturer: Česká zbrojovka (CZ)
+2025/03/15 19:46:27 Updated popularity for manufacturer: FN Herstal
+2025/03/15 19:46:27 Updated popularity for manufacturer: Steyr Mannlicher
+2025/03/15 19:46:27 Updated popularity for manufacturer: Walther
+2025/03/15 19:46:27 Updated popularity for manufacturer: IWI (Israel Weapon Industries)
+2025/03/15 19:46:27 Updated popularity for manufacturer: Kel-Tec
+2025/03/15 19:46:27 Updated popularity for manufacturer: Rossi
+2025/03/15 19:46:27 Updated popularity for manufacturer: Charter Arms
+2025/03/15 19:46:27 Updated popularity for manufacturer: Uberti
+2025/03/15 19:46:27 Updated popularity for manufacturer: ArmaLite
+2025/03/15 19:46:27 Updated popularity for manufacturer: Magnum Research
+2025/03/15 19:46:27 Updated popularity for manufacturer: Mauser
+2025/03/15 19:46:27 Updated popularity for manufacturer: Luger
+2025/03/15 19:46:27 Updated popularity for manufacturer: Webley
+2025/03/15 19:46:27 Updated popularity for manufacturer: Enfield
+2025/03/15 19:46:27 Updated popularity for manufacturer: Wilson Combat
+2025/03/15 19:46:27 Updated popularity for manufacturer: Les Baer
+2025/03/15 19:46:27 Updated popularity for manufacturer: Nighthawk Custom
+2025/03/15 19:46:27 Updated popularity for manufacturer: Taran Tactical Innovations
+2025/03/15 19:46:27 Updated popularity for manufacturer: Ed Brown Products
+2025/03/15 19:46:27 Updated popularity for manufacturer: CCI (Cascade Cartridge Inc.)
+2025/03/15 19:46:27 Seeding calibers...
+2025/03/15 19:46:27 Updated popularity for caliber: Other
+2025/03/15 19:46:27 Updated popularity for caliber: 9mm Parabellum
+2025/03/15 19:46:27 Updated popularity for caliber: 45 ACP
+2025/03/15 19:46:27 Updated popularity for caliber: 22 Long Rifle
+2025/03/15 19:46:27 Updated popularity for caliber: 12 Gauge
+2025/03/15 19:46:27 Updated popularity for caliber: 5.56×45mm NATO
+2025/03/15 19:46:27 Updated popularity for caliber: 308 Winchester
+2025/03/15 19:46:27 Updated popularity for caliber: 38 Special
+2025/03/15 19:46:27 Updated popularity for caliber: 357 Magnum
+2025/03/15 19:46:27 Updated popularity for caliber: 40 S&W
+2025/03/15 19:46:27 Updated popularity for caliber: 380 ACP
+2025/03/15 19:46:27 Updated popularity for caliber: 22 Magnum
+2025/03/15 19:46:27 Updated popularity for caliber: 25 ACP
+2025/03/15 19:46:27 Updated popularity for caliber: 32 ACP
+2025/03/15 19:46:27 Updated popularity for caliber: 32 S&W
+2025/03/15 19:46:27 Updated popularity for caliber: 9×19mm
+2025/03/15 19:46:27 Updated popularity for caliber: 44 Special
+2025/03/15 19:46:27 Updated popularity for caliber: 44 Magnum
+2025/03/15 19:46:27 Updated popularity for caliber: 50 AE
+2025/03/15 19:46:27 Updated popularity for caliber: 223 Remington
+2025/03/15 19:46:27 Updated popularity for caliber: 22-250 Remington
+2025/03/15 19:46:27 Updated popularity for caliber: 243 Winchester
+2025/03/15 19:46:27 Updated popularity for caliber: 270 Winchester
+2025/03/15 19:46:27 Updated popularity for caliber: 30-06 Springfield
+2025/03/15 19:46:27 Updated popularity for caliber: 300 Winchester Magnum
+2025/03/15 19:46:27 Updated popularity for caliber: 6.5 Creedmoor
+2025/03/15 19:46:27 Updated popularity for caliber: 7.62×39mm
+2025/03/15 19:46:27 Updated popularity for caliber: 7.62×51mm NATO
+2025/03/15 19:46:27 Updated popularity for caliber: 7.62×54mm R
+2025/03/15 19:46:27 Updated popularity for caliber: 300 AAC Blackout
+2025/03/15 19:46:27 Updated popularity for caliber: 6.8 SPC
+2025/03/15 19:46:27 Updated popularity for caliber: 6mm Creedmoor
+2025/03/15 19:46:27 Updated popularity for caliber: 338 Lapua Magnum
+2025/03/15 19:46:27 Updated popularity for caliber: 375 H&H Magnum
+2025/03/15 19:46:27 Updated popularity for caliber: 458 Winchester Magnum
+2025/03/15 19:46:27 Updated popularity for caliber: 416 Rigby
+2025/03/15 19:46:27 Updated popularity for caliber: 500 S&W Magnum
+2025/03/15 19:46:27 Updated popularity for caliber: 338 Federal
+2025/03/15 19:46:27 Updated popularity for caliber: 20 Gauge
+2025/03/15 19:46:27 Updated popularity for caliber: 28 Gauge
+2025/03/15 19:46:27 Updated popularity for caliber: 410 Bore
+2025/03/15 19:46:27 Updated popularity for caliber: 10 Gauge
+2025/03/15 19:46:27 Updated popularity for caliber: 16 Gauge
+2025/03/15 19:46:27 Seeding weapon types...
+2025/03/15 19:46:27 Updated popularity for weapon type: Other
+2025/03/15 19:46:27 Updated popularity for weapon type: Handgun
+2025/03/15 19:46:27 Updated popularity for weapon type: Semi-Automatic Rifle
+2025/03/15 19:46:27 Updated popularity for weapon type: Shotgun
+2025/03/15 19:46:27 Updated popularity for weapon type: Revolver
+2025/03/15 19:46:27 Updated popularity for weapon type: Rifle
+2025/03/15 19:46:27 Updated popularity for weapon type: Carbine
+2025/03/15 19:46:27 Updated popularity for weapon type: Bolt-Action Rifle
+2025/03/15 19:46:27 Updated popularity for weapon type: Semi-Automatic Shotgun
+2025/03/15 19:46:27 Updated popularity for weapon type: Pump-Action Shotgun
+2025/03/15 19:46:27 Updated popularity for weapon type: Lever-Action Rifle
+2025/03/15 19:46:27 Updated popularity for weapon type: Sniper Rifle
+2025/03/15 19:46:27 Updated popularity for weapon type: Designated Marksman Rifle
+2025/03/15 19:46:27 Updated popularity for weapon type: Submachine Gun
+2025/03/15 19:46:27 Updated popularity for weapon type: Personal Defense Weapon
+2025/03/15 19:46:27 Updated popularity for weapon type: Machine Gun
+2025/03/15 19:46:27 Updated popularity for weapon type: Anti-Materiel Rifle
+2025/03/15 19:46:27 Updated popularity for weapon type: Battle Rifle
+2025/03/15 19:46:27 Updated popularity for weapon type: Precision Rifle
+2025/03/15 19:46:27 Database seeding completed
+2025/03/15 19:46:48 Starting database seeding...
+2025/03/15 19:46:48 Seeding manufacturers...
+2025/03/15 19:46:48 Updated popularity for manufacturer: Other
+2025/03/15 19:46:48 Updated popularity for manufacturer: Glock
+2025/03/15 19:46:48 Updated popularity for manufacturer: Smith & Wesson
+2025/03/15 19:46:48 Updated popularity for manufacturer: Sig Sauer
+2025/03/15 19:46:48 Updated popularity for manufacturer: Colt's Manufacturing Company
+2025/03/15 19:46:48 Updated popularity for manufacturer: Remington Arms
+2025/03/15 19:46:48 Updated popularity for manufacturer: Winchester Repeating Arms
+2025/03/15 19:46:48 Updated popularity for manufacturer: Sturm, Ruger & Co.
+2025/03/15 19:46:48 Updated popularity for manufacturer: Beretta
+2025/03/15 19:46:48 Updated popularity for manufacturer: Browning
+2025/03/15 19:46:48 Updated popularity for manufacturer: Heckler & Koch
+2025/03/15 19:46:48 Updated popularity for manufacturer: Taurus
+2025/03/15 19:46:48 Updated popularity for manufacturer: Kimber Manufacturing
+2025/03/15 19:46:48 Updated popularity for manufacturer: Springfield Armory
+2025/03/15 19:46:48 Updated popularity for manufacturer: Barrett Firearms Manufacturing
+2025/03/15 19:46:48 Updated popularity for manufacturer: Bushmaster Firearms International
+2025/03/15 19:46:48 Updated popularity for manufacturer: Franklin Armory
+2025/03/15 19:46:48 Updated popularity for manufacturer: Accuracy International
+2025/03/15 19:46:48 Updated popularity for manufacturer: Česká zbrojovka (CZ)
+2025/03/15 19:46:48 Updated popularity for manufacturer: FN Herstal
+2025/03/15 19:46:48 Updated popularity for manufacturer: Steyr Mannlicher
+2025/03/15 19:46:48 Updated popularity for manufacturer: Walther
+2025/03/15 19:46:48 Updated popularity for manufacturer: IWI (Israel Weapon Industries)
+2025/03/15 19:46:48 Updated popularity for manufacturer: Kel-Tec
+2025/03/15 19:46:48 Updated popularity for manufacturer: Rossi
+2025/03/15 19:46:48 Updated popularity for manufacturer: Charter Arms
+2025/03/15 19:46:48 Updated popularity for manufacturer: Uberti
+2025/03/15 19:46:48 Updated popularity for manufacturer: ArmaLite
+2025/03/15 19:46:48 Updated popularity for manufacturer: Magnum Research
+2025/03/15 19:46:48 Updated popularity for manufacturer: Mauser
+2025/03/15 19:46:48 Updated popularity for manufacturer: Luger
+2025/03/15 19:46:48 Updated popularity for manufacturer: Webley
+2025/03/15 19:46:48 Updated popularity for manufacturer: Enfield
+2025/03/15 19:46:48 Updated popularity for manufacturer: Wilson Combat
+2025/03/15 19:46:48 Updated popularity for manufacturer: Les Baer
+2025/03/15 19:46:48 Updated popularity for manufacturer: Nighthawk Custom
+2025/03/15 19:46:48 Updated popularity for manufacturer: Taran Tactical Innovations
+2025/03/15 19:46:48 Updated popularity for manufacturer: Ed Brown Products
+2025/03/15 19:46:48 Updated popularity for manufacturer: CCI (Cascade Cartridge Inc.)
+2025/03/15 19:46:48 Seeding calibers...
+2025/03/15 19:46:48 Updated popularity for caliber: Other
+2025/03/15 19:46:48 Updated popularity for caliber: 9mm Parabellum
+2025/03/15 19:46:48 Updated popularity for caliber: 45 ACP
+2025/03/15 19:46:48 Updated popularity for caliber: 22 Long Rifle
+2025/03/15 19:46:48 Updated popularity for caliber: 12 Gauge
+2025/03/15 19:46:48 Updated popularity for caliber: 5.56×45mm NATO
+2025/03/15 19:46:48 Updated popularity for caliber: 308 Winchester
+2025/03/15 19:46:48 Updated popularity for caliber: 38 Special
+2025/03/15 19:46:48 Updated popularity for caliber: 357 Magnum
+2025/03/15 19:46:48 Updated popularity for caliber: 40 S&W
+2025/03/15 19:46:48 Updated popularity for caliber: 380 ACP
+2025/03/15 19:46:48 Updated popularity for caliber: 22 Magnum
+2025/03/15 19:46:48 Updated popularity for caliber: 25 ACP
+2025/03/15 19:46:48 Updated popularity for caliber: 32 ACP
+2025/03/15 19:46:48 Updated popularity for caliber: 32 S&W
+2025/03/15 19:46:48 Updated popularity for caliber: 9×19mm
+2025/03/15 19:46:48 Updated popularity for caliber: 44 Special
+2025/03/15 19:46:48 Updated popularity for caliber: 44 Magnum
+2025/03/15 19:46:48 Updated popularity for caliber: 50 AE
+2025/03/15 19:46:48 Updated popularity for caliber: 223 Remington
+2025/03/15 19:46:48 Updated popularity for caliber: 22-250 Remington
+2025/03/15 19:46:48 Updated popularity for caliber: 243 Winchester
+2025/03/15 19:46:48 Updated popularity for caliber: 270 Winchester
+2025/03/15 19:46:48 Updated popularity for caliber: 30-06 Springfield
+2025/03/15 19:46:48 Updated popularity for caliber: 300 Winchester Magnum
+2025/03/15 19:46:48 Updated popularity for caliber: 6.5 Creedmoor
+2025/03/15 19:46:48 Updated popularity for caliber: 7.62×39mm
+2025/03/15 19:46:48 Updated popularity for caliber: 7.62×51mm NATO
+2025/03/15 19:46:48 Updated popularity for caliber: 7.62×54mm R
+2025/03/15 19:46:48 Updated popularity for caliber: 300 AAC Blackout
+2025/03/15 19:46:48 Updated popularity for caliber: 6.8 SPC
+2025/03/15 19:46:48 Updated popularity for caliber: 6mm Creedmoor
+2025/03/15 19:46:48 Updated popularity for caliber: 338 Lapua Magnum
+2025/03/15 19:46:48 Updated popularity for caliber: 375 H&H Magnum
+2025/03/15 19:46:48 Updated popularity for caliber: 458 Winchester Magnum
+2025/03/15 19:46:48 Updated popularity for caliber: 416 Rigby
+2025/03/15 19:46:48 Updated popularity for caliber: 500 S&W Magnum
+2025/03/15 19:46:48 Updated popularity for caliber: 338 Federal
+2025/03/15 19:46:48 Updated popularity for caliber: 20 Gauge
+2025/03/15 19:46:48 Updated popularity for caliber: 28 Gauge
+2025/03/15 19:46:48 Updated popularity for caliber: 410 Bore
+2025/03/15 19:46:49 Updated popularity for caliber: 10 Gauge
+2025/03/15 19:46:49 Updated popularity for caliber: 16 Gauge
+2025/03/15 19:46:49 Seeding weapon types...
+2025/03/15 19:46:49 Updated popularity for weapon type: Other
+2025/03/15 19:46:49 Updated popularity for weapon type: Handgun
+2025/03/15 19:46:49 Updated popularity for weapon type: Semi-Automatic Rifle
+2025/03/15 19:46:49 Updated popularity for weapon type: Shotgun
+2025/03/15 19:46:49 Updated popularity for weapon type: Revolver
+2025/03/15 19:46:49 Updated popularity for weapon type: Rifle
+2025/03/15 19:46:49 Updated popularity for weapon type: Carbine
+2025/03/15 19:46:49 Updated popularity for weapon type: Bolt-Action Rifle
+2025/03/15 19:46:49 Updated popularity for weapon type: Semi-Automatic Shotgun
+2025/03/15 19:46:49 Updated popularity for weapon type: Pump-Action Shotgun
+2025/03/15 19:46:49 Updated popularity for weapon type: Lever-Action Rifle
+2025/03/15 19:46:49 Updated popularity for weapon type: Sniper Rifle
+2025/03/15 19:46:49 Updated popularity for weapon type: Designated Marksman Rifle
+2025/03/15 19:46:49 Updated popularity for weapon type: Submachine Gun
+2025/03/15 19:46:49 Updated popularity for weapon type: Personal Defense Weapon
+2025/03/15 19:46:49 Updated popularity for weapon type: Machine Gun
+2025/03/15 19:46:49 Updated popularity for weapon type: Anti-Materiel Rifle
+2025/03/15 19:46:49 Updated popularity for weapon type: Battle Rifle
+2025/03/15 19:46:49 Updated popularity for weapon type: Precision Rifle
+2025/03/15 19:46:49 Database seeding completed
+2025/03/15 19:47:45 Starting database seeding...
+2025/03/15 19:47:45 Seeding manufacturers...
+2025/03/15 19:47:45 Updated popularity for manufacturer: Other
+2025/03/15 19:47:45 Updated popularity for manufacturer: Glock
+2025/03/15 19:47:45 Updated popularity for manufacturer: Smith & Wesson
+2025/03/15 19:47:45 Updated popularity for manufacturer: Sig Sauer
+2025/03/15 19:47:45 Updated popularity for manufacturer: Colt's Manufacturing Company
+2025/03/15 19:47:45 Updated popularity for manufacturer: Remington Arms
+2025/03/15 19:47:45 Updated popularity for manufacturer: Winchester Repeating Arms
+2025/03/15 19:47:45 Updated popularity for manufacturer: Sturm, Ruger & Co.
+2025/03/15 19:47:45 Updated popularity for manufacturer: Beretta
+2025/03/15 19:47:45 Updated popularity for manufacturer: Browning
+2025/03/15 19:47:45 Updated popularity for manufacturer: Heckler & Koch
+2025/03/15 19:47:45 Updated popularity for manufacturer: Taurus
+2025/03/15 19:47:45 Updated popularity for manufacturer: Kimber Manufacturing
+2025/03/15 19:47:45 Updated popularity for manufacturer: Springfield Armory
+2025/03/15 19:47:45 Updated popularity for manufacturer: Barrett Firearms Manufacturing
+2025/03/15 19:47:45 Updated popularity for manufacturer: Bushmaster Firearms International
+2025/03/15 19:47:45 Updated popularity for manufacturer: Franklin Armory
+2025/03/15 19:47:45 Updated popularity for manufacturer: Accuracy International
+2025/03/15 19:47:45 Updated popularity for manufacturer: Česká zbrojovka (CZ)
+2025/03/15 19:47:45 Updated popularity for manufacturer: FN Herstal
+2025/03/15 19:47:45 Updated popularity for manufacturer: Steyr Mannlicher
+2025/03/15 19:47:45 Updated popularity for manufacturer: Walther
+2025/03/15 19:47:45 Updated popularity for manufacturer: IWI (Israel Weapon Industries)
+2025/03/15 19:47:45 Updated popularity for manufacturer: Kel-Tec
+2025/03/15 19:47:45 Updated popularity for manufacturer: Rossi
+2025/03/15 19:47:45 Updated popularity for manufacturer: Charter Arms
+2025/03/15 19:47:45 Updated popularity for manufacturer: Uberti
+2025/03/15 19:47:45 Updated popularity for manufacturer: ArmaLite
+2025/03/15 19:47:45 Updated popularity for manufacturer: Magnum Research
+2025/03/15 19:47:45 Updated popularity for manufacturer: Mauser
+2025/03/15 19:47:45 Updated popularity for manufacturer: Luger
+2025/03/15 19:47:45 Updated popularity for manufacturer: Webley
+2025/03/15 19:47:45 Updated popularity for manufacturer: Enfield
+2025/03/15 19:47:45 Updated popularity for manufacturer: Wilson Combat
+2025/03/15 19:47:45 Updated popularity for manufacturer: Les Baer
+2025/03/15 19:47:45 Updated popularity for manufacturer: Nighthawk Custom
+2025/03/15 19:47:45 Updated popularity for manufacturer: Taran Tactical Innovations
+2025/03/15 19:47:45 Updated popularity for manufacturer: Ed Brown Products
+2025/03/15 19:47:45 Updated popularity for manufacturer: CCI (Cascade Cartridge Inc.)
+2025/03/15 19:47:45 Seeding calibers...
+2025/03/15 19:47:45 Updated popularity for caliber: Other
+2025/03/15 19:47:45 Updated popularity for caliber: 9mm Parabellum
+2025/03/15 19:47:45 Updated popularity for caliber: 45 ACP
+2025/03/15 19:47:45 Updated popularity for caliber: 22 Long Rifle
+2025/03/15 19:47:45 Updated popularity for caliber: 12 Gauge
+2025/03/15 19:47:45 Updated popularity for caliber: 5.56×45mm NATO
+2025/03/15 19:47:45 Updated popularity for caliber: 308 Winchester
+2025/03/15 19:47:45 Updated popularity for caliber: 38 Special
+2025/03/15 19:47:45 Updated popularity for caliber: 357 Magnum
+2025/03/15 19:47:45 Updated popularity for caliber: 40 S&W
+2025/03/15 19:47:45 Updated popularity for caliber: 380 ACP
+2025/03/15 19:47:45 Updated popularity for caliber: 22 Magnum
+2025/03/15 19:47:45 Updated popularity for caliber: 25 ACP
+2025/03/15 19:47:45 Updated popularity for caliber: 32 ACP
+2025/03/15 19:47:45 Updated popularity for caliber: 32 S&W
+2025/03/15 19:47:45 Updated popularity for caliber: 9×19mm
+2025/03/15 19:47:45 Updated popularity for caliber: 44 Special
+2025/03/15 19:47:45 Updated popularity for caliber: 44 Magnum
+2025/03/15 19:47:45 Updated popularity for caliber: 50 AE
+2025/03/15 19:47:45 Updated popularity for caliber: 223 Remington
+2025/03/15 19:47:45 Updated popularity for caliber: 22-250 Remington
+2025/03/15 19:47:45 Updated popularity for caliber: 243 Winchester
+2025/03/15 19:47:45 Updated popularity for caliber: 270 Winchester
+2025/03/15 19:47:45 Updated popularity for caliber: 30-06 Springfield
+2025/03/15 19:47:45 Updated popularity for caliber: 300 Winchester Magnum
+2025/03/15 19:47:45 Updated popularity for caliber: 6.5 Creedmoor
+2025/03/15 19:47:45 Updated popularity for caliber: 7.62×39mm
+2025/03/15 19:47:45 Updated popularity for caliber: 7.62×51mm NATO
+2025/03/15 19:47:45 Updated popularity for caliber: 7.62×54mm R
+2025/03/15 19:47:45 Updated popularity for caliber: 300 AAC Blackout
+2025/03/15 19:47:45 Updated popularity for caliber: 6.8 SPC
+2025/03/15 19:47:45 Updated popularity for caliber: 6mm Creedmoor
+2025/03/15 19:47:45 Updated popularity for caliber: 338 Lapua Magnum
+2025/03/15 19:47:45 Updated popularity for caliber: 375 H&H Magnum
+2025/03/15 19:47:45 Updated popularity for caliber: 458 Winchester Magnum
+2025/03/15 19:47:45 Updated popularity for caliber: 416 Rigby
+2025/03/15 19:47:45 Updated popularity for caliber: 500 S&W Magnum
+2025/03/15 19:47:45 Updated popularity for caliber: 338 Federal
+2025/03/15 19:47:45 Updated popularity for caliber: 20 Gauge
+2025/03/15 19:47:45 Updated popularity for caliber: 28 Gauge
+2025/03/15 19:47:45 Updated popularity for caliber: 410 Bore
+2025/03/15 19:47:45 Updated popularity for caliber: 10 Gauge
+2025/03/15 19:47:45 Updated popularity for caliber: 16 Gauge
+2025/03/15 19:47:45 Seeding weapon types...
+2025/03/15 19:47:45 Updated popularity for weapon type: Other
+2025/03/15 19:47:45 Updated popularity for weapon type: Handgun
+2025/03/15 19:47:45 Updated popularity for weapon type: Semi-Automatic Rifle
+2025/03/15 19:47:45 Updated popularity for weapon type: Shotgun
+2025/03/15 19:47:45 Updated popularity for weapon type: Revolver
+2025/03/15 19:47:45 Updated popularity for weapon type: Rifle
+2025/03/15 19:47:45 Updated popularity for weapon type: Carbine
+2025/03/15 19:47:45 Updated popularity for weapon type: Bolt-Action Rifle
+2025/03/15 19:47:45 Updated popularity for weapon type: Semi-Automatic Shotgun
+2025/03/15 19:47:45 Updated popularity for weapon type: Pump-Action Shotgun
+2025/03/15 19:47:45 Updated popularity for weapon type: Lever-Action Rifle
+2025/03/15 19:47:45 Updated popularity for weapon type: Sniper Rifle
+2025/03/15 19:47:45 Updated popularity for weapon type: Designated Marksman Rifle
+2025/03/15 19:47:45 Updated popularity for weapon type: Submachine Gun
+2025/03/15 19:47:45 Updated popularity for weapon type: Personal Defense Weapon
+2025/03/15 19:47:45 Updated popularity for weapon type: Machine Gun
+2025/03/15 19:47:45 Updated popularity for weapon type: Anti-Materiel Rifle
+2025/03/15 19:47:45 Updated popularity for weapon type: Battle Rifle
+2025/03/15 19:47:45 Updated popularity for weapon type: Precision Rifle
+2025/03/15 19:47:45 Database seeding completed
+2025/03/15 19:47:54 Starting database seeding...
+2025/03/15 19:47:54 Seeding manufacturers...
+2025/03/15 19:47:54 Updated popularity for manufacturer: Other
+2025/03/15 19:47:54 Updated popularity for manufacturer: Glock
+2025/03/15 19:47:54 Updated popularity for manufacturer: Smith & Wesson
+2025/03/15 19:47:54 Updated popularity for manufacturer: Sig Sauer
+2025/03/15 19:47:54 Updated popularity for manufacturer: Colt's Manufacturing Company
+2025/03/15 19:47:54 Updated popularity for manufacturer: Remington Arms
+2025/03/15 19:47:54 Updated popularity for manufacturer: Winchester Repeating Arms
+2025/03/15 19:47:54 Updated popularity for manufacturer: Sturm, Ruger & Co.
+2025/03/15 19:47:54 Updated popularity for manufacturer: Beretta
+2025/03/15 19:47:54 Updated popularity for manufacturer: Browning
+2025/03/15 19:47:54 Updated popularity for manufacturer: Heckler & Koch
+2025/03/15 19:47:54 Updated popularity for manufacturer: Taurus
+2025/03/15 19:47:54 Updated popularity for manufacturer: Kimber Manufacturing
+2025/03/15 19:47:54 Updated popularity for manufacturer: Springfield Armory
+2025/03/15 19:47:54 Updated popularity for manufacturer: Barrett Firearms Manufacturing
+2025/03/15 19:47:54 Updated popularity for manufacturer: Bushmaster Firearms International
+2025/03/15 19:47:54 Updated popularity for manufacturer: Franklin Armory
+2025/03/15 19:47:54 Updated popularity for manufacturer: Accuracy International
+2025/03/15 19:47:54 Updated popularity for manufacturer: Česká zbrojovka (CZ)
+2025/03/15 19:47:54 Updated popularity for manufacturer: FN Herstal
+2025/03/15 19:47:54 Updated popularity for manufacturer: Steyr Mannlicher
+2025/03/15 19:47:54 Updated popularity for manufacturer: Walther
+2025/03/15 19:47:54 Updated popularity for manufacturer: IWI (Israel Weapon Industries)
+2025/03/15 19:47:54 Updated popularity for manufacturer: Kel-Tec
+2025/03/15 19:47:54 Updated popularity for manufacturer: Rossi
+2025/03/15 19:47:54 Updated popularity for manufacturer: Charter Arms
+2025/03/15 19:47:54 Updated popularity for manufacturer: Uberti
+2025/03/15 19:47:54 Updated popularity for manufacturer: ArmaLite
+2025/03/15 19:47:54 Updated popularity for manufacturer: Magnum Research
+2025/03/15 19:47:54 Updated popularity for manufacturer: Mauser
+2025/03/15 19:47:54 Updated popularity for manufacturer: Luger
+2025/03/15 19:47:54 Updated popularity for manufacturer: Webley
+2025/03/15 19:47:54 Updated popularity for manufacturer: Enfield
+2025/03/15 19:47:54 Updated popularity for manufacturer: Wilson Combat
+2025/03/15 19:47:54 Updated popularity for manufacturer: Les Baer
+2025/03/15 19:47:54 Updated popularity for manufacturer: Nighthawk Custom
+2025/03/15 19:47:54 Updated popularity for manufacturer: Taran Tactical Innovations
+2025/03/15 19:47:54 Updated popularity for manufacturer: Ed Brown Products
+2025/03/15 19:47:54 Updated popularity for manufacturer: CCI (Cascade Cartridge Inc.)
+2025/03/15 19:47:54 Seeding calibers...
+2025/03/15 19:47:54 Updated popularity for caliber: Other
+2025/03/15 19:47:54 Updated popularity for caliber: 9mm Parabellum
+2025/03/15 19:47:54 Updated popularity for caliber: 45 ACP
+2025/03/15 19:47:54 Updated popularity for caliber: 22 Long Rifle
+2025/03/15 19:47:54 Updated popularity for caliber: 12 Gauge
+2025/03/15 19:47:54 Updated popularity for caliber: 5.56×45mm NATO
+2025/03/15 19:47:54 Updated popularity for caliber: 308 Winchester
+2025/03/15 19:47:54 Updated popularity for caliber: 38 Special
+2025/03/15 19:47:54 Updated popularity for caliber: 357 Magnum
+2025/03/15 19:47:54 Updated popularity for caliber: 40 S&W
+2025/03/15 19:47:54 Updated popularity for caliber: 380 ACP
+2025/03/15 19:47:54 Updated popularity for caliber: 22 Magnum
+2025/03/15 19:47:54 Updated popularity for caliber: 25 ACP
+2025/03/15 19:47:54 Updated popularity for caliber: 32 ACP
+2025/03/15 19:47:54 Updated popularity for caliber: 32 S&W
+2025/03/15 19:47:54 Updated popularity for caliber: 9×19mm
+2025/03/15 19:47:54 Updated popularity for caliber: 44 Special
+2025/03/15 19:47:54 Updated popularity for caliber: 44 Magnum
+2025/03/15 19:47:54 Updated popularity for caliber: 50 AE
+2025/03/15 19:47:54 Updated popularity for caliber: 223 Remington
+2025/03/15 19:47:54 Updated popularity for caliber: 22-250 Remington
+2025/03/15 19:47:54 Updated popularity for caliber: 243 Winchester
+2025/03/15 19:47:54 Updated popularity for caliber: 270 Winchester
+2025/03/15 19:47:54 Updated popularity for caliber: 30-06 Springfield
+2025/03/15 19:47:54 Updated popularity for caliber: 300 Winchester Magnum
+2025/03/15 19:47:54 Updated popularity for caliber: 6.5 Creedmoor
+2025/03/15 19:47:54 Updated popularity for caliber: 7.62×39mm
+2025/03/15 19:47:54 Updated popularity for caliber: 7.62×51mm NATO
+2025/03/15 19:47:54 Updated popularity for caliber: 7.62×54mm R
+2025/03/15 19:47:54 Updated popularity for caliber: 300 AAC Blackout
+2025/03/15 19:47:54 Updated popularity for caliber: 6.8 SPC
+2025/03/15 19:47:54 Updated popularity for caliber: 6mm Creedmoor
+2025/03/15 19:47:54 Updated popularity for caliber: 338 Lapua Magnum
+2025/03/15 19:47:54 Updated popularity for caliber: 375 H&H Magnum
+2025/03/15 19:47:54 Updated popularity for caliber: 458 Winchester Magnum
+2025/03/15 19:47:54 Updated popularity for caliber: 416 Rigby
+2025/03/15 19:47:54 Updated popularity for caliber: 500 S&W Magnum
+2025/03/15 19:47:54 Updated popularity for caliber: 338 Federal
+2025/03/15 19:47:54 Updated popularity for caliber: 20 Gauge
+2025/03/15 19:47:54 Updated popularity for caliber: 28 Gauge
+2025/03/15 19:47:54 Updated popularity for caliber: 410 Bore
+2025/03/15 19:47:54 Updated popularity for caliber: 10 Gauge
+2025/03/15 19:47:54 Updated popularity for caliber: 16 Gauge
+2025/03/15 19:47:54 Seeding weapon types...
+2025/03/15 19:47:54 Updated popularity for weapon type: Other
+2025/03/15 19:47:54 Updated popularity for weapon type: Handgun
+2025/03/15 19:47:54 Updated popularity for weapon type: Semi-Automatic Rifle
+2025/03/15 19:47:54 Updated popularity for weapon type: Shotgun
+2025/03/15 19:47:54 Updated popularity for weapon type: Revolver
+2025/03/15 19:47:54 Updated popularity for weapon type: Rifle
+2025/03/15 19:47:54 Updated popularity for weapon type: Carbine
+2025/03/15 19:47:54 Updated popularity for weapon type: Bolt-Action Rifle
+2025/03/15 19:47:54 Updated popularity for weapon type: Semi-Automatic Shotgun
+2025/03/15 19:47:54 Updated popularity for weapon type: Pump-Action Shotgun
+2025/03/15 19:47:54 Updated popularity for weapon type: Lever-Action Rifle
+2025/03/15 19:47:54 Updated popularity for weapon type: Sniper Rifle
+2025/03/15 19:47:54 Updated popularity for weapon type: Designated Marksman Rifle
+2025/03/15 19:47:54 Updated popularity for weapon type: Submachine Gun
+2025/03/15 19:47:54 Updated popularity for weapon type: Personal Defense Weapon
+2025/03/15 19:47:54 Updated popularity for weapon type: Machine Gun
+2025/03/15 19:47:54 Updated popularity for weapon type: Anti-Materiel Rifle
+2025/03/15 19:47:54 Updated popularity for weapon type: Battle Rifle
+2025/03/15 19:47:54 Updated popularity for weapon type: Precision Rifle
+2025/03/15 19:47:54 Database seeding completed
+2025/03/15 19:51:53 Starting database seeding...
+2025/03/15 19:51:53 Seeding manufacturers...
+2025/03/15 19:51:53 Updated popularity for manufacturer: Other
+2025/03/15 19:51:53 Updated popularity for manufacturer: Glock
+2025/03/15 19:51:53 Updated popularity for manufacturer: Smith & Wesson
+2025/03/15 19:51:53 Updated popularity for manufacturer: Sig Sauer
+2025/03/15 19:51:53 Updated popularity for manufacturer: Colt's Manufacturing Company
+2025/03/15 19:51:53 Updated popularity for manufacturer: Remington Arms
+2025/03/15 19:51:53 Updated popularity for manufacturer: Winchester Repeating Arms
+2025/03/15 19:51:53 Updated popularity for manufacturer: Sturm, Ruger & Co.
+2025/03/15 19:51:53 Updated popularity for manufacturer: Beretta
+2025/03/15 19:51:53 Updated popularity for manufacturer: Browning
+2025/03/15 19:51:53 Updated popularity for manufacturer: Heckler & Koch
+2025/03/15 19:51:53 Updated popularity for manufacturer: Taurus
+2025/03/15 19:51:53 Updated popularity for manufacturer: Kimber Manufacturing
+2025/03/15 19:51:53 Updated popularity for manufacturer: Springfield Armory
+2025/03/15 19:51:53 Updated popularity for manufacturer: Barrett Firearms Manufacturing
+2025/03/15 19:51:53 Updated popularity for manufacturer: Bushmaster Firearms International
+2025/03/15 19:51:53 Updated popularity for manufacturer: Franklin Armory
+2025/03/15 19:51:53 Updated popularity for manufacturer: Accuracy International
+2025/03/15 19:51:53 Updated popularity for manufacturer: Česká zbrojovka (CZ)
+2025/03/15 19:51:53 Updated popularity for manufacturer: FN Herstal
+2025/03/15 19:51:53 Updated popularity for manufacturer: Steyr Mannlicher
+2025/03/15 19:51:53 Updated popularity for manufacturer: Walther
+2025/03/15 19:51:53 Updated popularity for manufacturer: IWI (Israel Weapon Industries)
+2025/03/15 19:51:53 Updated popularity for manufacturer: Kel-Tec
+2025/03/15 19:51:53 Updated popularity for manufacturer: Rossi
+2025/03/15 19:51:53 Updated popularity for manufacturer: Charter Arms
+2025/03/15 19:51:53 Updated popularity for manufacturer: Uberti
+2025/03/15 19:51:53 Updated popularity for manufacturer: ArmaLite
+2025/03/15 19:51:53 Updated popularity for manufacturer: Magnum Research
+2025/03/15 19:51:53 Updated popularity for manufacturer: Mauser
+2025/03/15 19:51:53 Updated popularity for manufacturer: Luger
+2025/03/15 19:51:53 Updated popularity for manufacturer: Webley
+2025/03/15 19:51:53 Updated popularity for manufacturer: Enfield
+2025/03/15 19:51:53 Updated popularity for manufacturer: Wilson Combat
+2025/03/15 19:51:53 Updated popularity for manufacturer: Les Baer
+2025/03/15 19:51:53 Updated popularity for manufacturer: Nighthawk Custom
+2025/03/15 19:51:53 Updated popularity for manufacturer: Taran Tactical Innovations
+2025/03/15 19:51:53 Updated popularity for manufacturer: Ed Brown Products
+2025/03/15 19:51:53 Updated popularity for manufacturer: CCI (Cascade Cartridge Inc.)
+2025/03/15 19:51:53 Seeding calibers...
+2025/03/15 19:51:53 Updated popularity for caliber: Other
+2025/03/15 19:51:53 Updated popularity for caliber: 9mm Parabellum
+2025/03/15 19:51:53 Updated popularity for caliber: 45 ACP
+2025/03/15 19:51:53 Updated popularity for caliber: 22 Long Rifle
+2025/03/15 19:51:53 Updated popularity for caliber: 12 Gauge
+2025/03/15 19:51:53 Updated popularity for caliber: 5.56×45mm NATO
+2025/03/15 19:51:53 Updated popularity for caliber: 308 Winchester
+2025/03/15 19:51:53 Updated popularity for caliber: 38 Special
+2025/03/15 19:51:53 Updated popularity for caliber: 357 Magnum
+2025/03/15 19:51:53 Updated popularity for caliber: 40 S&W
+2025/03/15 19:51:53 Updated popularity for caliber: 380 ACP
+2025/03/15 19:51:53 Updated popularity for caliber: 22 Magnum
+2025/03/15 19:51:53 Updated popularity for caliber: 25 ACP
+2025/03/15 19:51:53 Updated popularity for caliber: 32 ACP
+2025/03/15 19:51:53 Updated popularity for caliber: 32 S&W
+2025/03/15 19:51:53 Updated popularity for caliber: 9×19mm
+2025/03/15 19:51:53 Updated popularity for caliber: 44 Special
+2025/03/15 19:51:53 Updated popularity for caliber: 44 Magnum
+2025/03/15 19:51:53 Updated popularity for caliber: 50 AE
+2025/03/15 19:51:53 Updated popularity for caliber: 223 Remington
+2025/03/15 19:51:53 Updated popularity for caliber: 22-250 Remington
+2025/03/15 19:51:53 Updated popularity for caliber: 243 Winchester
+2025/03/15 19:51:53 Updated popularity for caliber: 270 Winchester
+2025/03/15 19:51:53 Updated popularity for caliber: 30-06 Springfield
+2025/03/15 19:51:53 Updated popularity for caliber: 300 Winchester Magnum
+2025/03/15 19:51:53 Updated popularity for caliber: 6.5 Creedmoor
+2025/03/15 19:51:53 Updated popularity for caliber: 7.62×39mm
+2025/03/15 19:51:53 Updated popularity for caliber: 7.62×51mm NATO
+2025/03/15 19:51:53 Updated popularity for caliber: 7.62×54mm R
+2025/03/15 19:51:53 Updated popularity for caliber: 300 AAC Blackout
+2025/03/15 19:51:53 Updated popularity for caliber: 6.8 SPC
+2025/03/15 19:51:53 Updated popularity for caliber: 6mm Creedmoor
+2025/03/15 19:51:53 Updated popularity for caliber: 338 Lapua Magnum
+2025/03/15 19:51:53 Updated popularity for caliber: 375 H&H Magnum
+2025/03/15 19:51:53 Updated popularity for caliber: 458 Winchester Magnum
+2025/03/15 19:51:53 Updated popularity for caliber: 416 Rigby
+2025/03/15 19:51:53 Updated popularity for caliber: 500 S&W Magnum
+2025/03/15 19:51:53 Updated popularity for caliber: 338 Federal
+2025/03/15 19:51:53 Updated popularity for caliber: 20 Gauge
+2025/03/15 19:51:53 Updated popularity for caliber: 28 Gauge
+2025/03/15 19:51:53 Updated popularity for caliber: 410 Bore
+2025/03/15 19:51:53 Updated popularity for caliber: 10 Gauge
+2025/03/15 19:51:53 Updated popularity for caliber: 16 Gauge
+2025/03/15 19:51:53 Seeding weapon types...
+2025/03/15 19:51:53 Updated popularity for weapon type: Other
+2025/03/15 19:51:53 Updated popularity for weapon type: Handgun
+2025/03/15 19:51:53 Updated popularity for weapon type: Semi-Automatic Rifle
+2025/03/15 19:51:53 Updated popularity for weapon type: Shotgun
+2025/03/15 19:51:53 Updated popularity for weapon type: Revolver
+2025/03/15 19:51:53 Updated popularity for weapon type: Rifle
+2025/03/15 19:51:53 Updated popularity for weapon type: Carbine
+2025/03/15 19:51:53 Updated popularity for weapon type: Bolt-Action Rifle
+2025/03/15 19:51:53 Updated popularity for weapon type: Semi-Automatic Shotgun
+2025/03/15 19:51:53 Updated popularity for weapon type: Pump-Action Shotgun
+2025/03/15 19:51:53 Updated popularity for weapon type: Lever-Action Rifle
+2025/03/15 19:51:53 Updated popularity for weapon type: Sniper Rifle
+2025/03/15 19:51:53 Updated popularity for weapon type: Designated Marksman Rifle
+2025/03/15 19:51:53 Updated popularity for weapon type: Submachine Gun
+2025/03/15 19:51:53 Updated popularity for weapon type: Personal Defense Weapon
+2025/03/15 19:51:53 Updated popularity for weapon type: Machine Gun
+2025/03/15 19:51:53 Updated popularity for weapon type: Anti-Materiel Rifle
+2025/03/15 19:51:53 Updated popularity for weapon type: Battle Rifle
+2025/03/15 19:51:53 Updated popularity for weapon type: Precision Rifle
+2025/03/15 19:51:53 Database seeding completed
+2025/03/15 19:59:38 Starting database seeding...
+2025/03/15 19:59:38 Seeding manufacturers...
+2025/03/15 19:59:38 Updated popularity for manufacturer: Other
+2025/03/15 19:59:38 Updated popularity for manufacturer: Glock
+2025/03/15 19:59:38 Updated popularity for manufacturer: Smith & Wesson
+2025/03/15 19:59:38 Updated popularity for manufacturer: Sig Sauer
+2025/03/15 19:59:38 Updated popularity for manufacturer: Colt's Manufacturing Company
+2025/03/15 19:59:38 Updated popularity for manufacturer: Remington Arms
+2025/03/15 19:59:38 Updated popularity for manufacturer: Winchester Repeating Arms
+2025/03/15 19:59:38 Updated popularity for manufacturer: Sturm, Ruger & Co.
+2025/03/15 19:59:38 Updated popularity for manufacturer: Beretta
+2025/03/15 19:59:38 Updated popularity for manufacturer: Browning
+2025/03/15 19:59:38 Updated popularity for manufacturer: Heckler & Koch
+2025/03/15 19:59:38 Updated popularity for manufacturer: Taurus
+2025/03/15 19:59:38 Updated popularity for manufacturer: Kimber Manufacturing
+2025/03/15 19:59:38 Updated popularity for manufacturer: Springfield Armory
+2025/03/15 19:59:38 Updated popularity for manufacturer: Barrett Firearms Manufacturing
+2025/03/15 19:59:38 Updated popularity for manufacturer: Bushmaster Firearms International
+2025/03/15 19:59:38 Updated popularity for manufacturer: Franklin Armory
+2025/03/15 19:59:38 Updated popularity for manufacturer: Accuracy International
+2025/03/15 19:59:38 Updated popularity for manufacturer: Česká zbrojovka (CZ)
+2025/03/15 19:59:38 Updated popularity for manufacturer: FN Herstal
+2025/03/15 19:59:38 Updated popularity for manufacturer: Steyr Mannlicher
+2025/03/15 19:59:38 Updated popularity for manufacturer: Walther
+2025/03/15 19:59:38 Updated popularity for manufacturer: IWI (Israel Weapon Industries)
+2025/03/15 19:59:38 Updated popularity for manufacturer: Kel-Tec
+2025/03/15 19:59:38 Updated popularity for manufacturer: Rossi
+2025/03/15 19:59:38 Updated popularity for manufacturer: Charter Arms
+2025/03/15 19:59:38 Updated popularity for manufacturer: Uberti
+2025/03/15 19:59:38 Updated popularity for manufacturer: ArmaLite
+2025/03/15 19:59:38 Updated popularity for manufacturer: Magnum Research
+2025/03/15 19:59:38 Updated popularity for manufacturer: Mauser
+2025/03/15 19:59:38 Updated popularity for manufacturer: Luger
+2025/03/15 19:59:38 Updated popularity for manufacturer: Webley
+2025/03/15 19:59:38 Updated popularity for manufacturer: Enfield
+2025/03/15 19:59:38 Updated popularity for manufacturer: Wilson Combat
+2025/03/15 19:59:38 Updated popularity for manufacturer: Les Baer
+2025/03/15 19:59:38 Updated popularity for manufacturer: Nighthawk Custom
+2025/03/15 19:59:38 Updated popularity for manufacturer: Taran Tactical Innovations
+2025/03/15 19:59:38 Updated popularity for manufacturer: Ed Brown Products
+2025/03/15 19:59:39 Updated popularity for manufacturer: CCI (Cascade Cartridge Inc.)
+2025/03/15 19:59:39 Seeding calibers...
+2025/03/15 19:59:39 Updated popularity for caliber: Other
+2025/03/15 19:59:39 Updated popularity for caliber: 9mm Parabellum
+2025/03/15 19:59:39 Updated popularity for caliber: 45 ACP
+2025/03/15 19:59:39 Updated popularity for caliber: 22 Long Rifle
+2025/03/15 19:59:39 Updated popularity for caliber: 12 Gauge
+2025/03/15 19:59:39 Updated popularity for caliber: 5.56×45mm NATO
+2025/03/15 19:59:39 Updated popularity for caliber: 308 Winchester
+2025/03/15 19:59:39 Updated popularity for caliber: 38 Special
+2025/03/15 19:59:39 Updated popularity for caliber: 357 Magnum
+2025/03/15 19:59:39 Updated popularity for caliber: 40 S&W
+2025/03/15 19:59:39 Updated popularity for caliber: 380 ACP
+2025/03/15 19:59:39 Updated popularity for caliber: 22 Magnum
+2025/03/15 19:59:39 Updated popularity for caliber: 25 ACP
+2025/03/15 19:59:39 Updated popularity for caliber: 32 ACP
+2025/03/15 19:59:39 Updated popularity for caliber: 32 S&W
+2025/03/15 19:59:39 Updated popularity for caliber: 9×19mm
+2025/03/15 19:59:39 Updated popularity for caliber: 44 Special
+2025/03/15 19:59:39 Updated popularity for caliber: 44 Magnum
+2025/03/15 19:59:39 Updated popularity for caliber: 50 AE
+2025/03/15 19:59:39 Updated popularity for caliber: 223 Remington
+2025/03/15 19:59:39 Updated popularity for caliber: 22-250 Remington
+2025/03/15 19:59:39 Updated popularity for caliber: 243 Winchester
+2025/03/15 19:59:39 Updated popularity for caliber: 270 Winchester
+2025/03/15 19:59:39 Updated popularity for caliber: 30-06 Springfield
+2025/03/15 19:59:39 Updated popularity for caliber: 300 Winchester Magnum
+2025/03/15 19:59:39 Updated popularity for caliber: 6.5 Creedmoor
+2025/03/15 19:59:39 Updated popularity for caliber: 7.62×39mm
+2025/03/15 19:59:39 Updated popularity for caliber: 7.62×51mm NATO
+2025/03/15 19:59:39 Updated popularity for caliber: 7.62×54mm R
+2025/03/15 19:59:39 Updated popularity for caliber: 300 AAC Blackout
+2025/03/15 19:59:39 Updated popularity for caliber: 6.8 SPC
+2025/03/15 19:59:39 Updated popularity for caliber: 6mm Creedmoor
+2025/03/15 19:59:39 Updated popularity for caliber: 338 Lapua Magnum
+2025/03/15 19:59:39 Updated popularity for caliber: 375 H&H Magnum
+2025/03/15 19:59:39 Updated popularity for caliber: 458 Winchester Magnum
+2025/03/15 19:59:39 Updated popularity for caliber: 416 Rigby
+2025/03/15 19:59:39 Updated popularity for caliber: 500 S&W Magnum
+2025/03/15 19:59:39 Updated popularity for caliber: 338 Federal
+2025/03/15 19:59:39 Updated popularity for caliber: 20 Gauge
+2025/03/15 19:59:39 Updated popularity for caliber: 28 Gauge
+2025/03/15 19:59:39 Updated popularity for caliber: 410 Bore
+2025/03/15 19:59:39 Updated popularity for caliber: 10 Gauge
+2025/03/15 19:59:39 Updated popularity for caliber: 16 Gauge
+2025/03/15 19:59:39 Seeding weapon types...
+2025/03/15 19:59:39 Updated popularity for weapon type: Other
+2025/03/15 19:59:39 Updated popularity for weapon type: Handgun
+2025/03/15 19:59:39 Updated popularity for weapon type: Semi-Automatic Rifle
+2025/03/15 19:59:39 Updated popularity for weapon type: Shotgun
+2025/03/15 19:59:39 Updated popularity for weapon type: Revolver
+2025/03/15 19:59:39 Updated popularity for weapon type: Rifle
+2025/03/15 19:59:39 Updated popularity for weapon type: Carbine
+2025/03/15 19:59:39 Updated popularity for weapon type: Bolt-Action Rifle
+2025/03/15 19:59:39 Updated popularity for weapon type: Semi-Automatic Shotgun
+2025/03/15 19:59:39 Updated popularity for weapon type: Pump-Action Shotgun
+2025/03/15 19:59:39 Updated popularity for weapon type: Lever-Action Rifle
+2025/03/15 19:59:39 Updated popularity for weapon type: Sniper Rifle
+2025/03/15 19:59:39 Updated popularity for weapon type: Designated Marksman Rifle
+2025/03/15 19:59:39 Updated popularity for weapon type: Submachine Gun
+2025/03/15 19:59:39 Updated popularity for weapon type: Personal Defense Weapon
+2025/03/15 19:59:39 Updated popularity for weapon type: Machine Gun
+2025/03/15 19:59:39 Updated popularity for weapon type: Anti-Materiel Rifle
+2025/03/15 19:59:39 Updated popularity for weapon type: Battle Rifle
+2025/03/15 19:59:39 Updated popularity for weapon type: Precision Rifle
+2025/03/15 19:59:39 Database seeding completed
+2025/03/15 20:01:06 Starting database seeding...
+2025/03/15 20:01:06 Seeding manufacturers...
+2025/03/15 20:01:06 Updated popularity for manufacturer: Other
+2025/03/15 20:01:06 Updated popularity for manufacturer: Glock
+2025/03/15 20:01:06 Updated popularity for manufacturer: Smith & Wesson
+2025/03/15 20:01:06 Updated popularity for manufacturer: Sig Sauer
+2025/03/15 20:01:06 Updated popularity for manufacturer: Colt's Manufacturing Company
+2025/03/15 20:01:06 Updated popularity for manufacturer: Remington Arms
+2025/03/15 20:01:06 Updated popularity for manufacturer: Winchester Repeating Arms
+2025/03/15 20:01:06 Updated popularity for manufacturer: Sturm, Ruger & Co.
+2025/03/15 20:01:06 Updated popularity for manufacturer: Beretta
+2025/03/15 20:01:06 Updated popularity for manufacturer: Browning
+2025/03/15 20:01:06 Updated popularity for manufacturer: Heckler & Koch
+2025/03/15 20:01:06 Updated popularity for manufacturer: Taurus
+2025/03/15 20:01:06 Updated popularity for manufacturer: Kimber Manufacturing
+2025/03/15 20:01:06 Updated popularity for manufacturer: Springfield Armory
+2025/03/15 20:01:06 Updated popularity for manufacturer: Barrett Firearms Manufacturing
+2025/03/15 20:01:06 Updated popularity for manufacturer: Bushmaster Firearms International
+2025/03/15 20:01:06 Updated popularity for manufacturer: Franklin Armory
+2025/03/15 20:01:06 Updated popularity for manufacturer: Accuracy International
+2025/03/15 20:01:06 Updated popularity for manufacturer: Česká zbrojovka (CZ)
+2025/03/15 20:01:06 Updated popularity for manufacturer: FN Herstal
+2025/03/15 20:01:06 Updated popularity for manufacturer: Steyr Mannlicher
+2025/03/15 20:01:06 Updated popularity for manufacturer: Walther
+2025/03/15 20:01:06 Updated popularity for manufacturer: IWI (Israel Weapon Industries)
+2025/03/15 20:01:06 Updated popularity for manufacturer: Kel-Tec
+2025/03/15 20:01:06 Updated popularity for manufacturer: Rossi
+2025/03/15 20:01:06 Updated popularity for manufacturer: Charter Arms
+2025/03/15 20:01:06 Updated popularity for manufacturer: Uberti
+2025/03/15 20:01:06 Updated popularity for manufacturer: ArmaLite
+2025/03/15 20:01:06 Updated popularity for manufacturer: Magnum Research
+2025/03/15 20:01:06 Updated popularity for manufacturer: Mauser
+2025/03/15 20:01:06 Updated popularity for manufacturer: Luger
+2025/03/15 20:01:06 Updated popularity for manufacturer: Webley
+2025/03/15 20:01:06 Updated popularity for manufacturer: Enfield
+2025/03/15 20:01:06 Updated popularity for manufacturer: Wilson Combat
+2025/03/15 20:01:06 Updated popularity for manufacturer: Les Baer
+2025/03/15 20:01:06 Updated popularity for manufacturer: Nighthawk Custom
+2025/03/15 20:01:06 Updated popularity for manufacturer: Taran Tactical Innovations
+2025/03/15 20:01:06 Updated popularity for manufacturer: Ed Brown Products
+2025/03/15 20:01:06 Updated popularity for manufacturer: CCI (Cascade Cartridge Inc.)
+2025/03/15 20:01:06 Seeding calibers...
+2025/03/15 20:01:06 Updated popularity for caliber: Other
+2025/03/15 20:01:06 Updated popularity for caliber: 9mm Parabellum
+2025/03/15 20:01:06 Updated popularity for caliber: 45 ACP
+2025/03/15 20:01:06 Updated popularity for caliber: 22 Long Rifle
+2025/03/15 20:01:06 Updated popularity for caliber: 12 Gauge
+2025/03/15 20:01:06 Updated popularity for caliber: 5.56×45mm NATO
+2025/03/15 20:01:06 Updated popularity for caliber: 308 Winchester
+2025/03/15 20:01:06 Updated popularity for caliber: 38 Special
+2025/03/15 20:01:06 Updated popularity for caliber: 357 Magnum
+2025/03/15 20:01:06 Updated popularity for caliber: 40 S&W
+2025/03/15 20:01:06 Updated popularity for caliber: 380 ACP
+2025/03/15 20:01:06 Updated popularity for caliber: 22 Magnum
+2025/03/15 20:01:06 Updated popularity for caliber: 25 ACP
+2025/03/15 20:01:06 Updated popularity for caliber: 32 ACP
+2025/03/15 20:01:06 Updated popularity for caliber: 32 S&W
+2025/03/15 20:01:06 Updated popularity for caliber: 9×19mm
+2025/03/15 20:01:06 Updated popularity for caliber: 44 Special
+2025/03/15 20:01:06 Updated popularity for caliber: 44 Magnum
+2025/03/15 20:01:06 Updated popularity for caliber: 50 AE
+2025/03/15 20:01:06 Updated popularity for caliber: 223 Remington
+2025/03/15 20:01:06 Updated popularity for caliber: 22-250 Remington
+2025/03/15 20:01:06 Updated popularity for caliber: 243 Winchester
+2025/03/15 20:01:06 Updated popularity for caliber: 270 Winchester
+2025/03/15 20:01:06 Updated popularity for caliber: 30-06 Springfield
+2025/03/15 20:01:06 Updated popularity for caliber: 300 Winchester Magnum
+2025/03/15 20:01:06 Updated popularity for caliber: 6.5 Creedmoor
+2025/03/15 20:01:06 Updated popularity for caliber: 7.62×39mm
+2025/03/15 20:01:06 Updated popularity for caliber: 7.62×51mm NATO
+2025/03/15 20:01:06 Updated popularity for caliber: 7.62×54mm R
+2025/03/15 20:01:06 Updated popularity for caliber: 300 AAC Blackout
+2025/03/15 20:01:06 Updated popularity for caliber: 6.8 SPC
+2025/03/15 20:01:06 Updated popularity for caliber: 6mm Creedmoor
+2025/03/15 20:01:06 Updated popularity for caliber: 338 Lapua Magnum
+2025/03/15 20:01:06 Updated popularity for caliber: 375 H&H Magnum
+2025/03/15 20:01:06 Updated popularity for caliber: 458 Winchester Magnum
+2025/03/15 20:01:06 Updated popularity for caliber: 416 Rigby
+2025/03/15 20:01:06 Updated popularity for caliber: 500 S&W Magnum
+2025/03/15 20:01:06 Updated popularity for caliber: 338 Federal
+2025/03/15 20:01:06 Updated popularity for caliber: 20 Gauge
+2025/03/15 20:01:06 Updated popularity for caliber: 28 Gauge
+2025/03/15 20:01:06 Updated popularity for caliber: 410 Bore
+2025/03/15 20:01:06 Updated popularity for caliber: 10 Gauge
+2025/03/15 20:01:06 Updated popularity for caliber: 16 Gauge
+2025/03/15 20:01:06 Seeding weapon types...
+2025/03/15 20:01:06 Updated popularity for weapon type: Other
+2025/03/15 20:01:06 Updated popularity for weapon type: Handgun
+2025/03/15 20:01:06 Updated popularity for weapon type: Semi-Automatic Rifle
+2025/03/15 20:01:06 Updated popularity for weapon type: Shotgun
+2025/03/15 20:01:06 Updated popularity for weapon type: Revolver
+2025/03/15 20:01:06 Updated popularity for weapon type: Rifle
+2025/03/15 20:01:06 Updated popularity for weapon type: Carbine
+2025/03/15 20:01:06 Updated popularity for weapon type: Bolt-Action Rifle
+2025/03/15 20:01:06 Updated popularity for weapon type: Semi-Automatic Shotgun
+2025/03/15 20:01:06 Updated popularity for weapon type: Pump-Action Shotgun
+2025/03/15 20:01:06 Updated popularity for weapon type: Lever-Action Rifle
+2025/03/15 20:01:06 Updated popularity for weapon type: Sniper Rifle
+2025/03/15 20:01:06 Updated popularity for weapon type: Designated Marksman Rifle
+2025/03/15 20:01:06 Updated popularity for weapon type: Submachine Gun
+2025/03/15 20:01:06 Updated popularity for weapon type: Personal Defense Weapon
+2025/03/15 20:01:06 Updated popularity for weapon type: Machine Gun
+2025/03/15 20:01:06 Updated popularity for weapon type: Anti-Materiel Rifle
+2025/03/15 20:01:06 Updated popularity for weapon type: Battle Rifle
+2025/03/15 20:01:06 Updated popularity for weapon type: Precision Rifle
+2025/03/15 20:01:06 Database seeding completed

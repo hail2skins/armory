@@ -30,6 +30,10 @@ func RegisterOwnerRoutes(router *gin.Engine, db database.Service, authController
 		// Check if user is authenticated
 		_, authenticated := authController.GetCurrentUser(c)
 		if !authenticated {
+			// Set flash message
+			if setFlash, exists := c.Get("setFlash"); exists {
+				setFlash.(func(string))("You must be logged in to access this page")
+			}
 			c.Redirect(302, "/login")
 			c.Abort()
 			return

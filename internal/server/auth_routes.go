@@ -25,6 +25,10 @@ func (s *Server) RegisterAuthRoutes(r *gin.Engine, authController *controller.Au
 		// Set authentication state
 		_, authenticated := authController.GetCurrentUser(c)
 		authData.Authenticated = authenticated
+
+		// Handle flash messages
+		authData = handleAuthFlashMessage(c, authData)
+
 		// Render the verification sent page
 		if authController.RenderVerificationSent != nil {
 			authController.RenderVerificationSent(c, authData)
@@ -41,6 +45,18 @@ func (s *Server) RegisterAuthRoutes(r *gin.Engine, authController *controller.Au
 	r.POST("/reset-password", authController.ResetPasswordHandler)
 }
 
+// handleAuthFlashMessage checks for a flash message cookie and adds it to the AuthData
+func handleAuthFlashMessage(c *gin.Context, authData data.AuthData) data.AuthData {
+	// Check for flash message
+	if flashCookie, err := c.Cookie("flash"); err == nil && flashCookie != "" {
+		// Add flash message to success messages
+		authData.Success = flashCookie
+		// Clear the flash cookie
+		c.SetCookie("flash", "", -1, "/", "", false, false)
+	}
+	return authData
+}
+
 // setupAuthRenderFunctions configures the render functions for auth views
 func setupAuthRenderFunctions(authController *controller.AuthController) {
 	// Login render function
@@ -53,6 +69,10 @@ func setupAuthRenderFunctions(authController *controller.AuthController) {
 		if authData.Title == "" {
 			authData.Title = "Login"
 		}
+
+		// Handle flash messages
+		authData = handleAuthFlashMessage(c, authData)
+
 		auth.Login(authData).Render(c.Request.Context(), c.Writer)
 	}
 
@@ -66,6 +86,10 @@ func setupAuthRenderFunctions(authController *controller.AuthController) {
 		if authData.Title == "" {
 			authData.Title = "Register"
 		}
+
+		// Handle flash messages
+		authData = handleAuthFlashMessage(c, authData)
+
 		auth.Register(authData).Render(c.Request.Context(), c.Writer)
 	}
 
@@ -78,6 +102,10 @@ func setupAuthRenderFunctions(authController *controller.AuthController) {
 		if authData.Title == "" {
 			authData.Title = "Logout"
 		}
+
+		// Handle flash messages
+		authData = handleAuthFlashMessage(c, authData)
+
 		auth.Logout(authData).Render(c.Request.Context(), c.Writer)
 	}
 
@@ -91,6 +119,10 @@ func setupAuthRenderFunctions(authController *controller.AuthController) {
 		if authData.Title == "" {
 			authData.Title = "Verification Email Sent"
 		}
+
+		// Handle flash messages
+		authData = handleAuthFlashMessage(c, authData)
+
 		auth.VerificationSent(authData).Render(c.Request.Context(), c.Writer)
 	}
 }

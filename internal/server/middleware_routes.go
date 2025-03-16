@@ -21,6 +21,16 @@ func (s *Server) RegisterMiddleware(r *gin.Engine, authController *controller.Au
 		AllowCredentials: true, // Enable cookies/auth
 	}))
 
+	// Set up flash message middleware
+	r.Use(func(c *gin.Context) {
+		// Set up a function to set flash messages
+		c.Set("setFlash", func(message string) {
+			// Set the flash message in a cookie
+			c.SetCookie("flash", message, 3600, "/", "", false, false)
+		})
+		c.Next()
+	})
+
 	// Set up auth data middleware
 	r.Use(func(c *gin.Context) {
 		// Get the current user's authentication status and email

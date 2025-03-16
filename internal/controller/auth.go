@@ -185,9 +185,12 @@ func (a *AuthController) LoginHandler(c *gin.Context) {
 		"email":   user.Email,
 	})
 
-	// Set welcome message
+	// Set welcome message using the setFlash function from middleware
 	if setFlash, exists := c.Get("setFlash"); exists {
 		setFlash.(func(string))("Welcome back, " + user.Email)
+	} else {
+		// Fallback to setting the cookie directly if middleware is not available
+		c.SetCookie("flash", "Welcome back, "+user.Email, 3600, "/", "", false, false)
 	}
 
 	// Redirect to owner page

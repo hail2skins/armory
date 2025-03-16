@@ -78,6 +78,14 @@ func (o *OwnerController) LandingPage(c *gin.Context) {
 			subscriptionEndsAt,
 		)
 
+	// Check for flash message from cookie
+	if flashCookie, err := c.Cookie("flash"); err == nil && flashCookie != "" {
+		// Add flash message to success messages
+		ownerData.WithSuccess(flashCookie)
+		// Clear the flash cookie
+		c.SetCookie("flash", "", -1, "/", "", false, false)
+	}
+
 	// Render the owner landing page with the data
 	owner.Owner(ownerData).Render(c.Request.Context(), c.Writer)
 }

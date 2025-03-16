@@ -18,6 +18,15 @@ templ Owner(data *data.OwnerData) {
 				<h1 class="text-2xl font-bold text-gunmetal-800 mb-4">Welcome to Your Virtual Armory</h1>
 				<p class="text-gray-600 mb-4">Manage your firearms collection, track maintenance, and more.</p>
 				
+				` + func() string {
+					if data.Auth.Success != "" {
+						return `<div class="mb-4 bg-green-100 border-l-4 border-green-500 p-4">
+							<p class="text-green-700">` + data.Auth.Success + `</p>
+						</div>`
+					}
+					return ""
+				}() + `
+				
 				<!-- Subscription Status -->
 				<div class="mb-6 p-4 rounded-lg border">
 					<h2 class="text-xl font-semibold mb-2">Subscription Status</h2>
