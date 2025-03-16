@@ -34,7 +34,7 @@ var _ AdminService = (*service)(nil)
 // FindAllManufacturers retrieves all manufacturers
 func (s *service) FindAllManufacturers() ([]models.Manufacturer, error) {
 	var manufacturers []models.Manufacturer
-	if err := s.db.Find(&manufacturers).Error; err != nil {
+	if err := s.db.Order("popularity DESC").Find(&manufacturers).Error; err != nil {
 		return nil, err
 	}
 	return manufacturers, nil
@@ -67,7 +67,7 @@ func (s *service) DeleteManufacturer(id uint) error {
 // FindAllCalibers retrieves all calibers
 func (s *service) FindAllCalibers() ([]models.Caliber, error) {
 	var calibers []models.Caliber
-	if err := s.db.Find(&calibers).Error; err != nil {
+	if err := s.db.Order("popularity DESC").Find(&calibers).Error; err != nil {
 		return nil, err
 	}
 	return calibers, nil
@@ -100,7 +100,7 @@ func (s *service) DeleteCaliber(id uint) error {
 // FindAllWeaponTypes retrieves all weapon types
 func (s *service) FindAllWeaponTypes() ([]models.WeaponType, error) {
 	var weaponTypes []models.WeaponType
-	if err := s.db.Find(&weaponTypes).Error; err != nil {
+	if err := s.db.Order("popularity DESC").Find(&weaponTypes).Error; err != nil {
 		return nil, err
 	}
 	return weaponTypes, nil

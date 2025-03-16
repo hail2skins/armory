@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/hail2skins/armory/internal/database"
+	"github.com/hail2skins/armory/internal/database/seed"
 	"github.com/hail2skins/armory/internal/models"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -56,6 +57,9 @@ func NewTestDB() *TestDB {
 	if err := db.AutoMigrate(&database.User{}, &models.Manufacturer{}, &models.Caliber{}, &models.WeaponType{}, &models.Gun{}); err != nil {
 		log.Fatalf("Error auto migrating schema: %v", err)
 	}
+
+	// Run seed data
+	seed.RunSeeds(db)
 
 	return &TestDB{
 		DB: db,

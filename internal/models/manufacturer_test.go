@@ -17,6 +17,9 @@ func TestManufacturerModel(t *testing.T) {
 	err = db.AutoMigrate(&Manufacturer{})
 	assert.NoError(t, err)
 
+	// Clear any existing manufacturers
+	db.Exec("DELETE FROM manufacturers")
+
 	// Test creating a manufacturer
 	manufacturer := Manufacturer{
 		Name:       "Test Manufacturer",

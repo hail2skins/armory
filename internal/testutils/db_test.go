@@ -18,7 +18,6 @@ func TestNewTestDB(t *testing.T) {
 	// Test creating a gun
 	gun := models.Gun{
 		Name:           "Test Gun",
-		Description:    "A test gun",
 		SerialNumber:   "123456",
 		WeaponTypeID:   1,
 		CaliberID:      1,
@@ -36,7 +35,6 @@ func TestNewTestDB(t *testing.T) {
 	result = testDB.DB.First(&retrievedGun, gun.ID)
 	assert.NoError(t, result.Error)
 	assert.Equal(t, "Test Gun", retrievedGun.Name)
-	assert.Equal(t, "A test gun", retrievedGun.Description)
 	assert.Equal(t, "123456", retrievedGun.SerialNumber)
 	assert.Equal(t, uint(1), retrievedGun.OwnerID)
 }

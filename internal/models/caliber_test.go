@@ -17,6 +17,9 @@ func TestCaliberModel(t *testing.T) {
 	err = db.AutoMigrate(&Caliber{})
 	assert.NoError(t, err)
 
+	// Clear any existing calibers
+	db.Exec("DELETE FROM calibers")
+
 	// Test creating a caliber
 	caliber := Caliber{
 		Caliber:    "9mm",

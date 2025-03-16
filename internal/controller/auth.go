@@ -568,3 +568,6 @@ func (a *AuthController) ResendVerificationHandler(c *gin.Context) {
 	authData.Email = email
 	a.RenderVerificationSent(c, authData)
 }
+
+// Ensure AuthController implements AuthControllerInterface
+var _ AuthControllerInterface = (*AuthController)(nil)

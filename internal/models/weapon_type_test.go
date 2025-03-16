@@ -17,6 +17,9 @@ func TestWeaponTypeModel(t *testing.T) {
 	err = db.AutoMigrate(&WeaponType{})
 	assert.NoError(t, err)
 
+	// Clear any existing weapon types
+	db.Exec("DELETE FROM weapon_types")
+
 	// Test creating a weapon type
 	weaponType := WeaponType{
 		Type:       "Pistol",

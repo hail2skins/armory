@@ -1,0 +1,279 @@
+package gun
+
+import (
+	"context"
+	"io"
+	"strconv"
+
+	"github.com/hail2skins/armory/cmd/web/views/data"
+	"github.com/hail2skins/armory/cmd/web/views/partials"
+)
+
+templ New(data *data.OwnerData) {
+	@partials.Base(data.Auth, templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+		_, err := io.WriteString(w, `
+		<div class="container mx-auto px-4 py-8">
+			<div class="flex justify-between items-center mb-6">
+				<h1 class="text-3xl font-bold text-gunmetal-800">Add New Firearm</h1>
+				<a href="/owner" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded">
+					Back to Dashboard
+				</a>
+			</div>
+		`)
+		if err != nil {
+			return err
+		}
+
+		if data.Auth.Error != "" {
+			_, err = io.WriteString(w, `
+			<div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+				<span class="block sm:inline">`+data.Auth.Error+`</span>
+			</div>
+			`)
+			if err != nil {
+				return err
+			}
+		}
+
+		_, err = io.WriteString(w, `
+		<div class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
+			<form action="/owner/guns" method="post">
+				<div class="mb-4">
+					<label class="block text-gray-700 text-sm font-bold mb-2" for="name">
+						Name
+					</label>
+					<input class="shadow appearance-none border rounded w-full py-2 px-3 text-gunmetal-800 leading-tight focus:outline-none focus:shadow-outline" 
+						id="name" type="text" name="name" required>
+					`)
+		if err != nil {
+			return err
+		}
+
+		if nameError, ok := data.FormErrors["name"]; ok {
+			_, err = io.WriteString(w, `
+					<p class="text-red-500 text-xs italic">`+nameError+`</p>
+					`)
+			if err != nil {
+				return err
+			}
+		}
+
+		_, err = io.WriteString(w, `
+				</div>
+				<div class="mb-4">
+					<label class="block text-gray-700 text-sm font-bold mb-2" for="serial_number">
+						Serial Number (Optional)
+					</label>
+					<input class="shadow appearance-none border rounded w-full py-2 px-3 text-gunmetal-800 leading-tight focus:outline-none focus:shadow-outline" 
+						id="serial_number" type="text" name="serial_number">
+					`)
+		if err != nil {
+			return err
+		}
+
+		if serialError, ok := data.FormErrors["serial_number"]; ok {
+			_, err = io.WriteString(w, `
+					<p class="text-red-500 text-xs italic">`+serialError+`</p>
+					`)
+			if err != nil {
+				return err
+			}
+		}
+
+		_, err = io.WriteString(w, `
+				</div>
+				<div class="mb-4">
+					<label class="block text-gray-700 text-sm font-bold mb-2" for="acquired_date">
+						Acquired Date
+					</label>
+					<input class="shadow appearance-none border rounded w-full py-2 px-3 text-gunmetal-800 leading-tight focus:outline-none focus:shadow-outline" 
+						id="acquired_date" type="date" name="acquired_date">
+				</div>
+				<div class="mb-4">
+					<label class="block text-gray-700 text-sm font-bold mb-2" for="weapon_type_id">
+						Weapon Type
+					</label>
+					<select class="shadow appearance-none border rounded w-full py-2 px-3 text-gunmetal-800 leading-tight focus:outline-none focus:shadow-outline filterable-select" 
+						id="weapon_type_id" name="weapon_type_id" required>
+						<option value="">Select a weapon type</option>
+					`)
+		if err != nil {
+			return err
+		}
+
+		// Sort weapon types by popularity (highest first)
+		for _, weaponType := range data.WeaponTypes {
+			displayText := weaponType.Type
+			if weaponType.Nickname != "" {
+				displayText = weaponType.Type + " (" + weaponType.Nickname + ")"
+			}
+			_, err = io.WriteString(w, `
+						<option value="`+strconv.FormatUint(uint64(weaponType.ID), 10)+`">`+displayText+`</option>
+					`)
+			if err != nil {
+				return err
+			}
+		}
+
+		_, err = io.WriteString(w, `
+					</select>
+					`)
+		if err != nil {
+			return err
+		}
+
+		if weaponTypeError, ok := data.FormErrors["weapon_type_id"]; ok {
+			_, err = io.WriteString(w, `
+					<p class="text-red-500 text-xs italic">`+weaponTypeError+`</p>
+					`)
+			if err != nil {
+				return err
+			}
+		}
+
+		_, err = io.WriteString(w, `
+				</div>
+				<div class="mb-4">
+					<label class="block text-gray-700 text-sm font-bold mb-2" for="caliber_id">
+						Caliber
+					</label>
+					<select class="shadow appearance-none border rounded w-full py-2 px-3 text-gunmetal-800 leading-tight focus:outline-none focus:shadow-outline filterable-select" 
+						id="caliber_id" name="caliber_id" required>
+						<option value="">Select a caliber</option>
+					`)
+		if err != nil {
+			return err
+		}
+
+		// Sort calibers by popularity (highest first)
+		for _, caliber := range data.Calibers {
+			displayText := caliber.Caliber
+			if caliber.Nickname != "" {
+				displayText = caliber.Caliber + " (" + caliber.Nickname + ")"
+			}
+			_, err = io.WriteString(w, `
+						<option value="`+strconv.FormatUint(uint64(caliber.ID), 10)+`">`+displayText+`</option>
+					`)
+			if err != nil {
+				return err
+			}
+		}
+
+		_, err = io.WriteString(w, `
+					</select>
+					`)
+		if err != nil {
+			return err
+		}
+
+		if caliberError, ok := data.FormErrors["caliber_id"]; ok {
+			_, err = io.WriteString(w, `
+					<p class="text-red-500 text-xs italic">`+caliberError+`</p>
+					`)
+			if err != nil {
+				return err
+			}
+		}
+
+		_, err = io.WriteString(w, `
+				</div>
+				<div class="mb-4">
+					<label class="block text-gray-700 text-sm font-bold mb-2" for="manufacturer_id">
+						Manufacturer
+					</label>
+					<select class="shadow appearance-none border rounded w-full py-2 px-3 text-gunmetal-800 leading-tight focus:outline-none focus:shadow-outline filterable-select" 
+						id="manufacturer_id" name="manufacturer_id" required>
+						<option value="">Select a manufacturer</option>
+					`)
+		if err != nil {
+			return err
+		}
+
+		// Sort manufacturers by popularity (highest first)
+		for _, manufacturer := range data.Manufacturers {
+			displayText := manufacturer.Name
+			if manufacturer.Nickname != "" {
+				displayText = manufacturer.Name + " (" + manufacturer.Nickname + ")"
+			}
+			_, err = io.WriteString(w, `
+						<option value="`+strconv.FormatUint(uint64(manufacturer.ID), 10)+`">`+displayText+`</option>
+					`)
+			if err != nil {
+				return err
+			}
+		}
+
+		_, err = io.WriteString(w, `
+					</select>
+					`)
+		if err != nil {
+			return err
+		}
+
+		if manufacturerError, ok := data.FormErrors["manufacturer_id"]; ok {
+			_, err = io.WriteString(w, `
+					<p class="text-red-500 text-xs italic">`+manufacturerError+`</p>
+					`)
+			if err != nil {
+				return err
+			}
+		}
+
+		_, err = io.WriteString(w, `
+				</div>
+				<div class="flex items-center justify-between">
+					<button class="bg-gunmetal-800 hover:bg-gunmetal-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline" 
+						type="submit">
+						Add Firearm
+					</button>
+				</div>
+			</form>
+			
+			<script>
+				// Add filtering functionality to select elements
+				document.addEventListener('DOMContentLoaded', function() {
+					// Get all filterable select elements
+					const filterableSelects = document.querySelectorAll('.filterable-select');
+					
+					// Add event listeners to each select
+					filterableSelects.forEach(select => {
+						// Store all original options
+						const allOptions = Array.from(select.options);
+						
+						// Add keyup event listener
+						select.addEventListener('keyup', function(e) {
+							const searchText = e.target.value.toLowerCase();
+							
+							// If backspace or delete is pressed, restore all options first
+							if (e.key === 'Backspace' || e.key === 'Delete') {
+								// Remove all current options
+								while (select.options.length > 0) {
+									select.remove(0);
+								}
+								
+								// Add back all options
+								allOptions.forEach(option => {
+									select.add(option.cloneNode(true));
+								});
+							}
+							
+							// Filter options based on search text
+							Array.from(select.options).forEach(option => {
+								// Skip the first "Select a..." option
+								if (option.value === '') return;
+								
+								const optionText = option.text.toLowerCase();
+								if (!optionText.includes(searchText)) {
+									select.remove(select.options.indexOf(option));
+								}
+							});
+						});
+					});
+				});
+			</script>
+		</div>
+		</div>
+		`)
+		return err
+	}))
+} 

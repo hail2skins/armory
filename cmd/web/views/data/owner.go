@@ -27,6 +27,12 @@ type OwnerData struct {
 	Guns []models.Gun
 	Gun  *models.Gun
 
+	// For gun form
+	WeaponTypes   []models.WeaponType
+	Calibers      []models.Caliber
+	Manufacturers []models.Manufacturer
+	FormErrors    map[string]string
+
 	// For subscription information
 	HasActiveSubscription bool
 	SubscriptionTier      string
@@ -36,7 +42,8 @@ type OwnerData struct {
 // NewOwnerData creates a new OwnerData with default values
 func NewOwnerData() *OwnerData {
 	return &OwnerData{
-		Auth: NewAuthData(),
+		Auth:       NewAuthData(),
+		FormErrors: make(map[string]string),
 	}
 }
 
@@ -85,6 +92,30 @@ func (o *OwnerData) WithGuns(guns []models.Gun) *OwnerData {
 // WithGun returns a copy of the OwnerData with a gun
 func (o *OwnerData) WithGun(gun *models.Gun) *OwnerData {
 	o.Gun = gun
+	return o
+}
+
+// WithWeaponTypes returns a copy of the OwnerData with weapon types
+func (o *OwnerData) WithWeaponTypes(weaponTypes []models.WeaponType) *OwnerData {
+	o.WeaponTypes = weaponTypes
+	return o
+}
+
+// WithCalibers returns a copy of the OwnerData with calibers
+func (o *OwnerData) WithCalibers(calibers []models.Caliber) *OwnerData {
+	o.Calibers = calibers
+	return o
+}
+
+// WithManufacturers returns a copy of the OwnerData with manufacturers
+func (o *OwnerData) WithManufacturers(manufacturers []models.Manufacturer) *OwnerData {
+	o.Manufacturers = manufacturers
+	return o
+}
+
+// WithFormErrors returns a copy of the OwnerData with form errors
+func (o *OwnerData) WithFormErrors(errors map[string]string) *OwnerData {
+	o.FormErrors = errors
 	return o
 }
 

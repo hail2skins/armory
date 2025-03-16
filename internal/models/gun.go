@@ -10,7 +10,6 @@ import (
 type Gun struct {
 	gorm.Model
 	Name           string
-	Description    string
 	SerialNumber   string
 	Acquired       *time.Time
 	WeaponTypeID   uint

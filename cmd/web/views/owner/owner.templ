@@ -16,7 +16,7 @@ templ Owner(data *data.OwnerData) {
 		<div class="container mx-auto px-4 py-8">
 			<div class="bg-white shadow-md rounded-lg p-6 mb-8">
 				<h1 class="text-2xl font-bold text-gunmetal-800 mb-4">Welcome to Your Virtual Armory</h1>
-				<p class="text-gray-600 mb-4">Manage your firearms collection, track maintenance, and more.</p>
+				<p class="text-gunmetal-700 mb-4">Manage your firearms collection, track maintenance, and more.</p>
 				
 				` + func() string {
 					if data.Auth.Success != "" {
@@ -28,8 +28,8 @@ templ Owner(data *data.OwnerData) {
 				}() + `
 				
 				<!-- Subscription Status -->
-				<div class="mb-6 p-4 rounded-lg border">
-					<h2 class="text-xl font-semibold mb-2">Subscription Status</h2>
+				<div class="mb-6 p-4 rounded-lg border border-gunmetal-300">
+					<h2 class="text-xl font-semibold text-gunmetal-800 mb-2">Subscription Status</h2>
 					` + func() string {
 						if data.HasActiveSubscription {
 							result := `<div class="bg-green-100 border-l-4 border-green-500 p-4">
@@ -48,7 +48,7 @@ templ Owner(data *data.OwnerData) {
 								<p class="text-yellow-700">
 									<span class="font-bold">Free Tier:</span> Limited to 2 firearms
 								</p>
-								<a href="/payment/pricing" class="inline-block mt-2 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">
+								<a href="/payment/pricing" class="inline-block mt-2 bg-gunmetal-700 hover:bg-gunmetal-800 text-white font-bold py-2 px-4 rounded">
 									Upgrade Now
 								</a>
 							</div>`
@@ -58,31 +58,31 @@ templ Owner(data *data.OwnerData) {
 				
 				<!-- Quick Stats -->
 				<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-					<div class="bg-gray-100 p-4 rounded-lg shadow">
-						<h3 class="font-semibold text-lg mb-2">Total Firearms</h3>
+					<div class="bg-gunmetal-100 p-4 rounded-lg shadow">
+						<h3 class="font-semibold text-lg text-gunmetal-800 mb-2">Total Firearms</h3>
 						<p class="text-3xl font-bold text-gunmetal-800">` + strconv.Itoa(len(data.Guns)) + `</p>
 					</div>
-					<div class="bg-gray-100 p-4 rounded-lg shadow">
-						<h3 class="font-semibold text-lg mb-2">Last Added</h3>
+					<div class="bg-gunmetal-100 p-4 rounded-lg shadow">
+						<h3 class="font-semibold text-lg text-gunmetal-800 mb-2">Last Added</h3>
 						` + func() string {
 							if len(data.Guns) > 0 {
-								result := `<p class="text-gunmetal-800">` + data.Guns[0].Name + `</p>`
+								result := `<p class="text-gunmetal-800 font-medium">` + data.Guns[0].Name + `</p>`
 								if data.Guns[0].Acquired != nil {
-									result += `<p class="text-sm text-gray-600">` + data.Guns[0].Acquired.Format("Jan 2, 2006") + `</p>`
+									result += `<p class="text-sm text-gunmetal-600">` + data.Guns[0].Acquired.Format("Jan 2, 2006") + `</p>`
 								}
 								return result
 							} else {
-								return `<p class="text-gray-600">No firearms added yet</p>`
+								return `<p class="text-gunmetal-600">No firearms added yet</p>`
 							}
 						}() + `
 					</div>
-					<div class="bg-gray-100 p-4 rounded-lg shadow">
-						<h3 class="font-semibold text-lg mb-2">Account Since</h3>
+					<div class="bg-gunmetal-100 p-4 rounded-lg shadow">
+						<h3 class="font-semibold text-lg text-gunmetal-800 mb-2">Account Since</h3>
 						` + func() string {
 							if data.User != nil && !data.User.CreatedAt.IsZero() {
-								return `<p class="text-gunmetal-800">` + data.User.CreatedAt.Format("January 2006") + `</p>`
+								return `<p class="text-gunmetal-800 font-medium">` + data.User.CreatedAt.Format("January 2006") + `</p>`
 							} else {
-								return `<p class="text-gray-600">Unknown</p>`
+								return `<p class="text-gunmetal-600">Unknown</p>`
 							}
 						}() + `
 					</div>
@@ -92,8 +92,8 @@ templ Owner(data *data.OwnerData) {
 			<!-- Firearms List -->
 			<div class="bg-white shadow-md rounded-lg p-6">
 				<div class="flex justify-between items-center mb-4">
-					<h2 class="text-xl font-semibold">Your Firearms</h2>
-					<a href="/owner/guns/new" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">
+					<h2 class="text-xl font-semibold text-gunmetal-800">Your Firearms</h2>
+					<a href="/owner/guns/new" class="bg-gunmetal-700 hover:bg-gunmetal-800 text-white font-bold py-2 px-4 rounded">
 						Add New Firearm
 					</a>
 				</div>
@@ -102,34 +102,34 @@ templ Owner(data *data.OwnerData) {
 					if len(data.Guns) > 0 {
 						result := `<div class="overflow-x-auto">
 							<table class="min-w-full bg-white">
-								<thead class="bg-gray-100">
+								<thead class="bg-gunmetal-200">
 									<tr>
-										<th class="py-2 px-4 text-left">Name</th>
-										<th class="py-2 px-4 text-left">Type</th>
-										<th class="py-2 px-4 text-left">Manufacturer</th>
-										<th class="py-2 px-4 text-left">Caliber</th>
-										<th class="py-2 px-4 text-left">Acquired</th>
-										<th class="py-2 px-4 text-left">Actions</th>
+										<th class="py-2 px-4 text-left text-gunmetal-800">Name</th>
+										<th class="py-2 px-4 text-left text-gunmetal-800">Type</th>
+										<th class="py-2 px-4 text-left text-gunmetal-800">Manufacturer</th>
+										<th class="py-2 px-4 text-left text-gunmetal-800">Caliber</th>
+										<th class="py-2 px-4 text-left text-gunmetal-800">Acquired</th>
+										<th class="py-2 px-4 text-left text-gunmetal-800">Actions</th>
 									</tr>
 								</thead>
 								<tbody>`
 						
 						for _, gun := range data.Guns {
-							result += `<tr class="border-t hover:bg-gray-50">
+							result += `<tr class="border-t hover:bg-gunmetal-50">
 								<td class="py-2 px-4">
-									<a href="/owner/guns/` + strconv.FormatUint(uint64(gun.ID), 10) + `" class="text-blue-600 hover:underline">
+									<a href="/owner/guns/` + strconv.FormatUint(uint64(gun.ID), 10) + `" class="text-blue-600 hover:underline font-medium">
 										` + gun.Name + `
 									</a>
 								</td>
-								<td class="py-2 px-4">` + gun.WeaponType.Type + `</td>
-								<td class="py-2 px-4">` + gun.Manufacturer.Name + `</td>
-								<td class="py-2 px-4">` + gun.Caliber.Caliber + `</td>
-								<td class="py-2 px-4">`
+								<td class="py-2 px-4 text-gunmetal-800">` + gun.WeaponType.Type + `</td>
+								<td class="py-2 px-4 text-gunmetal-800">` + gun.Manufacturer.Name + `</td>
+								<td class="py-2 px-4 text-gunmetal-800">` + gun.Caliber.Caliber + `</td>
+								<td class="py-2 px-4 text-gunmetal-800">`
 							
 							if gun.Acquired != nil {
 								result += gun.Acquired.Format("Jan 2, 2006")
 							} else {
-								result += `<span class="text-gray-400">Unknown</span>`
+								result += `<span class="text-gunmetal-500">Unknown</span>`
 							}
 							
 							result += `</td>
@@ -164,8 +164,8 @@ templ Owner(data *data.OwnerData) {
 						return result
 					} else {
 						return `<div class="text-center py-8">
-							<p class="text-gray-600 mb-4">You haven't added any firearms yet.</p>
-							<a href="/owner/guns/new" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">
+							<p class="text-gunmetal-700 mb-4">You haven't added any firearms yet.</p>
+							<a href="/owner/guns/new" class="bg-gunmetal-700 hover:bg-gunmetal-800 text-white font-bold py-2 px-4 rounded">
 								Add Your First Firearm
 							</a>
 						</div>`
@@ -176,20 +176,20 @@ templ Owner(data *data.OwnerData) {
 			<!-- Feature Cards -->
 			<div class="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 				<div class="bg-white p-6 rounded-lg shadow-md">
-					<h3 class="font-bold text-lg mb-2">Maintenance Records</h3>
-					<p class="text-gray-600 mb-4">Track cleaning, repairs, and modifications for each firearm.</p>
+					<h3 class="font-bold text-lg text-gunmetal-800 mb-2">Maintenance Records</h3>
+					<p class="text-gunmetal-700 mb-4">Track cleaning, repairs, and modifications for each firearm.</p>
 					<a href="#" class="text-blue-600 hover:underline">Coming Soon</a>
 				</div>
 				
 				<div class="bg-white p-6 rounded-lg shadow-md">
-					<h3 class="font-bold text-lg mb-2">Range Day Tracking</h3>
-					<p class="text-gray-600 mb-4">Log your range visits, rounds fired, and performance notes.</p>
+					<h3 class="font-bold text-lg text-gunmetal-800 mb-2">Range Day Tracking</h3>
+					<p class="text-gunmetal-700 mb-4">Log your range visits, rounds fired, and performance notes.</p>
 					<a href="#" class="text-blue-600 hover:underline">Coming Soon</a>
 				</div>
 				
 				<div class="bg-white p-6 rounded-lg shadow-md">
-					<h3 class="font-bold text-lg mb-2">Ammo Inventory</h3>
-					<p class="text-gray-600 mb-4">Manage your ammunition stock and consumption.</p>
+					<h3 class="font-bold text-lg text-gunmetal-800 mb-2">Ammo Inventory</h3>
+					<p class="text-gunmetal-700 mb-4">Manage your ammunition stock and consumption.</p>
 					<a href="#" class="text-blue-600 hover:underline">Coming Soon</a>
 				</div>
 			</div>

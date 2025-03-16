@@ -6,10 +6,50 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"github.com/hail2skins/armory/internal/controller"
 	"github.com/hail2skins/armory/internal/testutils"
+	"github.com/hail2skins/armory/internal/testutils/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// TestOwnerGunRoutes tests that the gun routes are properly registered
+func TestOwnerGunRoutes(t *testing.T) {
+	// Setup
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+
+	// Create mock DB
+	mockDB := new(mocks.MockDB)
+
+	// Create mock auth controller
+	mockAuthController := controller.NewAuthController(mockDB)
+
+	// Register routes
+	RegisterOwnerRoutes(router, mockDB, mockAuthController)
+
+	// Test routes
+	routes := []struct {
+		method   string
+		path     string
+		expected int
+	}{
+		{"GET", "/owner/guns/new", http.StatusOK},
+		{"POST", "/owner/guns", http.StatusOK},
+	}
+
+	for _, route := range routes {
+		// Create request
+		req, _ := http.NewRequest(route.method, route.path, nil)
+		resp := httptest.NewRecorder()
+
+		// Perform request
+		router.ServeHTTP(resp, req)
+
+		// Assert route exists (we don't care about the response code here, just that the route is registered)
+		assert.NotEqual(t, http.StatusNotFound, resp.Code, "Route %s %s not found", route.method, route.path)
+	}
+}
 
 // TestOwnerRouteRedirectWithFlashMessage tests that when an unauthenticated user
 // tries to access the /owner route, they are redirected to login with a flash message
