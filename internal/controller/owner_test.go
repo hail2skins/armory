@@ -948,3 +948,9 @@ func TestOwnerLandingPageViewArsenalButton(t *testing.T) {
 	mockAuthController.AssertExpectations(t)
 	mockDB.AssertExpectations(t)
 }
+
+// DeleteGun deletes a gun from the database
+func (m *MockOwnerDB) DeleteGun(db *gorm.DB, id uint, ownerID uint) error {
+	args := m.Called(db, id, ownerID)
+	return args.Error(0)
+}

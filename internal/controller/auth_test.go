@@ -13,6 +13,7 @@ import (
 	"github.com/hail2skins/armory/internal/database"
 	"github.com/hail2skins/armory/internal/models"
 	"github.com/hail2skins/armory/internal/testutils"
+	"github.com/hail2skins/armory/internal/testutils/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -275,7 +276,7 @@ func TestAuthenticationFlow(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	t.Run("Authentication flow changes navigation bar", func(t *testing.T) {
-		mockDB := new(MockDB)
+		mockDB := new(mocks.MockDB)
 		mockEmail := new(MockEmailService)
 
 		// Create a test user
@@ -542,7 +543,7 @@ func TestLogoutRedirectsToHome(t *testing.T) {
 func TestEmailVerification(t *testing.T) {
 	// Setup
 	gin.SetMode(gin.TestMode)
-	mockDB := new(MockDB)
+	mockDB := new(mocks.MockDB)
 
 	// Setup mock responses
 	testUser := &database.User{
@@ -652,7 +653,7 @@ func TestLoginRedirectsToOwner(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	// Create mock objects
-	mockDB := new(MockDB)
+	mockDB := new(mocks.MockDB)
 
 	// Create a test user
 	testUser := &database.User{
@@ -698,7 +699,7 @@ func TestLoginRedirectsToOwnerWithWelcomeMessage(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	// Create mock objects
-	mockDB := new(MockDB)
+	mockDB := new(mocks.MockDB)
 
 	// Create a test user
 	testUser := &database.User{

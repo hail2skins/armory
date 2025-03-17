@@ -44,6 +44,9 @@ type Service interface {
 	GetUserByID(id uint) (*User, error)
 	GetUserByStripeCustomerID(customerID string) (*User, error)
 
+	// Gun-related methods
+	DeleteGun(db *gorm.DB, id uint, ownerID uint) error
+
 	// GetDB returns the underlying *gorm.DB instance
 	GetDB() *gorm.DB
 }
@@ -221,4 +224,9 @@ func (s *service) Close() error {
 // GetDB returns the underlying *gorm.DB instance
 func (s *service) GetDB() *gorm.DB {
 	return s.db
+}
+
+// DeleteGun deletes a gun from the database
+func (s *service) DeleteGun(db *gorm.DB, id uint, ownerID uint) error {
+	return models.DeleteGun(s.db, id, ownerID)
 }

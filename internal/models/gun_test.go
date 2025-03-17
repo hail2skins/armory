@@ -211,3 +211,86 @@ func TestFindGunByID(t *testing.T) {
 	assert.Error(t, err)
 	assert.Nil(t, foundGun)
 }
+
+// TestDeleteGun tests the DeleteGun function
+func TestDeleteGun(t *testing.T) {
+	// Setup in-memory SQLite database
+	db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{})
+	assert.NoError(t, err)
+
+	// Migrate the schema
+	err = db.AutoMigrate(&Gun{}, &WeaponType{}, &Caliber{}, &Manufacturer{})
+	assert.NoError(t, err)
+
+	// Seed test data
+	testhelper.SeedTestData(db)
+
+	// Get test data from seeded data
+	var weaponType WeaponType
+	err = db.Where("type = ?", "Test Rifle").First(&weaponType).Error
+	assert.NoError(t, err)
+
+	var caliber Caliber
+	err = db.Where("caliber = ?", "Test .223").First(&caliber).Error
+	assert.NoError(t, err)
+
+	var manufacturer Manufacturer
+	err = db.Where("name = ?", "Test Manufacturer").First(&manufacturer).Error
+	assert.NoError(t, err)
+
+	// Create a test gun
+	acquired := time.Now()
+	gun := &Gun{
+		Name:           "Test Gun for Delete",
+		SerialNumber:   "DEL123456",
+		Acquired:       &acquired,
+		WeaponTypeID:   weaponType.ID,
+		CaliberID:      caliber.ID,
+		ManufacturerID: manufacturer.ID,
+		OwnerID:        1, // Test owner ID
+	}
+	err = db.Create(gun).Error
+	assert.NoError(t, err)
+
+	// Verify the gun was created
+	var createdGun Gun
+	err = db.First(&createdGun, gun.ID).Error
+	assert.NoError(t, err)
+
+	// Call the function being tested
+	err = DeleteGun(db, gun.ID, 1)
+	assert.NoError(t, err)
+
+	// Verify the gun was soft deleted (not found with normal query)
+	err = db.First(&Gun{}, gun.ID).Error
+	assert.Error(t, err) // Should error because the gun is soft deleted
+
+	// Verify the gun can be found with unscoped
+	var deletedGun Gun
+	err = db.Unscoped().First(&deletedGun, gun.ID).Error
+	assert.NoError(t, err)
+	assert.NotNil(t, deletedGun.DeletedAt.Time) // DeletedAt should be set
+
+	// Test deleting a gun with wrong owner ID
+	// Create another test gun
+	gun2 := &Gun{
+		Name:           "Test Gun 2 for Delete",
+		SerialNumber:   "DEL654321",
+		Acquired:       &acquired,
+		WeaponTypeID:   weaponType.ID,
+		CaliberID:      caliber.ID,
+		ManufacturerID: manufacturer.ID,
+		OwnerID:        1, // Test owner ID
+	}
+	err = db.Create(gun2).Error
+	assert.NoError(t, err)
+
+	// Try to delete with wrong owner ID
+	err = DeleteGun(db, gun2.ID, 2)
+	assert.NoError(t, err) // Should not error, but should not delete anything
+
+	// Verify the gun was not deleted (still found with normal query)
+	var stillExistsGun Gun
+	err = db.First(&stillExistsGun, gun2.ID).Error
+	assert.NoError(t, err) // Should not error because the gun still exists
+}

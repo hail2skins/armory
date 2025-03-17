@@ -253,3 +253,9 @@ func (m *MockDB) UpdatePayment(payment *database.Payment) error {
 	args := m.Called(payment)
 	return args.Error(0)
 }
+
+// DeleteGun mocks the DeleteGun method
+func (m *MockDB) DeleteGun(db *gorm.DB, id uint, ownerID uint) error {
+	args := m.Called(db, id, ownerID)
+	return args.Error(0)
+}

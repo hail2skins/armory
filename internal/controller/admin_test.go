@@ -283,6 +283,12 @@ func (m *MockAdminDB) DeleteWeaponType(id uint) error {
 	return args.Error(0)
 }
 
+// DeleteGun deletes a gun from the database
+func (m *MockAdminDB) DeleteGun(db *gorm.DB, id uint, ownerID uint) error {
+	args := m.Called(db, id, ownerID)
+	return args.Error(0)
+}
+
 // MockResponseWriter is a mock implementation of http.ResponseWriter
 type MockResponseWriter struct {
 	mock.Mock

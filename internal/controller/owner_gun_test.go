@@ -1226,3 +1226,209 @@ func TestOwnerGunUpdateValidation(t *testing.T) {
 	assert.Contains(t, w.Body.String(), "Edit Firearm")
 	assert.Contains(t, w.Body.String(), "Name is required")
 }
+
+// TestOwnerGunDelete tests the Delete function
+func TestOwnerGunDelete(t *testing.T) {
+	// Setup
+	gin.SetMode(gin.TestMode)
+
+	// Create a new mock DB
+	mockDB := new(mocks.MockDB)
+
+	// Create a new mock auth controller
+	mockAuthController := new(mocks.MockAuthController)
+
+	// Create a test user
+	user := &database.User{
+		Model: gorm.Model{
+			ID: 1,
+		},
+		Email: "test@example.com",
+	}
+
+	// Set up expectations
+	mockAuthInfo := &mocks.MockAuthInfo{}
+	mockAuthInfo.SetUserName("test@example.com")
+
+	// Expect GetCurrentUser to be called and return the mock auth info and true
+	mockAuthController.On("GetCurrentUser", mock.Anything).Return(mockAuthInfo, true)
+
+	// Expect GetUserByEmail to be called with the user's email and return the user
+	mockDB.On("GetUserByEmail", mock.Anything, "test@example.com").Return(user, nil)
+
+	// Expect GetDB to be called and return a mock DB
+	mockDB.On("GetDB").Return(nil)
+
+	// Expect the gun to be deleted
+	mockDB.On("DeleteGun", mock.Anything, uint(1), uint(1)).Return(nil)
+
+	// Create a new owner controller with the mock DB
+	ownerController := NewOwnerController(mockDB)
+
+	// Create a new gin context
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+
+	// Create a new request
+	req, _ := http.NewRequest("POST", "/owner/guns/1/delete", nil)
+	c.Request = req
+
+	// Set the auth controller in the context
+	c.Set("authController", mockAuthController)
+
+	// Set the gun ID parameter
+	c.Params = []gin.Param{
+		{
+			Key:   "id",
+			Value: "1",
+		},
+	}
+
+	// Set the setFlash function in the context
+	c.Set("setFlash", func(msg string) {
+		// In a real application, this would set a flash message
+		t.Logf("Flash message: %s", msg)
+		assert.Equal(t, "Your gun has been deleted.", msg)
+	})
+
+	// Call the Delete method
+	ownerController.Delete(c)
+
+	// Log the response for debugging
+	t.Logf("Response code: %d", w.Code)
+	t.Logf("Response headers: %v", w.Header())
+	t.Logf("Response body: %s", w.Body.String())
+
+	// Assert that the response has the correct Location header
+	assert.Equal(t, "/owner", w.Header().Get("Location"))
+
+	// Verify expectations
+	mockAuthController.AssertExpectations(t)
+	mockDB.AssertExpectations(t)
+}
+
+// TestOwnerGunDeleteUnauthenticated tests the Delete function when the user is not authenticated
+func TestOwnerGunDeleteUnauthenticated(t *testing.T) {
+	// Setup
+	gin.SetMode(gin.TestMode)
+
+	// Create a new mock DB
+	mockDB := new(mocks.MockDB)
+
+	// Create a new mock auth controller
+	mockAuthController := new(mocks.MockAuthController)
+
+	// Expect GetCurrentUser to be called and return nil and false
+	mockAuthController.On("GetCurrentUser", mock.Anything).Return(nil, false)
+
+	// Create a new owner controller with the mock DB
+	ownerController := NewOwnerController(mockDB)
+
+	// Create a new gin context
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+
+	// Create a new request
+	req, _ := http.NewRequest("POST", "/owner/guns/1/delete", nil)
+	c.Request = req
+
+	// Set the auth controller in the context
+	c.Set("authController", mockAuthController)
+
+	// Set the gun ID parameter
+	c.Params = []gin.Param{
+		{
+			Key:   "id",
+			Value: "1",
+		},
+	}
+
+	// Set the setFlash function in the context
+	c.Set("setFlash", func(msg string) {
+		// In a real application, this would set a flash message
+		assert.Equal(t, "You must be logged in to access this page", msg)
+	})
+
+	// Call the Delete method
+	ownerController.Delete(c)
+
+	// Assert that the response has the correct Location header
+	assert.Equal(t, "/login", w.Header().Get("Location"))
+
+	// Verify expectations
+	mockAuthController.AssertExpectations(t)
+}
+
+// TestOwnerGunDeleteError tests the Delete function when there's an error deleting the gun
+func TestOwnerGunDeleteError(t *testing.T) {
+	// Setup
+	gin.SetMode(gin.TestMode)
+
+	// Create a new mock DB
+	mockDB := new(mocks.MockDB)
+
+	// Create a new mock auth controller
+	mockAuthController := new(mocks.MockAuthController)
+
+	// Create a test user
+	user := &database.User{
+		Model: gorm.Model{
+			ID: 1,
+		},
+		Email: "test@example.com",
+	}
+
+	// Set up expectations
+	mockAuthInfo := &mocks.MockAuthInfo{}
+	mockAuthInfo.SetUserName("test@example.com")
+
+	// Expect GetCurrentUser to be called and return the mock auth info and true
+	mockAuthController.On("GetCurrentUser", mock.Anything).Return(mockAuthInfo, true)
+
+	// Expect GetUserByEmail to be called with the user's email and return the user
+	mockDB.On("GetUserByEmail", mock.Anything, "test@example.com").Return(user, nil)
+
+	// Expect GetDB to be called and return a mock DB
+	mockDB.On("GetDB").Return(nil)
+
+	// Expect the gun to be deleted with an error
+	mockDB.On("DeleteGun", mock.Anything, uint(1), uint(1)).Return(gorm.ErrRecordNotFound)
+
+	// Create a new owner controller with the mock DB
+	ownerController := NewOwnerController(mockDB)
+
+	// Create a new gin context
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+
+	// Create a new request
+	req, _ := http.NewRequest("POST", "/owner/guns/1/delete", nil)
+	c.Request = req
+
+	// Set the auth controller in the context
+	c.Set("authController", mockAuthController)
+
+	// Set the gun ID parameter
+	c.Params = []gin.Param{
+		{
+			Key:   "id",
+			Value: "1",
+		},
+	}
+
+	// Set the setFlash function in the context
+	c.Set("setFlash", func(msg string) {
+		// In a real application, this would set a flash message
+		assert.Equal(t, "Error deleting gun: record not found", msg)
+	})
+
+	// Call the Delete method
+	ownerController.Delete(c)
+
+	// Assert that the response has the correct Location header
+	assert.Equal(t, "/owner", w.Header().Get("Location"))
+
+	// Verify expectations
+	mockAuthController.AssertExpectations(t)
+	mockDB.AssertExpectations(t)
+}

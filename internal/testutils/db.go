@@ -426,3 +426,8 @@ func (s *TestService) DeleteWeaponType(id uint) error {
 func (s *TestService) GetDB() *gorm.DB {
 	return s.db
 }
+
+// DeleteGun deletes a gun from the database
+func (s *TestService) DeleteGun(db *gorm.DB, id uint, ownerID uint) error {
+	return models.DeleteGun(s.db, id, ownerID)
+}

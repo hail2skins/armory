@@ -9,6 +9,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/hail2skins/armory/internal/database"
+	"github.com/hail2skins/armory/internal/testutils/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -34,7 +35,7 @@ func (m *mockEmailService) SendContactEmail(name, email, subject, message string
 
 func TestVerificationFlow(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	mockDB := new(MockDB)
+	mockDB := new(mocks.MockDB)
 	mockEmailSvc := new(mockEmailService)
 
 	// Create test user
@@ -109,7 +110,7 @@ func TestVerificationFlow(t *testing.T) {
 
 func TestPasswordResetFlow(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	mockDB := new(MockDB)
+	mockDB := new(mocks.MockDB)
 	mockEmailSvc := new(mockEmailService)
 
 	// Create test user

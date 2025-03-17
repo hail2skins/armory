@@ -9,6 +9,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/hail2skins/armory/internal/services/email"
+	"github.com/hail2skins/armory/internal/testutils/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -38,7 +39,7 @@ func TestHomeController_ContactHandler(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	// Create a mock DB and email service
-	mockDB := new(MockDB)
+	mockDB := new(mocks.MockDB)
 	mockEmailService := new(MockEmailServiceWithContact)
 
 	// Create a test HTTP server

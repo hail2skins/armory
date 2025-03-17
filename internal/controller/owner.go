@@ -1188,8 +1188,114 @@ func (o *OwnerController) Update(c *gin.Context) {
 
 // Delete handles the delete gun route
 func (o *OwnerController) Delete(c *gin.Context) {
-	// This will be implemented later
-	c.JSON(200, gin.H{"message": "Delete gun"})
+	// Get the current user's authentication status and email
+	authController, ok := c.MustGet("authController").(AuthControllerInterface)
+	if !ok {
+		// Try to cast to the concrete type as a fallback
+		concreteAuthController, ok := c.MustGet("authController").(*AuthController)
+		if !ok {
+			c.Redirect(http.StatusSeeOther, "/login")
+			return
+		}
+		userInfo, authenticated := concreteAuthController.GetCurrentUser(c)
+		if !authenticated {
+			// Set flash message
+			if setFlash, exists := c.Get("setFlash"); exists {
+				setFlash.(func(string))("You must be logged in to access this page")
+			}
+			c.Redirect(http.StatusSeeOther, "/login")
+			return
+		}
+
+		// Get the user from the database
+		ctx := context.Background()
+		dbUser, err := o.db.GetUserByEmail(ctx, userInfo.GetUserName())
+		if err != nil {
+			c.Redirect(http.StatusSeeOther, "/login")
+			return
+		}
+
+		// Get the gun ID from the URL parameter
+		gunID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+		if err != nil {
+			// Set flash message
+			if setFlash, exists := c.Get("setFlash"); exists {
+				setFlash.(func(string))("Invalid gun ID")
+			}
+			c.Redirect(http.StatusSeeOther, "/owner")
+			return
+		}
+
+		// Delete the gun
+		db := o.db.GetDB()
+		err = o.db.DeleteGun(db, uint(gunID), dbUser.ID)
+		if err != nil {
+			// Set flash message
+			if setFlash, exists := c.Get("setFlash"); exists {
+				setFlash.(func(string))("Error deleting gun: " + err.Error())
+			}
+			c.Redirect(http.StatusSeeOther, "/owner")
+			return
+		}
+
+		// Set flash message
+		if setFlash, exists := c.Get("setFlash"); exists {
+			setFlash.(func(string))("Your gun has been deleted.")
+		}
+
+		// Redirect to the owner page
+		c.Redirect(http.StatusSeeOther, "/owner")
+		return
+	}
+
+	userInfo, authenticated := authController.GetCurrentUser(c)
+	if !authenticated {
+		// Set flash message
+		if setFlash, exists := c.Get("setFlash"); exists {
+			setFlash.(func(string))("You must be logged in to access this page")
+		}
+		c.Redirect(http.StatusSeeOther, "/login")
+		return
+	}
+
+	// Get the user from the database
+	ctx := context.Background()
+	dbUser, err := o.db.GetUserByEmail(ctx, userInfo.GetUserName())
+	if err != nil {
+		c.Redirect(http.StatusSeeOther, "/login")
+		return
+	}
+
+	// Get the gun ID from the URL parameter
+	gunID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		// Set flash message
+		if setFlash, exists := c.Get("setFlash"); exists {
+			setFlash.(func(string))("Invalid gun ID")
+		}
+		c.Redirect(http.StatusSeeOther, "/owner")
+		return
+	}
+
+	// Delete the gun
+	db := o.db.GetDB()
+	err = o.db.DeleteGun(db, uint(gunID), dbUser.ID)
+	if err != nil {
+		// Set flash message
+		if setFlash, exists := c.Get("setFlash"); exists {
+			setFlash.(func(string))("Error deleting gun: " + err.Error())
+		}
+		c.Redirect(http.StatusSeeOther, "/owner")
+		return
+	}
+
+	// Set flash message
+	if setFlash, exists := c.Get("setFlash"); exists {
+		setFlash.(func(string))("Your gun has been deleted.")
+	}
+
+	// Redirect to the owner page
+	c.Redirect(http.StatusSeeOther, "/owner")
 }
 
 // SearchCalibers handles the caliber search API

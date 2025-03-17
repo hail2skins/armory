@@ -303,6 +303,12 @@ func (m *MockDBWithContext) GetDB() *gorm.DB {
 	return args.Get(0).(*gorm.DB)
 }
 
+// DeleteGun deletes a gun from the database
+func (m *MockDBWithContext) DeleteGun(db *gorm.DB, id uint, ownerID uint) error {
+	args := m.Called(db, id, ownerID)
+	return args.Error(0)
+}
+
 // setupTestRouter creates a test router with real authentication handling
 func setupTestRouter(t *testing.T) (*gin.Engine, *MockDBWithContext, *MockEmailService) {
 	// Set Gin to test mode
