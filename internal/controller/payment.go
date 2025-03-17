@@ -125,7 +125,13 @@ func (p *PaymentController) CreateCheckoutSession(c *gin.Context) {
 
 	// Check if user is authenticated
 	if !authenticated {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "You must be logged in to subscribe"})
+		// Use the setFlash function from middleware to set the flash message
+		if setFlash, exists := c.Get("setFlash"); exists {
+			setFlash.(func(string))("You must be logged in to subscribe")
+		}
+
+		// Redirect to login
+		c.Redirect(http.StatusSeeOther, "/login")
 		return
 	}
 

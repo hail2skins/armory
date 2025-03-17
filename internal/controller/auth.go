@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -126,7 +127,28 @@ func (a *AuthController) LoginHandler(c *gin.Context) {
 
 	// For GET requests, render the login form
 	if c.Request.Method == http.MethodGet {
-		a.RenderLogin(c, data.NewAuthData().WithTitle("Login"))
+		// Get the auth data
+		authData := data.NewAuthData().WithTitle("Login")
+
+		// Check for flash message from cookie
+		if flashCookie, err := c.Cookie("flash"); err == nil && flashCookie != "" {
+			// Add flash message to success messages
+			authData.Success = flashCookie
+			// Clear the flash cookie
+			c.SetCookie("flash", "", -1, "/", "", false, false)
+		} else {
+			// If no flash message from cookie, check if the user is coming from the pricing page
+			// by examining the referer header
+			referer := c.Request.Header.Get("Referer")
+			if referer != "" {
+				if strings.Contains(referer, "/pricing") {
+					// User is coming from pricing page, set a flash message
+					authData.Success = "You must be logged in to subscribe"
+				}
+			}
+		}
+
+		a.RenderLogin(c, authData)
 		return
 	}
 
