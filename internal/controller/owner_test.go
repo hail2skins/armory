@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/hail2skins/armory/internal/database"
@@ -536,8 +537,9 @@ func TestOwnerLandingPage(t *testing.T) {
 		Model: gorm.Model{
 			ID: 1,
 		},
-		Email:            "test@example.com",
-		SubscriptionTier: "premium",
+		Email:               "test@example.com",
+		SubscriptionTier:    "premium",
+		SubscriptionEndDate: time.Now().Add(24 * time.Hour),
 	}
 
 	// Set up expectations
@@ -1217,4 +1219,130 @@ func TestOwnerArsenalWithFreeTierLimit(t *testing.T) {
 	// Verify expectations
 	mockAuthController.AssertExpectations(t)
 	mockDB.AssertExpectations(t)
+}
+
+// TestOwnerProfile tests the owner profile page
+func TestOwnerProfile(t *testing.T) {
+	// Setup
+	gin.SetMode(gin.TestMode)
+
+	// Create a new mock DB
+	mockDB := new(mocks.MockDB)
+
+	// Create a new mock auth controller
+	mockAuthController := new(mocks.MockAuthController)
+
+	// Create a test user
+	user := &database.User{
+		Model: gorm.Model{
+			ID: 1,
+		},
+		Email:               "test@example.com",
+		SubscriptionTier:    "premium",
+		SubscriptionEndDate: time.Now().Add(24 * time.Hour),
+	}
+
+	// Set up expectations
+	mockAuthInfo := &mocks.MockAuthInfo{}
+	mockAuthInfo.SetUserName("test@example.com")
+
+	// Expect GetCurrentUser to be called and return the mock auth info and true
+	mockAuthController.On("GetCurrentUser", mock.Anything).Return(mockAuthInfo, true)
+
+	// Expect GetUserByEmail to be called with the user's email and return the user
+	mockDB.On("GetUserByEmail", mock.Anything, "test@example.com").Return(user, nil)
+
+	// Create owner controller
+	ownerController := NewOwnerController(mockDB)
+
+	// Create test router
+	router := gin.New()
+	router.Use(func(c *gin.Context) {
+		c.Set("authController", mockAuthController)
+	})
+
+	// Add the profile route
+	router.GET("/profile", ownerController.Profile)
+
+	t.Run("Profile page shows subscription info for authenticated user", func(t *testing.T) {
+		// Create request
+		req := httptest.NewRequest("GET", "/profile", nil)
+		resp := httptest.NewRecorder()
+
+		// Serve the request
+		router.ServeHTTP(resp, req)
+
+		// Check response
+		assert.Equal(t, http.StatusOK, resp.Code)
+		assert.Contains(t, resp.Body.String(), "test@example.com")
+		assert.Contains(t, resp.Body.String(), "premium")
+	})
+
+	t.Run("Profile page shows flash message", func(t *testing.T) {
+		// Create request with flash cookie
+		req := httptest.NewRequest("GET", "/profile", nil)
+		req.AddCookie(&http.Cookie{
+			Name:  "flash",
+			Value: "Test flash message",
+		})
+		resp := httptest.NewRecorder()
+
+		// Serve the request
+		router.ServeHTTP(resp, req)
+
+		// Check response
+		assert.Equal(t, http.StatusOK, resp.Code)
+		assert.Contains(t, resp.Body.String(), "Test flash message")
+	})
+}
+
+// TestOwnerProfileUnauthenticated tests that unauthenticated users are redirected to login
+func TestOwnerProfileUnauthenticated(t *testing.T) {
+	// Setup
+	gin.SetMode(gin.TestMode)
+
+	// Create a new mock DB
+	mockDB := new(mocks.MockDB)
+
+	// Create a new mock auth controller
+	mockAuthController := new(mocks.MockAuthController)
+
+	// Create a mock auth info
+	mockAuthInfo := &mocks.MockAuthInfo{}
+
+	// Expect GetCurrentUser to be called and return the mock auth info and false
+	mockAuthController.On("GetCurrentUser", mock.Anything).Return(mockAuthInfo, false)
+
+	// Create owner controller
+	ownerController := NewOwnerController(mockDB)
+
+	// Create test router
+	router := gin.New()
+	var capturedFlash string
+	router.Use(func(c *gin.Context) {
+		c.Set("authController", mockAuthController)
+		c.Set("setFlash", func(msg string) {
+			capturedFlash = msg
+		})
+		c.Next()
+	})
+
+	// Add the profile route
+	router.GET("/profile", ownerController.Profile)
+
+	t.Run("Profile page redirects to login for unauthenticated user", func(t *testing.T) {
+		// Create request
+		req := httptest.NewRequest("GET", "/profile", nil)
+		resp := httptest.NewRecorder()
+
+		// Serve the request
+		router.ServeHTTP(resp, req)
+
+		// Check response
+		assert.Equal(t, http.StatusSeeOther, resp.Code)
+		assert.Equal(t, "/login", resp.Header().Get("Location"))
+
+		// Check that a permission message was set
+		assert.Contains(t, capturedFlash, "must be logged in")
+	})
 }

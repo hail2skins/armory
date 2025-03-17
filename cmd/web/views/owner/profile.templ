@@ -1,0 +1,83 @@
+package owner
+
+import (
+	"context"
+	"io"
+	
+	"github.com/hail2skins/armory/cmd/web/views/data"
+	"github.com/hail2skins/armory/cmd/web/views/partials"
+)
+
+// Profile renders the owner profile page
+templ Profile(data *data.OwnerData) {
+	@partials.Base(data.Auth, templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+		_, err := io.WriteString(w, `
+		<div class="max-w-4xl mx-auto py-8 px-4">
+			<div class="mb-6">
+				<a href="/owner" class="text-brass-400 hover:text-brass-300 inline-flex items-center">
+					<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+					</svg>
+					Back to Dashboard
+				</a>
+			</div>
+			
+			<h1 class="text-3xl font-bold mb-6 text-gunmetal-800">Your Profile</h1>
+			
+			` + func() string {
+				if data.Auth.Success != "" {
+					return `<div class="mb-4 bg-green-100 border-l-4 border-green-500 p-4 text-center">
+						<p class="text-green-700">` + data.Auth.Success + `</p>
+					</div>`
+				}
+				return ""
+			}() + `
+			
+			<div class="bg-white shadow-md rounded-lg overflow-hidden mb-8">
+				<div class="bg-gunmetal-700 text-white px-6 py-4">
+					<h2 class="text-xl font-semibold">Account Information</h2>
+				</div>
+				<div class="p-6 bg-gunmetal-50">
+					<div class="mb-4">
+						<p class="text-gunmetal-600">Email</p>
+						<p class="font-medium text-gunmetal-800">` + data.User.Email + `</p>
+					</div>
+					<div class="mb-4">
+						<p class="text-gunmetal-600">Subscription</p>
+						<p class="font-medium text-gunmetal-800">` + data.User.SubscriptionTier + `</p>
+					</div>
+					<div class="flex flex-wrap gap-4 mt-6">
+						<a href="/profile/edit" class="bg-gunmetal-700 hover:bg-gunmetal-600 text-white py-2 px-4 rounded transition duration-300">
+							Edit Profile
+						</a>
+						<a href="/profile/subscription" class="bg-brass-400 hover:bg-brass-300 text-gunmetal-800 py-2 px-4 rounded transition duration-300">
+							Manage Subscription
+						</a>
+						<a href="/owner/payment-history" class="bg-gunmetal-600 hover:bg-gunmetal-500 text-white py-2 px-4 rounded transition duration-300">
+							Payment History
+						</a>
+					</div>
+				</div>
+			</div>
+			
+			<div class="bg-white shadow-md rounded-lg overflow-hidden">
+				<div class="bg-gunmetal-700 text-white px-6 py-4">
+					<h2 class="text-xl font-semibold">Account Management</h2>
+				</div>
+				<div class="p-6 bg-gunmetal-50">
+					<p class="text-gunmetal-600 mb-4">
+						Need to take a break? You can delete your account, but all your data will be retained for 1 year in case you want to come back.
+					</p>
+					<a href="/profile/delete" class="text-red-600 hover:text-red-800 font-medium inline-flex items-center transition duration-300">
+						<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+						</svg>
+						Delete Account
+					</a>
+				</div>
+			</div>
+		</div>
+		`)
+		return err
+	}))
+} 

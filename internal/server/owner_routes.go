@@ -44,6 +44,9 @@ func RegisterOwnerRoutes(router *gin.Engine, db database.Service, authController
 		// Owner landing page
 		ownerGroup.GET("", ownerController.LandingPage)
 
+		// Owner profile page
+		ownerGroup.GET("/profile", ownerController.Profile)
+
 		// Gun routes nested under owner
 		gunGroup := ownerGroup.Group("/guns")
 		{

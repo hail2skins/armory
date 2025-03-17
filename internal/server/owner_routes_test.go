@@ -37,6 +37,7 @@ func TestOwnerGunRoutes(t *testing.T) {
 		{"GET", "/owner/guns/new", http.StatusOK},
 		{"POST", "/owner/guns", http.StatusOK},
 		{"GET", "/owner/guns/1", http.StatusOK},
+		{"GET", "/owner/profile", http.StatusOK},
 	}
 
 	for _, route := range routes {
