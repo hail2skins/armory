@@ -59,7 +59,20 @@ func CreateGun(db *gorm.DB, gun *Gun) error {
 
 // UpdateGun updates an existing gun in the database
 func UpdateGun(db *gorm.DB, gun *Gun) error {
-	return db.Save(gun).Error
+	// Update the gun using GORM
+	if err := db.Model(gun).Updates(map[string]interface{}{
+		"name":            gun.Name,
+		"serial_number":   gun.SerialNumber,
+		"acquired":        gun.Acquired,
+		"weapon_type_id":  gun.WeaponTypeID,
+		"caliber_id":      gun.CaliberID,
+		"manufacturer_id": gun.ManufacturerID,
+	}).Error; err != nil {
+		return err
+	}
+
+	// Reload the gun with its relationships
+	return db.Preload("WeaponType").Preload("Caliber").Preload("Manufacturer").First(gun, gun.ID).Error
 }
 
 // DeleteGun deletes a gun from the database
