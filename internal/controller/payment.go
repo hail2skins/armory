@@ -97,10 +97,16 @@ func (p *PaymentController) PricingHandler(c *gin.Context) {
 		CurrentPlan: "free",
 	}
 
-	// Set email if authenticated
-	if authenticated {
-		pricingData.Email = userInfo.GetUserName()
+	// Check for flash message from cookie
+	if flashCookie, err := c.Cookie("flash"); err == nil && flashCookie != "" {
+		// Add flash message to success messages
+		pricingData.Success = flashCookie
+		// Clear the flash cookie
+		c.SetCookie("flash", "", -1, "/", "", false, false)
+	}
 
+	// If authenticated, get the user's subscription tier
+	if authenticated {
 		// Get the user from the database to get subscription info
 		dbUser, err := p.db.GetUserByEmail(c.Request.Context(), userInfo.GetUserName())
 		if err == nil && dbUser != nil {

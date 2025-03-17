@@ -1432,3 +1432,145 @@ func TestOwnerGunDeleteError(t *testing.T) {
 	mockAuthController.AssertExpectations(t)
 	mockDB.AssertExpectations(t)
 }
+
+// TestOwnerGunCreateWithTwoGunsLimit tests that a non-subscribed user with two guns can't add a third gun
+func TestOwnerGunCreateWithTwoGunsLimit(t *testing.T) {
+	// Setup
+	gin.SetMode(gin.TestMode)
+
+	// Create a new mock DB
+	mockDB := new(mocks.MockDB)
+
+	// Create a new mock auth controller
+	mockAuthController := new(mocks.MockAuthController)
+
+	// Create a test user with free subscription tier
+	user := &database.User{
+		Model: gorm.Model{
+			ID: 1,
+		},
+		Email:            "test@example.com",
+		SubscriptionTier: "free",
+	}
+
+	// Set up expectations
+	mockAuthInfo := &mocks.MockAuthInfo{}
+	mockAuthInfo.SetUserName("test@example.com")
+
+	// Expect GetCurrentUser to be called and return the mock auth info and true
+	mockAuthController.On("GetCurrentUser", mock.Anything).Return(mockAuthInfo, true)
+
+	// Expect GetUserByEmail to be called with the user's email and return the user
+	mockDB.On("GetUserByEmail", mock.Anything, "test@example.com").Return(user, nil)
+
+	// Create a mock DB connection with the guns table
+	db, _ := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+
+	// Create the related tables
+	err := db.AutoMigrate(&models.WeaponType{}, &models.Caliber{}, &models.Manufacturer{}, &models.Gun{})
+	assert.NoError(t, err, "Failed to create tables")
+
+	// Create test data in the database
+	weaponType := models.WeaponType{Type: "Rifle", Popularity: 10}
+	err = db.Create(&weaponType).Error
+	assert.NoError(t, err, "Failed to create weapon type")
+
+	caliber := models.Caliber{Caliber: ".223", Popularity: 10}
+	err = db.Create(&caliber).Error
+	assert.NoError(t, err, "Failed to create caliber")
+
+	manufacturer := models.Manufacturer{Name: "Colt", Popularity: 10}
+	err = db.Create(&manufacturer).Error
+	assert.NoError(t, err, "Failed to create manufacturer")
+
+	// Create two existing guns for the user
+	gun1 := models.Gun{
+		Name:           "Existing Gun 1",
+		SerialNumber:   "123456",
+		WeaponTypeID:   1,
+		CaliberID:      1,
+		ManufacturerID: 1,
+		OwnerID:        1,
+	}
+	err = db.Create(&gun1).Error
+	assert.NoError(t, err, "Failed to create first gun")
+
+	gun2 := models.Gun{
+		Name:           "Existing Gun 2",
+		SerialNumber:   "789012",
+		WeaponTypeID:   1,
+		CaliberID:      1,
+		ManufacturerID: 1,
+		OwnerID:        1,
+	}
+	err = db.Create(&gun2).Error
+	assert.NoError(t, err, "Failed to create second gun")
+
+	// Expect GetDB to be called and return the mock DB connection
+	mockDB.On("GetDB").Return(db)
+
+	// Create a new owner controller with the mock DB
+	ownerController := NewOwnerController(mockDB)
+
+	// Create a new gin router
+	router := gin.New()
+
+	// Track if flash message was set correctly
+	var flashMessageSet bool
+	var flashMessage string
+
+	// Set up middleware
+	router.Use(func(c *gin.Context) {
+		c.Set("authController", mockAuthController)
+		c.Set("setFlash", func(msg string) {
+			t.Logf("Flash message: %s", msg)
+			flashMessageSet = true
+			flashMessage = msg
+		})
+		c.Next()
+	})
+
+	// Register the route
+	router.POST("/owner/guns", ownerController.Create)
+
+	// Create a new recorder
+	w := httptest.NewRecorder()
+
+	// Create form data for a third gun
+	form := url.Values{}
+	form.Add("name", "Third Gun")
+	form.Add("serial_number", "345678")
+	form.Add("weapon_type_id", "1")
+	form.Add("caliber_id", "1")
+	form.Add("manufacturer_id", "1")
+	form.Add("acquired_date", "2023-01-01")
+
+	// Create a new request
+	req, _ := http.NewRequest("POST", "/owner/guns", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	// Serve the request through the router
+	router.ServeHTTP(w, req)
+
+	// Print the response body for debugging
+	t.Logf("Response body: %s", w.Body.String())
+	t.Logf("Response code: %d", w.Code)
+	t.Logf("Response headers: %v", w.Header())
+
+	// Assert that the response is a redirect to /pricing
+	assert.Equal(t, http.StatusSeeOther, w.Code)
+	assert.Equal(t, "/pricing", w.Header().Get("Location"))
+
+	// Assert that the flash message was set correctly
+	assert.True(t, flashMessageSet, "Flash message should be set")
+	assert.Equal(t, "You must be subscribed to add more to your arsenal", flashMessage)
+
+	// Verify expectations
+	mockAuthController.AssertExpectations(t)
+	mockDB.AssertExpectations(t)
+
+	// Verify that no third gun was created
+	var count int64
+	db.Model(&models.Gun{}).Where("owner_id = ?", user.ID).Count(&count)
+	assert.Equal(t, int64(2), count, "There should still be only 2 guns for this user")
+}

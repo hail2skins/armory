@@ -331,6 +331,22 @@ func (o *OwnerController) Create(c *gin.Context) {
 			return
 		}
 
+		// Check if the user is on the free tier and already has 2 guns
+		if dbUser.SubscriptionTier == "free" {
+			var count int64
+			db := o.db.GetDB()
+			db.Model(&models.Gun{}).Where("owner_id = ?", dbUser.ID).Count(&count)
+
+			// If the user already has 2 guns, redirect to the pricing page
+			if count >= 2 {
+				if setFlash, exists := c.Get("setFlash"); exists {
+					setFlash.(func(string))("You must be subscribed to add more to your arsenal")
+				}
+				c.Redirect(http.StatusSeeOther, "/pricing")
+				return
+			}
+		}
+
 		// Parse form data
 		name := c.PostForm("name")
 		serialNumber := c.PostForm("serial_number")
@@ -473,6 +489,22 @@ func (o *OwnerController) Create(c *gin.Context) {
 	if err != nil {
 		c.Redirect(http.StatusSeeOther, "/login")
 		return
+	}
+
+	// Check if the user is on the free tier and already has 2 guns
+	if dbUser.SubscriptionTier == "free" {
+		var count int64
+		db := o.db.GetDB()
+		db.Model(&models.Gun{}).Where("owner_id = ?", dbUser.ID).Count(&count)
+
+		// If the user already has 2 guns, redirect to the pricing page
+		if count >= 2 {
+			if setFlash, exists := c.Get("setFlash"); exists {
+				setFlash.(func(string))("You must be subscribed to add more to your arsenal")
+			}
+			c.Redirect(http.StatusSeeOther, "/pricing")
+			return
+		}
 	}
 
 	// Parse form data
