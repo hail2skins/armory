@@ -54,7 +54,7 @@ func NewTestDB() *TestDB {
 	}
 
 	// Auto migrate the schema
-	if err := db.AutoMigrate(&database.User{}, &models.Manufacturer{}, &models.Caliber{}, &models.WeaponType{}, &models.Gun{}); err != nil {
+	if err := db.AutoMigrate(&database.User{}, &models.Manufacturer{}, &models.Caliber{}, &models.WeaponType{}, &models.Gun{}, &models.Payment{}); err != nil {
 		log.Fatalf("Error auto migrating schema: %v", err)
 	}
 

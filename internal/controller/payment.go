@@ -200,6 +200,10 @@ func (p *PaymentController) HandlePaymentSuccess(c *gin.Context) {
 
 	// Render the success page with the data
 	payment.Success(successData).Render(c.Request.Context(), c.Writer)
+
+	// Set a delayed redirect to /owner
+	// We'll use a JS variable that the response template can use to redirect
+	c.Header("HX-Redirect", "/owner")
 }
 
 // HandlePaymentCancellation handles the cancellation callback from Stripe

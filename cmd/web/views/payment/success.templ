@@ -33,8 +33,8 @@ templ successContent(data SuccessData) {
 			</div>
 			
 			<div class="mt-6 flex flex-col space-y-3">
-				<a href="/" class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded text-center transition duration-300">
-					Go to Home
+				<a href="/owner" class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded text-center transition duration-300">
+					Go to Armory
 				</a>
 				<a href="/pricing" class="bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 px-4 rounded text-center transition duration-300">
 					View Plans
@@ -43,9 +43,9 @@ templ successContent(data SuccessData) {
 		</div>
 		
 		<script>
-			// Redirect to the home page after 5 seconds
+			// Redirect to the owner page after 5 seconds
 			setTimeout(function() {
-				window.location.href = '/';
+				window.location.href = '/owner';
 			}, 5000);
 		</script>
 	</div>
