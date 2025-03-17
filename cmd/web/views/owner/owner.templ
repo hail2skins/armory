@@ -20,8 +20,17 @@ templ Owner(data *data.OwnerData) {
 				
 				` + func() string {
 					if data.Auth.Success != "" {
-						return `<div class="mb-4 bg-green-100 border-l-4 border-green-500 p-4">
+						return `<div class="mb-4 bg-green-100 border-l-4 border-green-500 p-4 text-center">
 							<p class="text-green-700">` + data.Auth.Success + `</p>
+						</div>`
+					}
+					return ""
+				}() + `
+				
+				` + func() string {
+					if data.Auth.Error != "" {
+						return `<div class="mb-4 bg-yellow-100 border-l-4 border-yellow-500 p-4 text-center">
+							<p class="text-yellow-700">` + data.Auth.Error + ` <a href="/pricing" class="text-blue-600 hover:text-blue-800 underline">Click here to view pricing options</a></p>
 						</div>`
 					}
 					return ""

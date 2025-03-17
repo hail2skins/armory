@@ -114,7 +114,26 @@ templ Arsenal(data *data.OwnerData) {
 						</tbody>
 					</table>
 				</div>
-				
+				`)
+			
+			// Add message for free tier users with more guns than shown
+			if len(data.Guns) > 0 && data.Guns[0].HasMoreGuns {
+				totalGuns := data.Guns[0].TotalGuns
+				shownGuns := len(data.Guns)
+				_, err = io.WriteString(w, `
+					<div class="mt-4 p-4 bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 text-center">
+						<p>
+							<span class="font-bold">Free Tier Limit:</span> Showing `+strconv.Itoa(shownGuns)+` of `+strconv.Itoa(totalGuns)+` firearms.
+							<a href="/pricing" class="text-blue-600 hover:underline">Upgrade your subscription</a> to view all your firearms.
+						</p>
+					</div>
+				`)
+				if err != nil {
+					return err
+				}
+			}
+			
+			_, err = io.WriteString(w, `
 				<!-- Pagination (to be implemented) -->
 				<div class="mt-4 flex justify-between items-center">
 					<div>

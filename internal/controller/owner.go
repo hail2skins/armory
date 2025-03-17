@@ -70,10 +70,12 @@ func (o *OwnerController) LandingPage(c *gin.Context) {
 		}
 
 		// Apply free tier limit if needed
-		if !dbUser.HasActiveSubscription() && len(guns) > 2 {
+		var totalGuns int
+		if dbUser.SubscriptionTier == "free" && len(guns) > 2 {
+			totalGuns = len(guns)
 			if len(guns) > 0 {
 				guns[0].HasMoreGuns = true
-				guns[0].TotalGuns = len(guns)
+				guns[0].TotalGuns = totalGuns
 			}
 			guns = guns[:2]
 		}
@@ -95,6 +97,11 @@ func (o *OwnerController) LandingPage(c *gin.Context) {
 				dbUser.SubscriptionTier,
 				subscriptionEndsAt,
 			)
+
+		// If the user has more guns than shown, add a message
+		if totalGuns > 2 && dbUser.SubscriptionTier == "free" {
+			ownerData.WithError("Please subscribe to see the rest of your collection")
+		}
 
 		// Check for flash message from cookie
 		if flashCookie, err := c.Cookie("flash"); err == nil && flashCookie != "" {
@@ -136,10 +143,12 @@ func (o *OwnerController) LandingPage(c *gin.Context) {
 	}
 
 	// Apply free tier limit if needed
-	if !dbUser.HasActiveSubscription() && len(guns) > 2 {
+	var totalGuns int
+	if dbUser.SubscriptionTier == "free" && len(guns) > 2 {
+		totalGuns = len(guns)
 		if len(guns) > 0 {
 			guns[0].HasMoreGuns = true
-			guns[0].TotalGuns = len(guns)
+			guns[0].TotalGuns = totalGuns
 		}
 		guns = guns[:2]
 	}
@@ -161,6 +170,11 @@ func (o *OwnerController) LandingPage(c *gin.Context) {
 			dbUser.SubscriptionTier,
 			subscriptionEndsAt,
 		)
+
+	// If the user has more guns than shown, add a message
+	if totalGuns > 2 && dbUser.SubscriptionTier == "free" {
+		ownerData.WithError("Please subscribe to see the rest of your collection")
+	}
 
 	// Check for flash message from cookie
 	if flashCookie, err := c.Cookie("flash"); err == nil && flashCookie != "" {
@@ -1368,6 +1382,17 @@ func (o *OwnerController) Arsenal(c *gin.Context) {
 			guns = []models.Gun{}
 		}
 
+		// Apply free tier limit if needed
+		var totalGuns int
+		if dbUser.SubscriptionTier == "free" && len(guns) > 2 {
+			totalGuns = len(guns)
+			if len(guns) > 0 {
+				guns[0].HasMoreGuns = true
+				guns[0].TotalGuns = totalGuns
+			}
+			guns = guns[:2]
+		}
+
 		// Format subscription end date if available
 		var subscriptionEndsAt string
 		if !dbUser.SubscriptionEndDate.IsZero() {
@@ -1385,6 +1410,11 @@ func (o *OwnerController) Arsenal(c *gin.Context) {
 				dbUser.SubscriptionTier,
 				subscriptionEndsAt,
 			)
+
+		// If the user has more guns than shown, add a message
+		if totalGuns > 2 && dbUser.SubscriptionTier == "free" {
+			ownerData.WithError("Please subscribe to see the rest of your collection")
+		}
 
 		// Check for flash message from cookie
 		if flashCookie, err := c.Cookie("flash"); err == nil && flashCookie != "" {
@@ -1419,6 +1449,17 @@ func (o *OwnerController) Arsenal(c *gin.Context) {
 		guns = []models.Gun{}
 	}
 
+	// Apply free tier limit if needed
+	var totalGuns int
+	if dbUser.SubscriptionTier == "free" && len(guns) > 2 {
+		totalGuns = len(guns)
+		if len(guns) > 0 {
+			guns[0].HasMoreGuns = true
+			guns[0].TotalGuns = totalGuns
+		}
+		guns = guns[:2]
+	}
+
 	// Format subscription end date if available
 	var subscriptionEndsAt string
 	if !dbUser.SubscriptionEndDate.IsZero() {
@@ -1436,6 +1477,11 @@ func (o *OwnerController) Arsenal(c *gin.Context) {
 			dbUser.SubscriptionTier,
 			subscriptionEndsAt,
 		)
+
+	// If the user has more guns than shown, add a message
+	if totalGuns > 2 && dbUser.SubscriptionTier == "free" {
+		ownerData.WithError("Please subscribe to see the rest of your collection")
+	}
 
 	// Check for flash message from cookie
 	if flashCookie, err := c.Cookie("flash"); err == nil && flashCookie != "" {

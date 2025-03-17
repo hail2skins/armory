@@ -954,3 +954,267 @@ func (m *MockOwnerDB) DeleteGun(db *gorm.DB, id uint, ownerID uint) error {
 	args := m.Called(db, id, ownerID)
 	return args.Error(0)
 }
+
+// TestOwnerLandingPageWithFreeTierLimit tests that a user with more than 2 guns but on the free tier
+// only sees 2 guns on the owner page, with a message to subscribe to see the rest of their collection
+func TestOwnerLandingPageWithFreeTierLimit(t *testing.T) {
+	// Setup
+	gin.SetMode(gin.TestMode)
+
+	// Create a new mock DB
+	mockDB := new(mocks.MockDB)
+
+	// Create a new mock auth controller
+	mockAuthController := new(mocks.MockAuthController)
+
+	// Create a test user with free subscription tier
+	user := &database.User{
+		Model: gorm.Model{
+			ID: 1,
+		},
+		Email:            "test@example.com",
+		SubscriptionTier: "free",
+	}
+
+	// Set up expectations
+	mockAuthInfo := &mocks.MockAuthInfo{}
+	mockAuthInfo.SetUserName("test@example.com")
+
+	// Expect GetCurrentUser to be called and return the mock auth info and true
+	mockAuthController.On("GetCurrentUser", mock.Anything).Return(mockAuthInfo, true)
+
+	// Expect GetUserByEmail to be called with the user's email and return the user
+	mockDB.On("GetUserByEmail", mock.Anything, "test@example.com").Return(user, nil)
+
+	// Create a mock DB connection with the guns table
+	db, _ := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+
+	// Create the related tables
+	err := db.AutoMigrate(&models.WeaponType{}, &models.Caliber{}, &models.Manufacturer{}, &models.Gun{})
+	assert.NoError(t, err, "Failed to create tables")
+
+	// Create test data in the database
+	weaponType := models.WeaponType{Type: "Rifle", Popularity: 10}
+	err = db.Create(&weaponType).Error
+	assert.NoError(t, err, "Failed to create weapon type")
+
+	caliber := models.Caliber{Caliber: ".223", Popularity: 10}
+	err = db.Create(&caliber).Error
+	assert.NoError(t, err, "Failed to create caliber")
+
+	manufacturer := models.Manufacturer{Name: "Colt", Popularity: 10}
+	err = db.Create(&manufacturer).Error
+	assert.NoError(t, err, "Failed to create manufacturer")
+
+	// Create three guns for the user
+	gun1 := models.Gun{
+		Name:           "Gun 1",
+		SerialNumber:   "123456",
+		WeaponTypeID:   1,
+		CaliberID:      1,
+		ManufacturerID: 1,
+		OwnerID:        1,
+	}
+	err = db.Create(&gun1).Error
+	assert.NoError(t, err, "Failed to create first gun")
+
+	gun2 := models.Gun{
+		Name:           "Gun 2",
+		SerialNumber:   "789012",
+		WeaponTypeID:   1,
+		CaliberID:      1,
+		ManufacturerID: 1,
+		OwnerID:        1,
+	}
+	err = db.Create(&gun2).Error
+	assert.NoError(t, err, "Failed to create second gun")
+
+	gun3 := models.Gun{
+		Name:           "Gun 3",
+		SerialNumber:   "345678",
+		WeaponTypeID:   1,
+		CaliberID:      1,
+		ManufacturerID: 1,
+		OwnerID:        1,
+	}
+	err = db.Create(&gun3).Error
+	assert.NoError(t, err, "Failed to create third gun")
+
+	// Expect GetDB to be called and return the mock DB connection
+	mockDB.On("GetDB").Return(db)
+
+	// Create a new owner controller with the mock DB
+	ownerController := NewOwnerController(mockDB)
+
+	// Create a new gin router
+	router := gin.New()
+
+	// Set up middleware
+	router.Use(func(c *gin.Context) {
+		c.Set("authController", mockAuthController)
+		c.Next()
+	})
+
+	// Register the route
+	router.GET("/owner", ownerController.LandingPage)
+
+	// Create a new recorder
+	w := httptest.NewRecorder()
+
+	// Create a new request
+	req, _ := http.NewRequest("GET", "/owner", nil)
+
+	// Serve the request through the router
+	router.ServeHTTP(w, req)
+
+	// Assert that the response is OK
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	// Check that the response body contains the expected content
+	responseBody := w.Body.String()
+
+	// The response should contain only 2 guns
+	assert.Contains(t, responseBody, "Gun 1")
+	assert.Contains(t, responseBody, "Gun 2")
+	assert.NotContains(t, responseBody, "Gun 3")
+
+	// The response should indicate there are more guns
+	assert.Contains(t, responseBody, "Upgrade your subscription")
+	assert.Contains(t, responseBody, "to view all your firearms")
+
+	// Verify expectations
+	mockAuthController.AssertExpectations(t)
+	mockDB.AssertExpectations(t)
+}
+
+// TestOwnerArsenalWithFreeTierLimit tests that a user with more than 2 guns but on the free tier
+// only sees 2 guns on the arsenal page, with a message to subscribe to see the rest of their collection
+func TestOwnerArsenalWithFreeTierLimit(t *testing.T) {
+	// Setup
+	gin.SetMode(gin.TestMode)
+
+	// Create a new mock DB
+	mockDB := new(mocks.MockDB)
+
+	// Create a new mock auth controller
+	mockAuthController := new(mocks.MockAuthController)
+
+	// Create a test user with free subscription tier
+	user := &database.User{
+		Model: gorm.Model{
+			ID: 1,
+		},
+		Email:            "test@example.com",
+		SubscriptionTier: "free",
+	}
+
+	// Set up expectations
+	mockAuthInfo := &mocks.MockAuthInfo{}
+	mockAuthInfo.SetUserName("test@example.com")
+
+	// Expect GetCurrentUser to be called and return the mock auth info and true
+	mockAuthController.On("GetCurrentUser", mock.Anything).Return(mockAuthInfo, true)
+
+	// Expect GetUserByEmail to be called with the user's email and return the user
+	mockDB.On("GetUserByEmail", mock.Anything, "test@example.com").Return(user, nil)
+
+	// Create a mock DB connection with the guns table
+	db, _ := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+
+	// Create the related tables
+	err := db.AutoMigrate(&models.WeaponType{}, &models.Caliber{}, &models.Manufacturer{}, &models.Gun{})
+	assert.NoError(t, err, "Failed to create tables")
+
+	// Create test data in the database
+	weaponType := models.WeaponType{Type: "Rifle", Popularity: 10}
+	err = db.Create(&weaponType).Error
+	assert.NoError(t, err, "Failed to create weapon type")
+
+	caliber := models.Caliber{Caliber: ".223", Popularity: 10}
+	err = db.Create(&caliber).Error
+	assert.NoError(t, err, "Failed to create caliber")
+
+	manufacturer := models.Manufacturer{Name: "Colt", Popularity: 10}
+	err = db.Create(&manufacturer).Error
+	assert.NoError(t, err, "Failed to create manufacturer")
+
+	// Create three guns for the user
+	gun1 := models.Gun{
+		Name:           "Gun 1",
+		SerialNumber:   "123456",
+		WeaponTypeID:   1,
+		CaliberID:      1,
+		ManufacturerID: 1,
+		OwnerID:        1,
+	}
+	err = db.Create(&gun1).Error
+	assert.NoError(t, err, "Failed to create first gun")
+
+	gun2 := models.Gun{
+		Name:           "Gun 2",
+		SerialNumber:   "789012",
+		WeaponTypeID:   1,
+		CaliberID:      1,
+		ManufacturerID: 1,
+		OwnerID:        1,
+	}
+	err = db.Create(&gun2).Error
+	assert.NoError(t, err, "Failed to create second gun")
+
+	gun3 := models.Gun{
+		Name:           "Gun 3",
+		SerialNumber:   "345678",
+		WeaponTypeID:   1,
+		CaliberID:      1,
+		ManufacturerID: 1,
+		OwnerID:        1,
+	}
+	err = db.Create(&gun3).Error
+	assert.NoError(t, err, "Failed to create third gun")
+
+	// Expect GetDB to be called and return the mock DB connection
+	mockDB.On("GetDB").Return(db)
+
+	// Create a new owner controller with the mock DB
+	ownerController := NewOwnerController(mockDB)
+
+	// Create a new gin router
+	router := gin.New()
+
+	// Set up middleware
+	router.Use(func(c *gin.Context) {
+		c.Set("authController", mockAuthController)
+		c.Next()
+	})
+
+	// Register the route
+	router.GET("/owner/arsenal", ownerController.Arsenal)
+
+	// Create a new recorder
+	w := httptest.NewRecorder()
+
+	// Create a new request
+	req, _ := http.NewRequest("GET", "/owner/arsenal", nil)
+
+	// Serve the request through the router
+	router.ServeHTTP(w, req)
+
+	// Assert that the response is OK
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	// Check that the response body contains the expected content
+	responseBody := w.Body.String()
+
+	// The response should contain only 2 guns
+	assert.Contains(t, responseBody, "Gun 1")
+	assert.Contains(t, responseBody, "Gun 2")
+	assert.NotContains(t, responseBody, "Gun 3")
+
+	// The response should indicate there are more guns
+	assert.Contains(t, responseBody, "Upgrade your subscription")
+	assert.Contains(t, responseBody, "to view all your firearms")
+
+	// Verify expectations
+	mockAuthController.AssertExpectations(t)
+	mockDB.AssertExpectations(t)
+}
