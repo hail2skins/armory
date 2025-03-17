@@ -101,29 +101,29 @@ func (m *MockDB) UpdateUser(ctx context.Context, user *database.User) error {
 	return args.Error(0)
 }
 
-// Payment-related methods
-func (m *MockDB) CreatePayment(payment *database.Payment) error {
+// Payment methods
+func (m *MockDB) CreatePayment(payment *models.Payment) error {
 	args := m.Called(payment)
 	return args.Error(0)
 }
 
-func (m *MockDB) GetPaymentsByUserID(userID uint) ([]database.Payment, error) {
+func (m *MockDB) GetPaymentsByUserID(userID uint) ([]models.Payment, error) {
 	args := m.Called(userID)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).([]database.Payment), args.Error(1)
+	return args.Get(0).([]models.Payment), args.Error(1)
 }
 
-func (m *MockDB) FindPaymentByID(id uint) (*database.Payment, error) {
+func (m *MockDB) FindPaymentByID(id uint) (*models.Payment, error) {
 	args := m.Called(id)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).(*database.Payment), args.Error(1)
+	return args.Get(0).(*models.Payment), args.Error(1)
 }
 
-func (m *MockDB) UpdatePayment(payment *database.Payment) error {
+func (m *MockDB) UpdatePayment(payment *models.Payment) error {
 	args := m.Called(payment)
 	return args.Error(0)
 }

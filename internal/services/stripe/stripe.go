@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/hail2skins/armory/internal/database"
+	"github.com/hail2skins/armory/internal/models"
 	"github.com/stripe/stripe-go/v72"
 	"github.com/stripe/stripe-go/v72/checkout/session"
 	"github.com/stripe/stripe-go/v72/customer"
@@ -159,7 +160,7 @@ func (s *service) HandleWebhook(payload []byte, signature string) error {
 		// For one-time payments, we'll create a payment record here
 		if session.Mode == "payment" {
 			// Create a payment record
-			payment := &database.Payment{
+			payment := &models.Payment{
 				UserID:      uint(userID),
 				Amount:      session.AmountTotal,
 				Currency:    string(session.Currency),
@@ -269,7 +270,7 @@ func (s *service) HandleWebhook(payload []byte, signature string) error {
 		}
 
 		// Create a payment record
-		payment := &database.Payment{
+		payment := &models.Payment{
 			UserID:      user.ID,
 			Amount:      invoice.AmountPaid,
 			Currency:    string(invoice.Currency),

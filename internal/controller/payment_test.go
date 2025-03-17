@@ -108,31 +108,31 @@ func (m *MockDB) ResetPassword(ctx context.Context, token, newPassword string) e
 }
 
 // CreatePayment mocks creating a payment
-func (m *MockDB) CreatePayment(payment *database.Payment) error {
+func (m *MockDB) CreatePayment(payment *models.Payment) error {
 	args := m.Called(payment)
 	return args.Error(0)
 }
 
 // GetPaymentsByUserID mocks retrieving payments by user ID
-func (m *MockDB) GetPaymentsByUserID(userID uint) ([]database.Payment, error) {
+func (m *MockDB) GetPaymentsByUserID(userID uint) ([]models.Payment, error) {
 	args := m.Called(userID)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).([]database.Payment), args.Error(1)
+	return args.Get(0).([]models.Payment), args.Error(1)
 }
 
 // FindPaymentByID mocks retrieving a payment by ID
-func (m *MockDB) FindPaymentByID(id uint) (*database.Payment, error) {
+func (m *MockDB) FindPaymentByID(id uint) (*models.Payment, error) {
 	args := m.Called(id)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).(*database.Payment), args.Error(1)
+	return args.Get(0).(*models.Payment), args.Error(1)
 }
 
 // UpdatePayment mocks updating a payment
-func (m *MockDB) UpdatePayment(payment *database.Payment) error {
+func (m *MockDB) UpdatePayment(payment *models.Payment) error {
 	args := m.Called(payment)
 	return args.Error(0)
 }

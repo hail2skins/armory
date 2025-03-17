@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"github.com/hail2skins/armory/cmd/web/views/data"
 	"github.com/hail2skins/armory/cmd/web/views/partials"
-	"github.com/hail2skins/armory/internal/database"
+	"github.com/hail2skins/armory/internal/models"
 )
 
 // PaymentHistoryData is the data for the payment history page
 type PaymentHistoryData struct {
 	data.AuthData
-	Payments []database.Payment
+	Payments []models.Payment
 }
 
 // Helper functions

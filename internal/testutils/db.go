@@ -296,13 +296,13 @@ func (s *TestService) GetUserByStripeCustomerID(customerID string) (*database.Us
 }
 
 // CreatePayment creates a payment
-func (s *TestService) CreatePayment(payment *database.Payment) error {
+func (s *TestService) CreatePayment(payment *models.Payment) error {
 	return s.db.Create(payment).Error
 }
 
 // GetPaymentsByUserID gets payments by user ID
-func (s *TestService) GetPaymentsByUserID(userID uint) ([]database.Payment, error) {
-	var payments []database.Payment
+func (s *TestService) GetPaymentsByUserID(userID uint) ([]models.Payment, error) {
+	var payments []models.Payment
 	if err := s.db.Where("user_id = ?", userID).Find(&payments).Error; err != nil {
 		return nil, err
 	}
@@ -310,8 +310,8 @@ func (s *TestService) GetPaymentsByUserID(userID uint) ([]database.Payment, erro
 }
 
 // FindPaymentByID finds a payment by ID
-func (s *TestService) FindPaymentByID(id uint) (*database.Payment, error) {
-	var payment database.Payment
+func (s *TestService) FindPaymentByID(id uint) (*models.Payment, error) {
+	var payment models.Payment
 	if err := s.db.First(&payment, id).Error; err != nil {
 		return nil, err
 	}
@@ -319,7 +319,7 @@ func (s *TestService) FindPaymentByID(id uint) (*database.Payment, error) {
 }
 
 // UpdatePayment updates a payment
-func (s *TestService) UpdatePayment(payment *database.Payment) error {
+func (s *TestService) UpdatePayment(payment *models.Payment) error {
 	return s.db.Save(payment).Error
 }
 

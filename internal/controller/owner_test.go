@@ -192,28 +192,31 @@ func (m *MockOwnerDB) GetUserByStripeCustomerID(customerID string) (*database.Us
 }
 
 // CreatePayment mocks the CreatePayment method
-func (m *MockOwnerDB) CreatePayment(payment *database.Payment) error {
+func (m *MockOwnerDB) CreatePayment(payment *models.Payment) error {
 	args := m.Called(payment)
 	return args.Error(0)
 }
 
 // GetPaymentsByUserID mocks the GetPaymentsByUserID method
-func (m *MockOwnerDB) GetPaymentsByUserID(userID uint) ([]database.Payment, error) {
+func (m *MockOwnerDB) GetPaymentsByUserID(userID uint) ([]models.Payment, error) {
 	args := m.Called(userID)
-	return args.Get(0).([]database.Payment), args.Error(1)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]models.Payment), args.Error(1)
 }
 
 // FindPaymentByID mocks the FindPaymentByID method
-func (m *MockOwnerDB) FindPaymentByID(id uint) (*database.Payment, error) {
+func (m *MockOwnerDB) FindPaymentByID(id uint) (*models.Payment, error) {
 	args := m.Called(id)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).(*database.Payment), args.Error(1)
+	return args.Get(0).(*models.Payment), args.Error(1)
 }
 
 // UpdatePayment mocks the UpdatePayment method
-func (m *MockOwnerDB) UpdatePayment(payment *database.Payment) error {
+func (m *MockOwnerDB) UpdatePayment(payment *models.Payment) error {
 	args := m.Called(payment)
 	return args.Error(0)
 }

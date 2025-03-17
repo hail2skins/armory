@@ -35,10 +35,10 @@ type Service interface {
 	AdminService
 
 	// Payment-related methods
-	CreatePayment(payment *Payment) error
-	GetPaymentsByUserID(userID uint) ([]Payment, error)
-	FindPaymentByID(id uint) (*Payment, error)
-	UpdatePayment(payment *Payment) error
+	CreatePayment(payment *models.Payment) error
+	GetPaymentsByUserID(userID uint) ([]models.Payment, error)
+	FindPaymentByID(id uint) (*models.Payment, error)
+	UpdatePayment(payment *models.Payment) error
 
 	// Additional user methods
 	GetUserByID(id uint) (*User, error)
@@ -125,7 +125,7 @@ func New() Service {
 func (s *service) AutoMigrate() error {
 	return s.db.AutoMigrate(
 		&User{},
-		&Payment{},
+		&models.Payment{},
 		&models.Manufacturer{},
 		&models.Caliber{},
 		&models.WeaponType{},
@@ -229,4 +229,33 @@ func (s *service) GetDB() *gorm.DB {
 // DeleteGun deletes a gun from the database
 func (s *service) DeleteGun(db *gorm.DB, id uint, ownerID uint) error {
 	return models.DeleteGun(s.db, id, ownerID)
+}
+
+// Payment-related methods implementation
+// CreatePayment creates a new payment record
+func (s *service) CreatePayment(payment *models.Payment) error {
+	return s.db.Create(payment).Error
+}
+
+// GetPaymentsByUserID retrieves all payments for a user
+func (s *service) GetPaymentsByUserID(userID uint) ([]models.Payment, error) {
+	var payments []models.Payment
+	if err := s.db.Where("user_id = ?", userID).Order("created_at desc").Find(&payments).Error; err != nil {
+		return nil, err
+	}
+	return payments, nil
+}
+
+// FindPaymentByID retrieves a payment by its ID
+func (s *service) FindPaymentByID(id uint) (*models.Payment, error) {
+	var payment models.Payment
+	if err := s.db.First(&payment, id).Error; err != nil {
+		return nil, err
+	}
+	return &payment, nil
+}
+
+// UpdatePayment updates an existing payment in the database
+func (s *service) UpdatePayment(payment *models.Payment) error {
+	return s.db.Save(payment).Error
 }

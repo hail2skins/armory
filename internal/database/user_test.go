@@ -1,62 +1,45 @@
 package database
 
 import (
-	"context"
 	"crypto/rand"
 	"encoding/base64"
-	"fmt"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/testcontainers/testcontainers-go"
-	tcpostgres "github.com/testcontainers/testcontainers-go/modules/postgres"
-	"github.com/testcontainers/testcontainers-go/wait"
-	"gorm.io/driver/postgres"
+	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
-func setupTestDB(t *testing.T) (*gorm.DB, *tcpostgres.PostgresContainer) {
-	ctx := context.Background()
-
-	container, err := tcpostgres.RunContainer(ctx,
-		testcontainers.WithImage("postgres:15-alpine"),
-		tcpostgres.WithDatabase("testdb"),
-		tcpostgres.WithUsername("postgres"),
-		tcpostgres.WithPassword("postgres"),
-		testcontainers.WithWaitStrategy(
-			wait.ForLog("database system is ready to accept connections").
-				WithOccurrence(2).
-				WithStartupTimeout(5*time.Second),
-		),
-	)
+func setupUserTestDB(t *testing.T) (*gorm.DB, string) {
+	// Create a temporary directory for the SQLite database
+	tempDir, err := os.MkdirTemp("", "user-test-*")
 	require.NoError(t, err)
 
-	// Get the container's host and port
-	host, err := container.Host(ctx)
-	require.NoError(t, err)
-	port, err := container.MappedPort(ctx, "5432")
-	require.NoError(t, err)
+	// Create a SQLite database in the temporary directory
+	dbPath := filepath.Join(tempDir, "user-test.db")
 
-	// Construct the database URL
-	dbURL := fmt.Sprintf("postgres://postgres:postgres@%s:%s/testdb?sslmode=disable", host, port.Port())
-
-	// Connect to the database
-	db, err := gorm.Open(postgres.Open(dbURL), &gorm.Config{})
+	// Open connection to database
+	db, err := gorm.Open(sqlite.Open(dbPath), &gorm.Config{
+		Logger: logger.Default.LogMode(logger.Silent),
+	})
 	require.NoError(t, err)
 
 	// Run migrations
 	err = db.AutoMigrate(&User{})
 	require.NoError(t, err)
 
-	return db, container
+	return db, tempDir
 }
 
 func TestUserVerificationFields(t *testing.T) {
 	// Create a test database
-	db, container := setupTestDB(t)
-	defer container.Terminate(context.Background())
+	db, tempDir := setupUserTestDB(t)
+	defer os.RemoveAll(tempDir)
 
 	// Create a test user
 	user := &User{
