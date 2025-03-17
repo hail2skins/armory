@@ -36,52 +36,36 @@ templ Owner(data *data.OwnerData) {
 					return ""
 				}() + `
 				
-				<!-- Subscription Status -->
-				<div class="mb-6 p-4 rounded-lg border border-gunmetal-300">
-					<h2 class="text-xl font-semibold text-gunmetal-800 mb-2">Subscription Status</h2>
-					` + func() string {
-						if data.HasActiveSubscription {
-							result := `<div class="bg-green-100 border-l-4 border-green-500 p-4">
-								<p class="text-green-700">
-									<span class="font-bold">Active Subscription:</span> ` + data.SubscriptionTier + `
-								</p>`
-							if data.SubscriptionEndsAt != "" {
-								result += `<p class="text-green-700">
-									<span class="font-bold">Expires:</span> ` + data.SubscriptionEndsAt + `
-								</p>`
-							}
-							result += `</div>`
-							return result
-						} else {
-							return `<div class="bg-yellow-100 border-l-4 border-yellow-500 p-4">
-								<p class="text-yellow-700">
-									<span class="font-bold">Free Tier:</span> Limited to 2 firearms
-								</p>
-								<a href="/payment/pricing" class="inline-block mt-2 bg-gunmetal-700 hover:bg-gunmetal-800 text-white font-bold py-2 px-4 rounded">
-									Upgrade Now
-								</a>
-							</div>`
-						}
-					}() + `
-				</div>
-				
 				<!-- Quick Stats -->
 				<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
 					<div class="bg-gunmetal-100 p-4 rounded-lg shadow">
-						<h3 class="font-semibold text-lg text-gunmetal-800 mb-2">Total Firearms</h3>
-						<p class="text-3xl font-bold text-gunmetal-800">` + strconv.Itoa(len(data.Guns)) + `</p>
+						<h3 class="font-semibold text-lg text-gunmetal-800 mb-2">Your Arsenal</h3>
+						<p class="text-gunmetal-800"><strong>Total Firearms:</strong> ` + strconv.Itoa(len(data.Guns)) + `</p>
+						<p class="text-sm text-gunmetal-600 mt-2">More features coming soon!</p>
 					</div>
 					<div class="bg-gunmetal-100 p-4 rounded-lg shadow">
-						<h3 class="font-semibold text-lg text-gunmetal-800 mb-2">Last Added</h3>
+						<h3 class="font-semibold text-lg text-gunmetal-800 mb-2">Recently Added</h3>
 						` + func() string {
 							if len(data.Guns) > 0 {
-								result := `<p class="text-gunmetal-800 font-medium">
-									<a href="/owner/guns/` + strconv.FormatUint(uint64(data.Guns[0].ID), 10) + `" class="text-blue-600 hover:underline">
-										` + data.Guns[0].Name + `
-									</a>
-								</p>`
-								if data.Guns[0].Acquired != nil {
-									result += `<p class="text-sm text-gunmetal-600">` + data.Guns[0].Acquired.Format("Jan 2, 2006") + `</p>`
+								result := ``
+								// Show up to 3 most recent guns
+								maxToShow := 3
+								if len(data.Guns) < maxToShow {
+									maxToShow = len(data.Guns)
+								}
+								
+								for i := 0; i < maxToShow; i++ {
+									gun := data.Guns[i]
+									result += `<p class="text-gunmetal-800 font-medium mb-1">
+										<a href="/owner/guns/` + strconv.FormatUint(uint64(gun.ID), 10) + `" class="text-blue-600 hover:underline">
+											` + gun.Name + `
+										</a>`
+									
+									if gun.Acquired != nil {
+										result += ` <span class="text-sm text-gunmetal-600">` + gun.Acquired.Format("Jan 2, 2006") + `</span>`
+									}
+									
+									result += `</p>`
 								}
 								return result
 							} else {
@@ -90,14 +74,18 @@ templ Owner(data *data.OwnerData) {
 						}() + `
 					</div>
 					<div class="bg-gunmetal-100 p-4 rounded-lg shadow">
-						<h3 class="font-semibold text-lg text-gunmetal-800 mb-2">Account Since</h3>
+						<h3 class="font-semibold text-lg text-gunmetal-800 mb-2">Account Status</h3>
+						<p class="text-gunmetal-800 mb-1"><strong>Current Plan:</strong> ` + data.SubscriptionTier + `</p>
 						` + func() string {
-							if data.User != nil && !data.User.CreatedAt.IsZero() {
-								return `<p class="text-gunmetal-800 font-medium">` + data.User.CreatedAt.Format("January 2006") + `</p>`
-							} else {
-								return `<p class="text-gunmetal-600">Unknown</p>`
+							if data.SubscriptionEndsAt != "" {
+								return `<p class="text-gunmetal-800 mb-3"><strong>Expires on:</strong> ` + data.SubscriptionEndsAt + `</p>`
 							}
+							return ``
 						}() + `
+						<div class="flex space-x-2 mt-2">
+							<a href="/owner/profile" class="text-blue-600 hover:text-blue-800 underline">Profile</a>
+							<a href="/pricing" class="text-blue-600 hover:text-blue-800 underline">Change Plan</a>
+						</div>
 					</div>
 				</div>
 			</div>
