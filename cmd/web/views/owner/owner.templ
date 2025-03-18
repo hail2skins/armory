@@ -75,7 +75,31 @@ templ Owner(data *data.OwnerData) {
 					</div>
 					<div class="bg-gunmetal-100 p-4 rounded-lg shadow">
 						<h3 class="font-semibold text-lg text-gunmetal-800 mb-2">Account Status</h3>
-						<p class="text-gunmetal-800 mb-1"><strong>Current Plan:</strong> ` + data.SubscriptionTier + `</p>
+						<p class="text-gunmetal-800 mb-1"><strong>Current Plan:</strong> ` + func() string {
+							// Format the subscription tier with proper capitalization
+							tier := ""
+							switch data.SubscriptionTier {
+							case "free":
+								tier = "Free"
+							case "monthly":
+								tier = "Liking It"
+							case "yearly":
+								tier = "Loving It"
+							case "lifetime":
+								tier = "Supporter"
+							case "premium_lifetime":
+								tier = "Big Baller"
+							default:
+								tier = data.SubscriptionTier
+							}
+							
+							// Add (canceled) label if subscription is canceled
+							if data.User != nil && data.User.SubscriptionStatus == "canceled" {
+								tier += " (canceled)"
+							}
+							
+							return tier
+						}() + `</p>
 						` + func() string {
 							if data.SubscriptionEndsAt != "" {
 								return `<p class="text-gunmetal-800 mb-3"><strong>Expires on:</strong> ` + data.SubscriptionEndsAt + `</p>`

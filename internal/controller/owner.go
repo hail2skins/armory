@@ -1537,7 +1537,7 @@ func (o *OwnerController) Profile(c *gin.Context) {
 
 		// Create owner data
 		ownerData := data.NewOwnerData().
-			WithTitle("Your Profile").
+			WithTitle("Profile").
 			WithAuthenticated(authenticated).
 			WithUser(dbUser).
 			WithSubscriptionInfo(
@@ -1554,7 +1554,7 @@ func (o *OwnerController) Profile(c *gin.Context) {
 			c.SetCookie("flash", "", -1, "/", "", false, false)
 		}
 
-		// Render the owner profile page with the data
+		// Render the profile page with the data
 		owner.Profile(ownerData).Render(c.Request.Context(), c.Writer)
 		return
 	}
@@ -1585,7 +1585,7 @@ func (o *OwnerController) Profile(c *gin.Context) {
 
 	// Create owner data
 	ownerData := data.NewOwnerData().
-		WithTitle("Your Profile").
+		WithTitle("Profile").
 		WithAuthenticated(authenticated).
 		WithUser(dbUser).
 		WithSubscriptionInfo(
@@ -1602,7 +1602,7 @@ func (o *OwnerController) Profile(c *gin.Context) {
 		c.SetCookie("flash", "", -1, "/", "", false, false)
 	}
 
-	// Render the owner profile page with the data
+	// Render the profile page with the data
 	owner.Profile(ownerData).Render(c.Request.Context(), c.Writer)
 }
 
@@ -1968,4 +1968,124 @@ func generateToken() string {
 		return ""
 	}
 	return base64.URLEncoding.EncodeToString(token)
+}
+
+// Subscription handles the subscription management page route
+func (o *OwnerController) Subscription(c *gin.Context) {
+	// Get the current user's authentication status and email
+	authController, ok := c.MustGet("authController").(AuthControllerInterface)
+	if !ok {
+		// Try to cast to the concrete type as a fallback
+		concreteAuthController, ok := c.MustGet("authController").(*AuthController)
+		if !ok {
+			c.Redirect(http.StatusSeeOther, "/login")
+			return
+		}
+		userInfo, authenticated := concreteAuthController.GetCurrentUser(c)
+		if !authenticated {
+			// Set flash message
+			if setFlash, exists := c.Get("setFlash"); exists {
+				setFlash.(func(string))("You must be logged in to access this page")
+			}
+			c.Redirect(http.StatusSeeOther, "/login")
+			return
+		}
+
+		// Get the user from the database
+		ctx := context.Background()
+		dbUser, err := o.db.GetUserByEmail(ctx, userInfo.GetUserName())
+		if err != nil {
+			c.Redirect(http.StatusSeeOther, "/login")
+			return
+		}
+
+		// Get the user's payment history
+		payments, err := o.db.GetPaymentsByUserID(dbUser.ID)
+		if err != nil {
+			payments = []models.Payment{} // Empty slice if error
+		}
+
+		// Format subscription end date if available
+		var subscriptionEndsAt string
+		if !dbUser.SubscriptionEndDate.IsZero() {
+			subscriptionEndsAt = dbUser.SubscriptionEndDate.Format("January 2, 2006")
+		}
+
+		// Create owner data
+		ownerData := data.NewOwnerData().
+			WithTitle("Subscription Management").
+			WithAuthenticated(authenticated).
+			WithUser(dbUser).
+			WithSubscriptionInfo(
+				dbUser.HasActiveSubscription(),
+				dbUser.SubscriptionTier,
+				subscriptionEndsAt,
+			).
+			WithPayments(payments)
+
+		// Check for flash message from cookie
+		if flashCookie, err := c.Cookie("flash"); err == nil && flashCookie != "" {
+			// Add flash message to success messages
+			ownerData.WithSuccess(flashCookie)
+			// Clear the flash cookie
+			c.SetCookie("flash", "", -1, "/", "", false, false)
+		}
+
+		// Render the subscription management page with the data
+		owner.Subscription(ownerData).Render(c.Request.Context(), c.Writer)
+		return
+	}
+
+	userInfo, authenticated := authController.GetCurrentUser(c)
+	if !authenticated {
+		// Set flash message
+		if setFlash, exists := c.Get("setFlash"); exists {
+			setFlash.(func(string))("You must be logged in to access this page")
+		}
+		c.Redirect(http.StatusSeeOther, "/login")
+		return
+	}
+
+	// Get the user from the database
+	ctx := context.Background()
+	dbUser, err := o.db.GetUserByEmail(ctx, userInfo.GetUserName())
+	if err != nil {
+		c.Redirect(http.StatusSeeOther, "/login")
+		return
+	}
+
+	// Get the user's payment history
+	payments, err := o.db.GetPaymentsByUserID(dbUser.ID)
+	if err != nil {
+		payments = []models.Payment{} // Empty slice if error
+	}
+
+	// Format subscription end date if available
+	var subscriptionEndsAt string
+	if !dbUser.SubscriptionEndDate.IsZero() {
+		subscriptionEndsAt = dbUser.SubscriptionEndDate.Format("January 2, 2006")
+	}
+
+	// Create owner data
+	ownerData := data.NewOwnerData().
+		WithTitle("Subscription Management").
+		WithAuthenticated(authenticated).
+		WithUser(dbUser).
+		WithSubscriptionInfo(
+			dbUser.HasActiveSubscription(),
+			dbUser.SubscriptionTier,
+			subscriptionEndsAt,
+		).
+		WithPayments(payments)
+
+	// Check for flash message from cookie
+	if flashCookie, err := c.Cookie("flash"); err == nil && flashCookie != "" {
+		// Add flash message to success messages
+		ownerData.WithSuccess(flashCookie)
+		// Clear the flash cookie
+		c.SetCookie("flash", "", -1, "/", "", false, false)
+	}
+
+	// Render the subscription management page with the data
+	owner.Subscription(ownerData).Render(c.Request.Context(), c.Writer)
 }

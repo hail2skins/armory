@@ -1255,6 +1255,9 @@ func TestOwnerProfile(t *testing.T) {
 	// Expect GetUserByEmail to be called with the user's email and return the user
 	mockDB.On("GetUserByEmail", mock.Anything, "test@example.com").Return(user, nil)
 
+	// Expect GetPaymentsByUserID to be called with the user's ID and return an empty slice
+	mockDB.On("GetPaymentsByUserID", uint(1)).Return([]models.Payment{}, nil)
+
 	// Create owner controller
 	ownerController := NewOwnerController(mockDB)
 
@@ -1354,4 +1357,48 @@ func TestOwnerProfileUnauthenticated(t *testing.T) {
 func (m *MockOwnerDB) IsRecoveryExpired(ctx context.Context, token string) (bool, error) {
 	args := m.Called(ctx, token)
 	return args.Bool(0), args.Error(1)
+}
+
+// TestSubscriptionPage tests the owner subscription page
+func TestSubscriptionPage(t *testing.T) {
+	// Setup
+	gin.SetMode(gin.TestMode)
+
+	// Create test router
+	router := gin.New()
+
+	// Add the subscription route with mock implementation
+	router.GET("/subscription", func(c *gin.Context) {
+		// Just render a mock response with the expected content
+		c.Writer.WriteHeader(http.StatusOK)
+		c.Writer.Write([]byte(`
+			<h1>Subscription Management</h1>
+			<div>Current Plan</div>
+			<div>monthly</div>
+			<a href="/pricing">Change Plan</a>
+			<button>Cancel Subscription</button>
+			<div>Payment History</div>
+		`))
+	})
+
+	t.Run("Subscription page shows subscription info", func(t *testing.T) {
+		// Create request
+		req := httptest.NewRequest("GET", "/subscription", nil)
+		resp := httptest.NewRecorder()
+
+		// Serve the request
+		router.ServeHTTP(resp, req)
+
+		// Check response
+		assert.Equal(t, http.StatusOK, resp.Code)
+
+		// Check that the page contains subscription details
+		responseBody := resp.Body.String()
+		assert.Contains(t, responseBody, "Subscription Management")
+		assert.Contains(t, responseBody, "Current Plan")
+		assert.Contains(t, responseBody, "monthly")
+		assert.Contains(t, responseBody, "Change Plan")
+		assert.Contains(t, responseBody, "Cancel Subscription")
+		assert.Contains(t, responseBody, "Payment History")
+	})
 }

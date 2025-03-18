@@ -370,9 +370,18 @@ func (p *PaymentController) CancelSubscription(c *gin.Context) {
 		return
 	}
 
-	// Set a flash message
-	c.SetCookie("flash", "Your subscription has been cancelled", 3600, "/", "", false, true)
+	// Format subscription end date for the flash message
+	var expiresMessage string
+	if !dbUser.SubscriptionEndDate.IsZero() {
+		expiresDate := dbUser.SubscriptionEndDate.Format("January 2, 2006")
+		expiresMessage = "Your subscription will remain active until " + expiresDate + "."
+	} else {
+		expiresMessage = "Your subscription has been cancelled."
+	}
 
-	// Redirect to the home page
-	c.Redirect(http.StatusSeeOther, "/")
+	// Set a flash message
+	c.SetCookie("flash", expiresMessage, 3600, "/", "", false, true)
+
+	// Redirect to the owner dashboard
+	c.Redirect(http.StatusSeeOther, "/owner")
 }

@@ -37,6 +37,9 @@ type OwnerData struct {
 	HasActiveSubscription bool
 	SubscriptionTier      string
 	SubscriptionEndsAt    string
+
+	// For payment history
+	Payments []models.Payment
 }
 
 // NewOwnerData creates a new OwnerData with default values
@@ -124,5 +127,11 @@ func (o *OwnerData) WithSubscriptionInfo(hasActiveSubscription bool, tier string
 	o.HasActiveSubscription = hasActiveSubscription
 	o.SubscriptionTier = tier
 	o.SubscriptionEndsAt = endsAt
+	return o
+}
+
+// WithPayments returns a copy of the OwnerData with payment history
+func (o *OwnerData) WithPayments(payments []models.Payment) *OwnerData {
+	o.Payments = payments
 	return o
 }
