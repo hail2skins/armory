@@ -33,6 +33,14 @@ func (h *HomeController) HomeHandler(c *gin.Context) {
 	authData.Authenticated = authenticated
 	authData.Title = "Home"
 
+	// Check for flash messages
+	if flashCookie, err := c.Cookie("flash"); err == nil && flashCookie != "" {
+		// Add flash message to success messages
+		authData.Success = flashCookie
+		// Clear the flash cookie
+		c.SetCookie("flash", "", -1, "/", "", false, false)
+	}
+
 	homeData := home.HomeData{
 		AuthData: authData,
 	}

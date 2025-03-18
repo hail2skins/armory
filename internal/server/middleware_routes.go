@@ -1,6 +1,8 @@
 package server
 
 import (
+	"strings"
+
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/hail2skins/armory/cmd/web/views/data"
@@ -13,15 +15,7 @@ func (s *Server) RegisterMiddleware(r *gin.Engine, authController *controller.Au
 	// Set up error handling middleware
 	middleware.SetupErrorHandling(r)
 
-	// Set up CORS
-	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:5173"}, // Add your frontend URL
-		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
-		AllowHeaders:     []string{"Accept", "Authorization", "Content-Type"},
-		AllowCredentials: true, // Enable cookies/auth
-	}))
-
-	// Set up flash message middleware
+	// Set up flash message middleware - moved before rate limiting
 	r.Use(func(c *gin.Context) {
 		// Set up a function to set flash messages
 		c.Set("setFlash", func(message string) {
@@ -30,6 +24,27 @@ func (s *Server) RegisterMiddleware(r *gin.Engine, authController *controller.Au
 		})
 		c.Next()
 	})
+
+	// Set up rate limiting middleware - moved after flash middleware
+	middleware.SetupRateLimiting(r)
+
+	// Apply webhook monitoring to webhook endpoints
+	r.Use(func(c *gin.Context) {
+		// Apply webhook monitoring only to the webhook endpoint
+		if strings.HasPrefix(c.Request.URL.Path, "/webhook") {
+			middleware.WebhookMonitor()(c)
+		} else {
+			c.Next()
+		}
+	})
+
+	// Set up CORS
+	r.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"http://localhost:5173"}, // Add your frontend URL
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
+		AllowHeaders:     []string{"Accept", "Authorization", "Content-Type"},
+		AllowCredentials: true, // Enable cookies/auth
+	}))
 
 	// Set up auth data middleware
 	r.Use(func(c *gin.Context) {
