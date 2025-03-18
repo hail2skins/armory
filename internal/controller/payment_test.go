@@ -307,6 +307,12 @@ func (m *MockDB) DeleteGun(db *gorm.DB, id uint, ownerID uint) error {
 	return args.Error(0)
 }
 
+// IsRecoveryExpired is a mock method to satisfy the database.Service interface
+func (m *MockDB) IsRecoveryExpired(ctx context.Context, token string) (bool, error) {
+	args := m.Called(ctx, token)
+	return args.Bool(0), args.Error(1)
+}
+
 // TestRedirectGuestToLogin tests that guests are redirected to login when attempting to access pricing
 func TestRedirectGuestToLogin(t *testing.T) {
 	// Setup

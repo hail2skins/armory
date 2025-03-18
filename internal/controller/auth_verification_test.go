@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/hail2skins/armory/internal/database"
@@ -115,8 +116,9 @@ func TestPasswordResetFlow(t *testing.T) {
 
 	// Create test user
 	testUser := &database.User{
-		Email:         "test@example.com",
-		RecoveryToken: "valid-token",
+		Email:               "test@example.com",
+		RecoveryToken:       "valid-token",
+		RecoveryTokenExpiry: time.Now().Add(1 * time.Hour), // Set to future time
 	}
 	database.SetUserID(testUser, 1)
 
@@ -124,8 +126,11 @@ func TestPasswordResetFlow(t *testing.T) {
 	mockDB.On("GetUserByEmail", mock.Anything, "test@example.com").Return(testUser, nil).Once()
 	mockDB.On("GetUserByEmail", mock.Anything, "nonexistent@example.com").Return(nil, nil).Once()
 	mockDB.On("RequestPasswordReset", mock.Anything, "test@example.com").Return(testUser, nil).Once()
-	mockDB.On("ResetPassword", mock.Anything, "valid-token", "newpassword123").Return(nil).Once()
-	mockDB.On("ResetPassword", mock.Anything, "invalid-token", mock.Anything).Return(database.ErrInvalidToken).Once()
+
+	// Add expectations for the new controller implementation
+	mockDB.On("GetUserByRecoveryToken", mock.Anything, "valid-token").Return(testUser, nil).Once()
+	mockDB.On("GetUserByRecoveryToken", mock.Anything, "invalid-token").Return(nil, database.ErrInvalidToken).Once()
+	mockDB.On("UpdateUser", mock.Anything, mock.AnythingOfType("*database.User")).Return(nil).Once()
 
 	mockEmailSvc.On("SendPasswordResetEmail", "test@example.com", mock.AnythingOfType("string")).Return(nil).Once()
 

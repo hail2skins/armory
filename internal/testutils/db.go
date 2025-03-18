@@ -151,12 +151,13 @@ func (s *TestService) AuthenticateUser(ctx context.Context, email, password stri
 		return nil, err
 	}
 	if user == nil {
-		return nil, nil
+		return nil, database.ErrInvalidCredentials
 	}
 
 	// Check the password
-	if !database.CheckPassword(password, user.Password) {
-		return nil, nil
+	matches := database.CheckPassword(password, user.Password)
+	if !matches {
+		return nil, database.ErrInvalidCredentials
 	}
 
 	return user, nil
@@ -255,12 +256,12 @@ func (s *TestService) ResetPassword(ctx context.Context, token, newPassword stri
 		return err
 	}
 	if user == nil {
-		return errors.New("invalid recovery token")
+		return database.ErrInvalidToken
 	}
 
 	// Check if the token is expired
 	if user.RecoveryTokenExpiry.Before(time.Now()) {
-		return errors.New("recovery token has expired")
+		return database.ErrTokenExpired
 	}
 
 	// Hash the new password
@@ -430,4 +431,13 @@ func (s *TestService) GetDB() *gorm.DB {
 // DeleteGun deletes a gun from the database
 func (s *TestService) DeleteGun(db *gorm.DB, id uint, ownerID uint) error {
 	return models.DeleteGun(s.db, id, ownerID)
+}
+
+// IsRecoveryExpired checks if a recovery token is expired in the test service
+func (s *TestService) IsRecoveryExpired(ctx context.Context, token string) (bool, error) {
+	user, err := s.GetUserByRecoveryToken(ctx, token)
+	if err != nil {
+		return true, err
+	}
+	return user.IsRecoveryExpired(), nil
 }

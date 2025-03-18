@@ -309,6 +309,12 @@ func (m *MockDBWithContext) DeleteGun(db *gorm.DB, id uint, ownerID uint) error 
 	return args.Error(0)
 }
 
+// IsRecoveryExpired implements the database.Service interface
+func (m *MockDBWithContext) IsRecoveryExpired(ctx context.Context, token string) (bool, error) {
+	args := m.Called(ctx, token)
+	return args.Bool(0), args.Error(1)
+}
+
 // setupTestRouter creates a test router with real authentication handling
 func setupTestRouter(t *testing.T) (*gin.Engine, *MockDBWithContext, *MockEmailService) {
 	// Set Gin to test mode

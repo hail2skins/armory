@@ -1349,3 +1349,9 @@ func TestOwnerProfileUnauthenticated(t *testing.T) {
 		assert.Contains(t, capturedFlash, "must be logged in")
 	})
 }
+
+// IsRecoveryExpired is a mock method to satisfy the database.Service interface
+func (m *MockOwnerDB) IsRecoveryExpired(ctx context.Context, token string) (bool, error) {
+	args := m.Called(ctx, token)
+	return args.Bool(0), args.Error(1)
+}

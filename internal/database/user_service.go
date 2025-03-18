@@ -42,6 +42,9 @@ type UserService interface {
 
 	// GetUserByStripeCustomerID retrieves a user by their Stripe customer ID
 	GetUserByStripeCustomerID(customerID string) (*User, error)
+
+	// IsRecoveryExpired checks if a recovery token is expired
+	IsRecoveryExpired(ctx context.Context, token string) (bool, error)
 }
 
 // Ensure service implements UserService
@@ -178,11 +181,11 @@ func (s *service) ResetPassword(ctx context.Context, token, newPassword string) 
 		return err
 	}
 	if user == nil {
-		return errors.New("invalid recovery token")
+		return ErrInvalidToken
 	}
 
 	if user.IsRecoveryExpired() {
-		return errors.New("recovery token has expired")
+		return ErrTokenExpired
 	}
 
 	hashedPassword, err := HashPassword(newPassword)
@@ -214,4 +217,13 @@ func (s *service) GetUserByStripeCustomerID(customerID string) (*User, error) {
 		return nil, err
 	}
 	return &user, nil
+}
+
+// IsRecoveryExpired checks if a recovery token is expired
+func (s *service) IsRecoveryExpired(ctx context.Context, token string) (bool, error) {
+	user, err := s.GetUserByRecoveryToken(ctx, token)
+	if err != nil {
+		return true, err
+	}
+	return user.IsRecoveryExpired(), nil
 }

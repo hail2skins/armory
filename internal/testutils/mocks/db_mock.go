@@ -259,3 +259,9 @@ func (m *MockDB) DeleteGun(db *gorm.DB, id uint, ownerID uint) error {
 	args := m.Called(db, id, ownerID)
 	return args.Error(0)
 }
+
+// IsRecoveryExpired mocks the checking of whether a recovery token is expired
+func (m *MockDB) IsRecoveryExpired(ctx context.Context, token string) (bool, error) {
+	args := m.Called(ctx, token)
+	return args.Bool(0), args.Error(1)
+}

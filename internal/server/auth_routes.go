@@ -125,4 +125,38 @@ func setupAuthRenderFunctions(authController *controller.AuthController) {
 
 		auth.VerificationSent(authData).Render(c.Request.Context(), c.Writer)
 	}
+
+	// ForgotPassword render function
+	authController.RenderForgotPassword = func(c *gin.Context, d interface{}) {
+		authData := d.(data.AuthData)
+		// Set authentication state
+		_, authenticated := authController.GetCurrentUser(c)
+		authData.Authenticated = authenticated
+		// Set default title if not set
+		if authData.Title == "" {
+			authData.Title = "Forgot Password"
+		}
+
+		// Handle flash messages
+		authData = handleAuthFlashMessage(c, authData)
+
+		auth.ForgotPassword(authData).Render(c.Request.Context(), c.Writer)
+	}
+
+	// ResetPassword render function
+	authController.RenderResetPassword = func(c *gin.Context, d interface{}) {
+		authData := d.(data.AuthData)
+		// Set authentication state
+		_, authenticated := authController.GetCurrentUser(c)
+		authData.Authenticated = authenticated
+		// Set default title if not set
+		if authData.Title == "" {
+			authData.Title = "Reset Password"
+		}
+
+		// Handle flash messages
+		authData = handleAuthFlashMessage(c, authData)
+
+		auth.ResetPassword(authData).Render(c.Request.Context(), c.Writer)
+	}
 }

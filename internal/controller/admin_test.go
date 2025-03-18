@@ -292,6 +292,12 @@ func (m *MockAdminDB) DeleteGun(db *gorm.DB, id uint, ownerID uint) error {
 	return args.Error(0)
 }
 
+// IsRecoveryExpired is a mock method to satisfy the database.Service interface
+func (m *MockAdminDB) IsRecoveryExpired(ctx context.Context, token string) (bool, error) {
+	args := m.Called(ctx, token)
+	return args.Bool(0), args.Error(1)
+}
+
 // MockResponseWriter is a mock implementation of http.ResponseWriter
 type MockResponseWriter struct {
 	mock.Mock

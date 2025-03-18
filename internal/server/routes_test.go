@@ -786,3 +786,14 @@ func (m *MockDB) DeleteGun(db *gorm.DB, id uint, ownerID uint) error {
 	args := m.Called(db, id, ownerID)
 	return args.Error(0)
 }
+
+// IsRecoveryExpired implements the database.Service interface
+func (m *MockDB) IsRecoveryExpired(ctx context.Context, token string) (bool, error) {
+	args := m.Called(ctx, token)
+	return args.Bool(0), args.Error(1)
+}
+
+func (m *mockDB) IsRecoveryExpired(ctx context.Context, token string) (bool, error) {
+	// Simple mock implementation that returns false (not expired) and nil error
+	return false, nil
+}

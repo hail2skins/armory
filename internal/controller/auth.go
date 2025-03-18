@@ -2,7 +2,7 @@ package controller
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -444,8 +444,19 @@ func (a *AuthController) ForgotPasswordHandler(c *gin.Context) {
 		err := a.emailService.SendPasswordResetEmail(user.Email, user.RecoveryToken)
 		if err != nil {
 			// Log the error but continue
-			// TODO: Add proper logging
+			logger.Error("Failed to send password reset email", err, map[string]interface{}{
+				"email": user.Email,
+			})
+
+			// For troubleshooting
+			fmt.Printf("DEBUG: Failed to send password reset email: %v\n", err)
+		} else {
+			// For troubleshooting
+			fmt.Printf("DEBUG: Successfully sent password reset email to %s with token %s\n", user.Email, user.RecoveryToken)
 		}
+	} else {
+		// For troubleshooting
+		fmt.Printf("DEBUG: Email service is nil\n")
 	}
 
 	// In test mode, redirect to a specific URL
@@ -485,23 +496,54 @@ func (a *AuthController) ResetPasswordHandler(c *gin.Context) {
 		return
 	}
 
-	// Reset the password
-	err := a.db.ResetPassword(c.Request.Context(), req.Token, req.Password)
-	if err != nil {
-		var errMsg string
-		if errors.Is(err, database.ErrTokenExpired) {
-			errMsg = "Recovery token has expired"
-		} else if errors.Is(err, database.ErrInvalidToken) {
-			// In test mode, return a specific status code
-			if c.Request.Header.Get("X-Test") == "true" {
-				c.String(http.StatusBadRequest, "Invalid token")
-				return
-			}
-			errMsg = "Invalid recovery token"
-		} else {
-			errMsg = "An error occurred while resetting your password"
+	// First get the user directly by token
+	user, err := a.db.GetUserByRecoveryToken(c.Request.Context(), req.Token)
+	if err != nil || user == nil {
+		// For test purposes, check for X-Test header
+		if c.Request.Header.Get("X-Test") == "true" {
+			c.String(http.StatusBadRequest, "Invalid recovery token")
+			return
 		}
-		authData := data.NewAuthData().WithTitle("Reset Password").WithError(errMsg)
+
+		// For normal operation, render the form with an error
+		authData := data.NewAuthData().WithTitle("Reset Password").WithError("Invalid recovery token")
+		authData.Token = req.Token
+		a.RenderResetPassword(c, authData)
+		return
+	}
+
+	// Directly check if the token is expired
+	if user.IsRecoveryExpired() {
+		// For test purposes, check for X-Test header
+		if c.Request.Header.Get("X-Test") == "true" {
+			c.String(http.StatusBadRequest, "Recovery token has expired")
+			return
+		}
+
+		// For normal operation, render the form with an error
+		authData := data.NewAuthData().WithTitle("Reset Password").WithError("Recovery token has expired")
+		authData.Token = req.Token
+		a.RenderResetPassword(c, authData)
+		return
+	}
+
+	// Now that we've validated the token, reset the password
+	hashedPassword, err := database.HashPassword(req.Password)
+	if err != nil {
+		authData := data.NewAuthData().WithTitle("Reset Password").WithError("An error occurred while resetting your password")
+		authData.Token = req.Token
+		a.RenderResetPassword(c, authData)
+		return
+	}
+
+	// Update the user with the new password
+	user.Password = hashedPassword
+	user.RecoveryToken = ""
+	user.RecoveryTokenExpiry = time.Time{}
+	user.RecoverySentAt = time.Time{}
+
+	if err := a.db.UpdateUser(c.Request.Context(), user); err != nil {
+		authData := data.NewAuthData().WithTitle("Reset Password").WithError("An error occurred while updating your password")
 		authData.Token = req.Token
 		a.RenderResetPassword(c, authData)
 		return

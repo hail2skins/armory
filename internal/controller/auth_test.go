@@ -748,3 +748,9 @@ func TestLoginRedirectsToOwnerWithWelcomeMessage(t *testing.T) {
 	// Verify that all expectations were met
 	mockDB.AssertExpectations(t)
 }
+
+// IsRecoveryExpired implements the database.Service interface
+func (m *MockDB) IsRecoveryExpired(ctx context.Context, token string) (bool, error) {
+	args := m.Called(ctx, token)
+	return args.Bool(0), args.Error(1)
+}
