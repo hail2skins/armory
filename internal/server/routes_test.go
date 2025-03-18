@@ -181,7 +181,8 @@ func TestAllRoutes(t *testing.T) {
 
 	// Create a test user for verification
 	testUser := &database.User{
-		Email: "test@example.com",
+		Email:    "test@example.com",
+		Verified: true,
 	}
 	database.SetUserID(testUser, 1)
 
@@ -252,7 +253,8 @@ func TestAllRoutes(t *testing.T) {
 	t.Run("Logout is accessible for authenticated users", func(t *testing.T) {
 		// Create a test user
 		testUser := &database.User{
-			Email: "test@example.com",
+			Email:    "test@example.com",
+			Verified: true,
 		}
 		database.SetUserID(testUser, 1)
 

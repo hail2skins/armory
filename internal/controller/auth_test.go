@@ -298,7 +298,10 @@ func TestAuthenticationFlow(t *testing.T) {
 		mockDB.On("CreateUser", mock.Anything, "test@example.com", "password123").Return(testUser, nil)
 		mockDB.On("AuthenticateUser", mock.Anything, "test@example.com", "password123").Return(testUser, nil)
 		mockDB.On("GetUserByVerificationToken", mock.Anything, "test-token").Return(testUser, nil)
-		mockDB.On("VerifyUserEmail", mock.Anything, "test-token").Return(testUser, nil)
+		mockDB.On("VerifyUserEmail", mock.Anything, "test-token").Run(func(args mock.Arguments) {
+			// Set the user as verified when verification happens
+			testUser.Verified = true
+		}).Return(testUser, nil)
 
 		// Mock UpdateUser to return nil error
 		mockDB.On("UpdateUser", mock.Anything, mock.AnythingOfType("*database.User")).Return(nil)
@@ -667,6 +670,7 @@ func TestLoginRedirectsToOwner(t *testing.T) {
 		},
 		Email:    "test@example.com",
 		Password: "hashed_password",
+		Verified: true,
 	}
 
 	// Setup expectations
@@ -713,6 +717,7 @@ func TestLoginRedirectsToOwnerWithWelcomeMessage(t *testing.T) {
 		},
 		Email:    "test@example.com",
 		Password: "hashed_password",
+		Verified: true,
 	}
 
 	// Setup expectations

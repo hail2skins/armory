@@ -128,6 +128,7 @@ func TestFormSubmission(t *testing.T) {
 		},
 		Email:    "test@example.com",
 		Password: "hashed_password",
+		Verified: true,
 	}
 
 	// Setup expectations

@@ -343,12 +343,14 @@ func setupTestRouter(t *testing.T) (*gin.Engine, *MockDBWithContext, *MockEmailS
 
 	// Setup mock responses
 	testUser := &database.User{
-		Email: "test@example.com",
+		Email:    "test@example.com",
+		Verified: true,
 	}
 	database.SetUserID(testUser, 1)
 
 	testUser2 := &database.User{
-		Email: "test2@example.com",
+		Email:    "test2@example.com",
+		Verified: true,
 	}
 	database.SetUserID(testUser2, 2)
 
@@ -373,7 +375,10 @@ func setupTestRouter(t *testing.T) (*gin.Engine, *MockDBWithContext, *MockEmailS
 	mockDB.On("GetUserByVerificationToken", mock.Anything, "test-token").Return(testUser, nil)
 	mockDB.On("VerifyUserEmail", mock.Anything, "test-token").Return(testUser, nil)
 	mockDB.On("GetUserByVerificationToken", mock.Anything, "test-verification-token").Return(testUser, nil)
-	mockDB.On("VerifyUserEmail", mock.Anything, "test-verification-token").Return(testUser, nil)
+	mockDB.On("VerifyUserEmail", mock.Anything, "test-verification-token").Run(func(args mock.Arguments) {
+		// Update the user's verified status
+		testUser.Verified = true
+	}).Return(testUser, nil)
 
 	// Mock other methods that might be called
 	mockDB.On("GetUserByVerificationToken", mock.Anything, mock.AnythingOfType("string")).Return(nil, nil).Maybe()
@@ -788,7 +793,10 @@ func TestRegistrationWithoutAuthentication(t *testing.T) {
 	mockDB.On("CreateUser", mock.Anything, "unauthenticated@example.com", "password123").Return(testUser, nil)
 	mockDB.On("UpdateUser", mock.Anything, mock.AnythingOfType("*database.User")).Return(nil)
 	mockDB.On("GetUserByVerificationToken", mock.Anything, "test-verification-token").Return(testUser, nil)
-	mockDB.On("VerifyUserEmail", mock.Anything, "test-verification-token").Return(testUser, nil)
+	mockDB.On("VerifyUserEmail", mock.Anything, "test-verification-token").Run(func(args mock.Arguments) {
+		// Update the user's verified status
+		testUser.Verified = true
+	}).Return(testUser, nil)
 	mockDB.On("AuthenticateUser", mock.Anything, "unauthenticated@example.com", "password123").Return(testUser, nil)
 
 	// Add default mocks for other methods that might be called
