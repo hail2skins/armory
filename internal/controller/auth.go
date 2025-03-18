@@ -258,12 +258,48 @@ func (a *AuthController) RegisterHandler(c *gin.Context) {
 		return
 	}
 
-	// Check if the user already exists
+	// Check if the user already exists (including soft-deleted)
 	existingUser, err := a.db.GetUserByEmail(c.Request.Context(), req.Email)
 	if err != nil {
 		authData := data.NewAuthData().WithTitle("Register").WithError("An error occurred")
 		authData.Email = req.Email
 		a.RenderRegister(c, authData)
+		return
+	}
+
+	// Check if there's a soft-deleted user with this email
+	var softDeletedUser database.User
+	if err := a.db.GetDB().Unscoped().Where("email = ? AND deleted_at IS NOT NULL", req.Email).First(&softDeletedUser).Error; err == nil {
+		// User exists but was soft-deleted - restore it
+		if err := a.db.GetDB().Unscoped().Model(&softDeletedUser).Update("deleted_at", nil).Error; err != nil {
+			// Error restoring user
+			authData := data.NewAuthData().WithTitle("Register").WithError("An error occurred restoring your account")
+			authData.Email = req.Email
+			a.RenderRegister(c, authData)
+			return
+		}
+
+		// Update password
+		if err := softDeletedUser.SetPassword(req.Password); err != nil {
+			authData := data.NewAuthData().WithTitle("Register").WithError("Failed to update password")
+			authData.Email = req.Email
+			a.RenderRegister(c, authData)
+			return
+		}
+
+		// Save the updated user
+		if err := a.db.UpdateUser(c.Request.Context(), &softDeletedUser); err != nil {
+			authData := data.NewAuthData().WithTitle("Register").WithError("Failed to update account")
+			authData.Email = req.Email
+			a.RenderRegister(c, authData)
+			return
+		}
+
+		// Set success flash message
+		c.SetCookie("flash", "Your previous account has been restored with all your data. Please log in.", 3600, "/", "", false, false)
+
+		// Redirect to login page
+		c.Redirect(http.StatusSeeOther, "/login")
 		return
 	}
 

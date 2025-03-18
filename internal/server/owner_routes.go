@@ -57,6 +57,10 @@ func RegisterOwnerRoutes(router *gin.Engine, db database.Service, authController
 		ownerGroup.GET("/profile/edit", ownerController.EditProfile)
 		ownerGroup.POST("/profile/update", ownerController.UpdateProfile)
 
+		// Owner account deletion
+		ownerGroup.GET("/profile/delete", ownerController.DeleteAccountConfirm)
+		ownerGroup.POST("/profile/delete", ownerController.DeleteAccountHandler)
+
 		// Owner subscription management
 		ownerGroup.GET("/profile/subscription", ownerController.Subscription)
 

@@ -10,6 +10,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/hail2skins/armory/internal/database"
+	"github.com/hail2skins/armory/internal/testutils"
 	"github.com/hail2skins/armory/internal/testutils/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -43,6 +44,13 @@ func TestVerificationFlow(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	mockDB := new(mocks.MockDB)
 	mockEmailSvc := new(mockEmailService)
+
+	// Create a test DB instance to handle the real SQL operations
+	testDb := testutils.SharedTestService()
+
+	// Mock GetDB to return a real DB connection that can handle the direct SQL calls
+	// This is crucial for the soft-delete recovery functionality
+	mockDB.On("GetDB").Return(testDb.GetDB()).Maybe()
 
 	// Create test user
 	testUser := &database.User{
@@ -119,6 +127,13 @@ func TestPasswordResetFlow(t *testing.T) {
 	mockDB := new(mocks.MockDB)
 	mockEmailSvc := new(mockEmailService)
 
+	// Create a test DB instance to handle the real SQL operations
+	testDb := testutils.SharedTestService()
+
+	// Mock GetDB to return a real DB connection that can handle the direct SQL calls
+	// This is crucial for the soft-delete recovery functionality
+	mockDB.On("GetDB").Return(testDb.GetDB()).Maybe()
+
 	// Create test user
 	testUser := &database.User{
 		Email:               "test@example.com",
@@ -137,6 +152,7 @@ func TestPasswordResetFlow(t *testing.T) {
 	mockDB.On("GetUserByRecoveryToken", mock.Anything, "invalid-token").Return(nil, database.ErrInvalidToken).Once()
 	mockDB.On("UpdateUser", mock.Anything, mock.AnythingOfType("*database.User")).Return(nil).Once()
 
+	// Email service mock
 	mockEmailSvc.On("SendPasswordResetEmail", "test@example.com", mock.AnythingOfType("string")).Return(nil).Once()
 
 	// Create auth controller

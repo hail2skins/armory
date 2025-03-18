@@ -2089,3 +2089,209 @@ func (o *OwnerController) Subscription(c *gin.Context) {
 	// Render the subscription management page with the data
 	owner.Subscription(ownerData).Render(c.Request.Context(), c.Writer)
 }
+
+// DeleteAccountConfirm renders the confirmation page for deleting an account
+func (o *OwnerController) DeleteAccountConfirm(c *gin.Context) {
+	// Get the current user's authentication status and email
+	authController, ok := c.MustGet("authController").(AuthControllerInterface)
+	if !ok {
+		// Try to cast to the concrete type as a fallback
+		concreteAuthController, ok := c.MustGet("authController").(*AuthController)
+		if !ok {
+			c.Redirect(http.StatusSeeOther, "/login")
+			return
+		}
+		userInfo, authenticated := concreteAuthController.GetCurrentUser(c)
+		if !authenticated {
+			// Set flash message
+			if setFlash, exists := c.Get("setFlash"); exists {
+				setFlash.(func(string))("You must be logged in to access this page")
+			}
+			c.Redirect(http.StatusSeeOther, "/login")
+			return
+		}
+
+		// Get the user from the database
+		ctx := context.Background()
+		dbUser, err := o.db.GetUserByEmail(ctx, userInfo.GetUserName())
+		if err != nil {
+			c.Redirect(http.StatusSeeOther, "/login")
+			return
+		}
+
+		// Format subscription end date if available
+		var subscriptionEndsAt string
+		if !dbUser.SubscriptionEndDate.IsZero() {
+			subscriptionEndsAt = dbUser.SubscriptionEndDate.Format("January 2, 2006")
+		}
+
+		// Create owner data
+		ownerData := data.NewOwnerData().
+			WithTitle("Delete Account").
+			WithAuthenticated(authenticated).
+			WithUser(dbUser).
+			WithSubscriptionInfo(
+				dbUser.HasActiveSubscription(),
+				dbUser.SubscriptionTier,
+				subscriptionEndsAt,
+			)
+
+		// Render the delete confirmation page
+		owner.DeleteConfirm(ownerData).Render(c.Request.Context(), c.Writer)
+		return
+	}
+
+	userInfo, authenticated := authController.GetCurrentUser(c)
+	if !authenticated {
+		// Set flash message
+		if setFlash, exists := c.Get("setFlash"); exists {
+			setFlash.(func(string))("You must be logged in to access this page")
+		}
+		c.Redirect(http.StatusSeeOther, "/login")
+		return
+	}
+
+	// Get the user from the database
+	ctx := context.Background()
+	dbUser, err := o.db.GetUserByEmail(ctx, userInfo.GetUserName())
+	if err != nil {
+		c.Redirect(http.StatusSeeOther, "/login")
+		return
+	}
+
+	// Format subscription end date if available
+	var subscriptionEndsAt string
+	if !dbUser.SubscriptionEndDate.IsZero() {
+		subscriptionEndsAt = dbUser.SubscriptionEndDate.Format("January 2, 2006")
+	}
+
+	// Create owner data
+	ownerData := data.NewOwnerData().
+		WithTitle("Delete Account").
+		WithAuthenticated(authenticated).
+		WithUser(dbUser).
+		WithSubscriptionInfo(
+			dbUser.HasActiveSubscription(),
+			dbUser.SubscriptionTier,
+			subscriptionEndsAt,
+		)
+
+	// Render the delete confirmation page
+	owner.DeleteConfirm(ownerData).Render(c.Request.Context(), c.Writer)
+}
+
+// DeleteAccountHandler handles the POST request to delete an account
+func (o *OwnerController) DeleteAccountHandler(c *gin.Context) {
+	// Get the current user's authentication status and email
+	authController, ok := c.MustGet("authController").(AuthControllerInterface)
+	if !ok {
+		// Try to cast to the concrete type as a fallback
+		concreteAuthController, ok := c.MustGet("authController").(*AuthController)
+		if !ok {
+			c.Redirect(http.StatusSeeOther, "/login")
+			return
+		}
+		userInfo, authenticated := concreteAuthController.GetCurrentUser(c)
+		if !authenticated {
+			// Set flash message
+			if setFlash, exists := c.Get("setFlash"); exists {
+				setFlash.(func(string))("You must be logged in to access this page")
+			}
+			c.Redirect(http.StatusSeeOther, "/login")
+			return
+		}
+
+		// Get the user from the database
+		ctx := context.Background()
+		dbUser, err := o.db.GetUserByEmail(ctx, userInfo.GetUserName())
+		if err != nil {
+			c.Redirect(http.StatusSeeOther, "/login")
+			return
+		}
+
+		// Check if the user confirmed the deletion
+		confirm := c.PostForm("confirm")
+		if confirm != "true" {
+			// User did not confirm, redirect back to profile
+			c.Redirect(http.StatusSeeOther, "/owner/profile")
+			return
+		}
+
+		// Soft-delete the user (GORM will use DeletedAt)
+		if err := o.db.GetDB().Delete(&dbUser).Error; err != nil {
+			// Set error flash message
+			if setFlash, exists := c.Get("setFlash"); exists {
+				setFlash.(func(string))("Failed to delete account: " + err.Error())
+			}
+			c.Redirect(http.StatusSeeOther, "/owner/profile")
+			return
+		}
+
+		// Invalidate the user's session - use the correct cookie name "auth-session"
+		http.SetCookie(c.Writer, &http.Cookie{
+			Name:     "auth-session",
+			Value:    "",
+			Path:     "/",
+			HttpOnly: true,
+			MaxAge:   -1, // Delete the cookie
+		})
+
+		// Set flash message
+		c.SetCookie("flash", "Your account has been deleted. Please come back any time!", 3600, "/", "", false, false)
+
+		// Redirect to home page
+		c.Redirect(http.StatusSeeOther, "/")
+		return
+	}
+
+	userInfo, authenticated := authController.GetCurrentUser(c)
+	if !authenticated {
+		// Set flash message
+		if setFlash, exists := c.Get("setFlash"); exists {
+			setFlash.(func(string))("You must be logged in to access this page")
+		}
+		c.Redirect(http.StatusSeeOther, "/login")
+		return
+	}
+
+	// Get the user from the database
+	ctx := context.Background()
+	dbUser, err := o.db.GetUserByEmail(ctx, userInfo.GetUserName())
+	if err != nil {
+		c.Redirect(http.StatusSeeOther, "/login")
+		return
+	}
+
+	// Check if the user confirmed the deletion
+	confirm := c.PostForm("confirm")
+	if confirm != "true" {
+		// User did not confirm, redirect back to profile
+		c.Redirect(http.StatusSeeOther, "/owner/profile")
+		return
+	}
+
+	// Soft-delete the user (GORM will use DeletedAt)
+	if err := o.db.GetDB().Delete(&dbUser).Error; err != nil {
+		// Set error flash message
+		if setFlash, exists := c.Get("setFlash"); exists {
+			setFlash.(func(string))("Failed to delete account: " + err.Error())
+		}
+		c.Redirect(http.StatusSeeOther, "/owner/profile")
+		return
+	}
+
+	// Invalidate the user's session - use the correct cookie name "auth-session"
+	http.SetCookie(c.Writer, &http.Cookie{
+		Name:     "auth-session",
+		Value:    "",
+		Path:     "/",
+		HttpOnly: true,
+		MaxAge:   -1, // Delete the cookie
+	})
+
+	// Set flash message
+	c.SetCookie("flash", "Your account has been deleted. Please come back any time!", 3600, "/", "", false, false)
+
+	// Redirect to home page
+	c.Redirect(http.StatusSeeOther, "/")
+}

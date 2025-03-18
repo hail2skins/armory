@@ -1,0 +1,52 @@
+package owner
+
+import (
+	"context"
+	"io"
+	
+	"github.com/hail2skins/armory/cmd/web/views/data"
+	"github.com/hail2skins/armory/cmd/web/views/partials"
+)
+
+// DeleteConfirm renders the account deletion confirmation page
+templ DeleteConfirm(data *data.OwnerData) {
+	@partials.Base(data.Auth, templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+		_, err := io.WriteString(w, `
+		<div class="max-w-4xl mx-auto py-8 px-4">
+			<div class="mb-6">
+				<a href="/owner/profile" class="text-brass-400 hover:text-brass-300 inline-flex items-center">
+					<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+					</svg>
+					Back to Profile
+				</a>
+			</div>
+			
+			<h1 class="text-3xl font-bold mb-6 text-gunmetal-800">Delete Account</h1>
+			
+			<div class="bg-white shadow-md rounded-lg overflow-hidden mb-8">
+				<div class="bg-red-600 text-white px-6 py-4">
+					<h2 class="text-xl font-semibold">Are you sure you want to delete your account?</h2>
+				</div>
+				<div class="p-6 bg-gunmetal-50">
+					<p class="text-gunmetal-700 mb-6">
+						This will remove your access to the Virtual Armory. All your data will be retained in our systems.
+						If you sign up again with the same email address, your account and all your previous data will be restored.
+					</p>
+					
+					<form action="/owner/profile/delete" method="POST" class="flex items-center gap-4">
+						<input type="hidden" name="confirm" value="true">
+						<button type="submit" class="bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded transition duration-300">
+							Yes, Delete My Account
+						</button>
+						<a href="/owner/profile" class="bg-gunmetal-600 hover:bg-gunmetal-700 text-white py-2 px-4 rounded transition duration-300">
+							No, Keep My Account
+						</a>
+					</form>
+				</div>
+			</div>
+		</div>
+		`)
+		return err
+	}))
+} 

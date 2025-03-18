@@ -284,6 +284,10 @@ func TestAuthenticationFlow(t *testing.T) {
 		mockDB := new(mocks.MockDB)
 		mockEmail := new(MockEmailService)
 
+		// Create a test DB instance to mock the GetDB method
+		testDb := testutils.SharedTestService()
+		mockDB.On("GetDB").Return(testDb.GetDB()).Maybe()
+
 		// Create a test user
 		testUser := &database.User{
 			Email:    "test@example.com",
@@ -554,6 +558,10 @@ func TestEmailVerification(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	mockDB := new(mocks.MockDB)
 
+	// Create a test DB instance to mock the GetDB method
+	testDb := testutils.SharedTestService()
+	mockDB.On("GetDB").Return(testDb.GetDB()).Maybe()
+
 	// Setup mock responses
 	testUser := &database.User{
 		Email:             "test@example.com",
@@ -665,6 +673,10 @@ func TestLoginRedirectsToOwner(t *testing.T) {
 	// Create mock objects
 	mockDB := new(mocks.MockDB)
 
+	// Create a test DB instance to mock the GetDB method
+	testDb := testutils.SharedTestService()
+	mockDB.On("GetDB").Return(testDb.GetDB()).Maybe()
+
 	// Create a test user
 	testUser := &database.User{
 		Model: gorm.Model{
@@ -711,6 +723,10 @@ func TestLoginRedirectsToOwnerWithWelcomeMessage(t *testing.T) {
 
 	// Create mock objects
 	mockDB := new(mocks.MockDB)
+
+	// Create a test DB instance to mock the GetDB method
+	testDb := testutils.SharedTestService()
+	mockDB.On("GetDB").Return(testDb.GetDB()).Maybe()
 
 	// Create a test user
 	testUser := &database.User{
