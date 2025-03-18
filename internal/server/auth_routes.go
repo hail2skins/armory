@@ -39,10 +39,10 @@ func (s *Server) RegisterAuthRoutes(r *gin.Engine, authController *controller.Au
 	})
 	r.POST("/resend-verification", authController.ResendVerificationHandler)
 	r.GET("/verify-email", authController.VerifyEmailHandler)
-	r.GET("/forgot-password", authController.ForgotPasswordHandler)
-	r.POST("/forgot-password", authController.ForgotPasswordHandler)
 	r.GET("/reset-password", authController.ResetPasswordHandler)
 	r.POST("/reset-password", authController.ResetPasswordHandler)
+	r.GET("/reset-password/new", authController.ForgotPasswordHandler)
+	r.POST("/reset-password/new", authController.ForgotPasswordHandler)
 }
 
 // handleAuthFlashMessage checks for a flash message cookie and adds it to the AuthData
@@ -134,13 +134,13 @@ func setupAuthRenderFunctions(authController *controller.AuthController) {
 		authData.Authenticated = authenticated
 		// Set default title if not set
 		if authData.Title == "" {
-			authData.Title = "Forgot Password"
+			authData.Title = "Reset Password"
 		}
 
 		// Handle flash messages
 		authData = handleAuthFlashMessage(c, authData)
 
-		auth.ForgotPassword(authData).Render(c.Request.Context(), c.Writer)
+		auth.ResetPasswordRequest(authData).Render(c.Request.Context(), c.Writer)
 	}
 
 	// ResetPassword render function

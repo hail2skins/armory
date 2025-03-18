@@ -24,8 +24,8 @@ func setupRoutes(router *gin.Engine, authController *controller.AuthController) 
 	})
 
 	// Password reset routes
-	router.GET("/forgot-password", authController.ForgotPasswordHandler)
-	router.POST("/forgot-password", authController.ForgotPasswordHandler)
+	router.GET("/reset-password/new", authController.ForgotPasswordHandler)
+	router.POST("/reset-password/new", authController.ForgotPasswordHandler)
 	router.GET("/reset-password", authController.ResetPasswordHandler)
 	router.POST("/reset-password", authController.ResetPasswordHandler)
 

@@ -20,7 +20,7 @@ import (
 // ErrEmailSendFailed is used for testing email send failures
 var ErrEmailSendFailed = errors.New("failed to send email")
 
-func TestForgotPasswordGetRoute(t *testing.T) {
+func TestResetPasswordRequestGetRoute(t *testing.T) {
 	// Setup
 	gin.SetMode(gin.TestMode)
 	r := gin.Default()
@@ -38,10 +38,10 @@ func TestForgotPasswordGetRoute(t *testing.T) {
 		c.Status(http.StatusOK)
 	}
 
-	r.GET("/forgot-password", controller.ForgotPasswordHandler)
+	r.GET("/reset-password/new", controller.ForgotPasswordHandler)
 
 	// Create a request
-	req := httptest.NewRequest(http.MethodGet, "/forgot-password", nil)
+	req := httptest.NewRequest(http.MethodGet, "/reset-password/new", nil)
 	w := httptest.NewRecorder()
 
 	// Perform the request
@@ -49,7 +49,7 @@ func TestForgotPasswordGetRoute(t *testing.T) {
 
 	// Assert
 	assert.Equal(t, http.StatusOK, w.Code)
-	assert.Equal(t, "Forgot Password", renderedData.Title)
+	assert.Equal(t, "Reset Password", renderedData.Title)
 }
 
 func TestForgotPasswordSubmitValidEmail(t *testing.T) {

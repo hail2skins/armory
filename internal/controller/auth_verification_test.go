@@ -140,15 +140,15 @@ func TestPasswordResetFlow(t *testing.T) {
 
 	// Create test router
 	router := gin.New()
-	router.POST("/forgot-password", authController.ForgotPasswordHandler)
+	router.POST("/reset-password/new", authController.ForgotPasswordHandler)
 	router.POST("/reset-password", authController.ResetPasswordHandler)
 
-	// Test requesting password reset
+	// Test requesting password reset for existing user
 	t.Run("Request password reset for existing user", func(t *testing.T) {
 		form := url.Values{}
 		form.Add("email", "test@example.com")
 
-		req := httptest.NewRequest("POST", "/forgot-password", strings.NewReader(form.Encode()))
+		req := httptest.NewRequest("POST", "/reset-password/new", strings.NewReader(form.Encode()))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		req.Header.Set("X-Test", "true")
 		w := httptest.NewRecorder()
@@ -163,7 +163,7 @@ func TestPasswordResetFlow(t *testing.T) {
 		form := url.Values{}
 		form.Add("email", "nonexistent@example.com")
 
-		req := httptest.NewRequest("POST", "/forgot-password", strings.NewReader(form.Encode()))
+		req := httptest.NewRequest("POST", "/reset-password/new", strings.NewReader(form.Encode()))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		req.Header.Set("X-Test", "true")
 		w := httptest.NewRecorder()

@@ -38,11 +38,11 @@ func (a *TestAuthController) SetEmailService(emailService email.EmailService) {
 func (a *TestAuthController) ForgotPasswordHandler(c *gin.Context) {
 	if c.Request.Method == http.MethodGet {
 		// GET request - render the form
-		authData := data.NewAuthData().WithTitle("Forgot Password")
+		authData := data.NewAuthData().WithTitle("Reset Password")
 		if a.RenderForgotPassword != nil {
 			a.RenderForgotPassword(c, authData)
 		} else {
-			c.String(http.StatusOK, "Forgot Password Form")
+			c.String(http.StatusOK, "Reset Password Form")
 		}
 		return
 	}
@@ -53,7 +53,7 @@ func (a *TestAuthController) ForgotPasswordHandler(c *gin.Context) {
 	}
 
 	if err := c.ShouldBind(&req); err != nil {
-		authData := data.NewAuthData().WithTitle("Forgot Password").WithError("Invalid email format")
+		authData := data.NewAuthData().WithTitle("Reset Password").WithError("Invalid email format")
 		if a.RenderForgotPassword != nil {
 			a.RenderForgotPassword(c, authData)
 		} else {
@@ -66,7 +66,7 @@ func (a *TestAuthController) ForgotPasswordHandler(c *gin.Context) {
 	user, err := a.DB.GetUserByEmail(c.Request.Context(), req.Email)
 	if err != nil || user == nil {
 		// For security reasons, don't reveal if the user exists or not
-		authData := data.NewAuthData().WithTitle("Forgot Password").WithSuccess("If your email is registered, you will receive a password reset link.")
+		authData := data.NewAuthData().WithTitle("Reset Password").WithSuccess("If your email is registered, you will receive a password reset link.")
 		if a.RenderForgotPassword != nil {
 			a.RenderForgotPassword(c, authData)
 		} else {
@@ -78,7 +78,7 @@ func (a *TestAuthController) ForgotPasswordHandler(c *gin.Context) {
 	// Generate recovery token
 	user, err = a.DB.RequestPasswordReset(c.Request.Context(), req.Email)
 	if err != nil {
-		authData := data.NewAuthData().WithTitle("Forgot Password").WithError("Failed to process your request")
+		authData := data.NewAuthData().WithTitle("Reset Password").WithError("Failed to process your request")
 		if a.RenderForgotPassword != nil {
 			a.RenderForgotPassword(c, authData)
 		} else {
@@ -91,7 +91,7 @@ func (a *TestAuthController) ForgotPasswordHandler(c *gin.Context) {
 	if a.EmailService != nil {
 		err = a.EmailService.SendPasswordResetEmail(user.Email, user.RecoveryToken)
 		if err != nil {
-			authData := data.NewAuthData().WithTitle("Forgot Password").WithError("Failed to send password reset email")
+			authData := data.NewAuthData().WithTitle("Reset Password").WithError("Failed to send password reset email")
 			if a.RenderForgotPassword != nil {
 				a.RenderForgotPassword(c, authData)
 			} else {
@@ -102,7 +102,7 @@ func (a *TestAuthController) ForgotPasswordHandler(c *gin.Context) {
 	}
 
 	// Send success response
-	authData := data.NewAuthData().WithTitle("Forgot Password").WithSuccess("Password reset email sent. Please check your inbox.")
+	authData := data.NewAuthData().WithTitle("Reset Password").WithSuccess("Password reset email sent. Please check your inbox.")
 	if a.RenderForgotPassword != nil {
 		a.RenderForgotPassword(c, authData)
 	} else {

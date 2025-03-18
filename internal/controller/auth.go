@@ -394,14 +394,14 @@ func (a *AuthController) VerifyEmailHandler(c *gin.Context) {
 func (a *AuthController) ForgotPasswordHandler(c *gin.Context) {
 	// For GET requests, render the forgot password form
 	if c.Request.Method == http.MethodGet {
-		a.RenderForgotPassword(c, data.NewAuthData().WithTitle("Forgot Password"))
+		a.RenderForgotPassword(c, data.NewAuthData().WithTitle("Reset Password"))
 		return
 	}
 
 	// For POST requests, process the forgot password form
 	var req ForgotPasswordRequest
 	if err := c.ShouldBind(&req); err != nil {
-		authData := data.NewAuthData().WithTitle("Forgot Password").WithError("Invalid form data")
+		authData := data.NewAuthData().WithTitle("Reset Password").WithError("Invalid form data")
 		authData.Email = req.Email
 		a.RenderForgotPassword(c, authData)
 		return
@@ -410,7 +410,7 @@ func (a *AuthController) ForgotPasswordHandler(c *gin.Context) {
 	// Get the user by email
 	user, err := a.db.GetUserByEmail(c.Request.Context(), req.Email)
 	if err != nil {
-		authData := data.NewAuthData().WithTitle("Forgot Password").WithError("An error occurred")
+		authData := data.NewAuthData().WithTitle("Reset Password").WithError("An error occurred")
 		authData.Email = req.Email
 		a.RenderForgotPassword(c, authData)
 		return
@@ -424,7 +424,7 @@ func (a *AuthController) ForgotPasswordHandler(c *gin.Context) {
 			return
 		}
 
-		authData := data.NewAuthData().WithTitle("Forgot Password").WithSuccess("If your email is registered, you will receive a password reset link shortly")
+		authData := data.NewAuthData().WithTitle("Reset Password").WithSuccess("If your email is registered, you will receive a password reset link shortly")
 		authData.Email = req.Email
 		a.RenderForgotPassword(c, authData)
 		return
@@ -433,7 +433,7 @@ func (a *AuthController) ForgotPasswordHandler(c *gin.Context) {
 	// Generate and save the recovery token
 	user, err = a.db.RequestPasswordReset(c.Request.Context(), req.Email)
 	if err != nil {
-		authData := data.NewAuthData().WithTitle("Forgot Password").WithError("Failed to generate recovery token")
+		authData := data.NewAuthData().WithTitle("Reset Password").WithError("Failed to generate recovery token")
 		authData.Email = req.Email
 		a.RenderForgotPassword(c, authData)
 		return
@@ -466,7 +466,7 @@ func (a *AuthController) ForgotPasswordHandler(c *gin.Context) {
 	}
 
 	// Show success message
-	authData := data.NewAuthData().WithTitle("Forgot Password").WithSuccess("If your email is registered, you will receive a password reset link shortly")
+	authData := data.NewAuthData().WithTitle("Reset Password").WithSuccess("If your email is registered, you will receive a password reset link shortly")
 	authData.Email = req.Email
 	a.RenderForgotPassword(c, authData)
 }
