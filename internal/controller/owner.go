@@ -2,9 +2,14 @@ package controller
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/base64"
 	"net/http"
+	"regexp"
 	"strconv"
 	"time"
+
+	"log"
 
 	"github.com/gin-gonic/gin"
 	"github.com/hail2skins/armory/cmd/web/views/data"
@@ -12,6 +17,7 @@ import (
 	gunView "github.com/hail2skins/armory/cmd/web/views/owner/gun"
 	"github.com/hail2skins/armory/internal/database"
 	"github.com/hail2skins/armory/internal/models"
+	"github.com/hail2skins/armory/internal/services/email"
 	"github.com/shaj13/go-guardian/v2/auth"
 )
 
@@ -1598,4 +1604,368 @@ func (o *OwnerController) Profile(c *gin.Context) {
 
 	// Render the owner profile page with the data
 	owner.Profile(ownerData).Render(c.Request.Context(), c.Writer)
+}
+
+// EditProfile renders the profile edit page
+func (o *OwnerController) EditProfile(c *gin.Context) {
+	// Get the current user's authentication status and email
+	authController, ok := c.MustGet("authController").(AuthControllerInterface)
+	if !ok {
+		// Try to cast to the concrete type as a fallback
+		concreteAuthController, ok := c.MustGet("authController").(*AuthController)
+		if !ok {
+			c.Redirect(http.StatusSeeOther, "/login")
+			return
+		}
+		userInfo, authenticated := concreteAuthController.GetCurrentUser(c)
+		if !authenticated {
+			// Set flash message
+			if setFlash, exists := c.Get("setFlash"); exists {
+				setFlash.(func(string))("You must be logged in to access this page")
+			}
+			c.Redirect(http.StatusSeeOther, "/login")
+			return
+		}
+
+		// Get the user from the database
+		ctx := context.Background()
+		dbUser, err := o.db.GetUserByEmail(ctx, userInfo.GetUserName())
+		if err != nil {
+			c.Redirect(http.StatusSeeOther, "/login")
+			return
+		}
+
+		// Format subscription end date if available
+		var subscriptionEndsAt string
+		if !dbUser.SubscriptionEndDate.IsZero() {
+			subscriptionEndsAt = dbUser.SubscriptionEndDate.Format("January 2, 2006")
+		}
+
+		// Create owner data
+		ownerData := data.NewOwnerData().
+			WithTitle("Edit Profile").
+			WithAuthenticated(authenticated).
+			WithUser(dbUser).
+			WithSubscriptionInfo(
+				dbUser.HasActiveSubscription(),
+				dbUser.SubscriptionTier,
+				subscriptionEndsAt,
+			)
+
+		// Check for flash message from cookie
+		if flashCookie, err := c.Cookie("flash"); err == nil && flashCookie != "" {
+			// Add flash message to success messages
+			ownerData.WithSuccess(flashCookie)
+			// Clear the flash cookie
+			c.SetCookie("flash", "", -1, "/", "", false, false)
+		}
+
+		// Render the profile edit page
+		owner.Edit(ownerData).Render(c.Request.Context(), c.Writer)
+		return
+	}
+
+	userInfo, authenticated := authController.GetCurrentUser(c)
+	if !authenticated {
+		// Set flash message
+		if setFlash, exists := c.Get("setFlash"); exists {
+			setFlash.(func(string))("You must be logged in to access this page")
+		}
+		c.Redirect(http.StatusSeeOther, "/login")
+		return
+	}
+
+	// Get the user from the database
+	ctx := context.Background()
+	dbUser, err := o.db.GetUserByEmail(ctx, userInfo.GetUserName())
+	if err != nil {
+		c.Redirect(http.StatusSeeOther, "/login")
+		return
+	}
+
+	// Format subscription end date if available
+	var subscriptionEndsAt string
+	if !dbUser.SubscriptionEndDate.IsZero() {
+		subscriptionEndsAt = dbUser.SubscriptionEndDate.Format("January 2, 2006")
+	}
+
+	// Create owner data
+	ownerData := data.NewOwnerData().
+		WithTitle("Edit Profile").
+		WithAuthenticated(authenticated).
+		WithUser(dbUser).
+		WithSubscriptionInfo(
+			dbUser.HasActiveSubscription(),
+			dbUser.SubscriptionTier,
+			subscriptionEndsAt,
+		)
+
+	// Check for flash message from cookie
+	if flashCookie, err := c.Cookie("flash"); err == nil && flashCookie != "" {
+		// Add flash message to success messages
+		ownerData.WithSuccess(flashCookie)
+		// Clear the flash cookie
+		c.SetCookie("flash", "", -1, "/", "", false, false)
+	}
+
+	// Render the profile edit page
+	owner.Edit(ownerData).Render(c.Request.Context(), c.Writer)
+}
+
+// UpdateProfile handles the update profile form submission
+func (o *OwnerController) UpdateProfile(c *gin.Context) {
+	// Get the current user's authentication status and email
+	authController, ok := c.MustGet("authController").(AuthControllerInterface)
+	if !ok {
+		// Try to cast to the concrete type as a fallback
+		concreteAuthController, ok := c.MustGet("authController").(*AuthController)
+		if !ok {
+			c.Redirect(http.StatusSeeOther, "/login")
+			return
+		}
+		userInfo, authenticated := concreteAuthController.GetCurrentUser(c)
+		if !authenticated {
+			// Set flash message
+			if setFlash, exists := c.Get("setFlash"); exists {
+				setFlash.(func(string))("You must be logged in to access this page")
+			}
+			c.Redirect(http.StatusSeeOther, "/login")
+			return
+		}
+
+		// Get the user from the database
+		ctx := context.Background()
+		dbUser, err := o.db.GetUserByEmail(ctx, userInfo.GetUserName())
+		if err != nil {
+			c.Redirect(http.StatusSeeOther, "/login")
+			return
+		}
+
+		// Parse form data
+		if err := c.Request.ParseForm(); err != nil {
+			// Create owner data with error
+			ownerData := data.NewOwnerData().
+				WithTitle("Edit Profile").
+				WithAuthenticated(authenticated).
+				WithUser(dbUser).
+				WithError("Failed to parse form data")
+
+			// Render the profile edit page with error
+			owner.Edit(ownerData).Render(c.Request.Context(), c.Writer)
+			return
+		}
+
+		// Get email from form
+		newEmail := c.PostForm("email")
+
+		// Validate email format
+		emailRegex := regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
+		if !emailRegex.MatchString(newEmail) {
+			// Create owner data with error
+			ownerData := data.NewOwnerData().
+				WithTitle("Edit Profile").
+				WithAuthenticated(authenticated).
+				WithUser(dbUser).
+				WithError("Invalid email format")
+
+			// Render the profile edit page with error
+			c.Status(http.StatusOK)
+			owner.Edit(ownerData).Render(c.Request.Context(), c.Writer)
+			return
+		}
+
+		// Check if email is being changed
+		emailChanged := newEmail != dbUser.Email
+
+		// If email is changed, update the user's email and unset verified status
+		if emailChanged {
+			// Store the new email in the pending_email field instead of changing the actual email
+			dbUser.PendingEmail = newEmail
+			// The user remains verified for their current email
+			// Only set verified to false after verification with the new email
+			dbUser.VerificationToken = generateToken()
+			dbUser.VerificationTokenExpiry = time.Now().Add(24 * time.Hour)
+
+			// Update the user in the database
+			if err := o.db.UpdateUser(ctx, dbUser); err != nil {
+				// Create owner data with error
+				ownerData := data.NewOwnerData().
+					WithTitle("Edit Profile").
+					WithAuthenticated(authenticated).
+					WithUser(dbUser).
+					WithError("Failed to update user: " + err.Error())
+
+				// Render the profile edit page with error
+				c.Status(http.StatusOK)
+				owner.Edit(ownerData).Render(c.Request.Context(), c.Writer)
+				return
+			}
+
+			// Send verification email
+			emailService, exists := c.Get("emailService")
+			if exists {
+				if emailSvc, ok := emailService.(email.EmailService); ok {
+					if err := emailSvc.SendEmailChangeVerification(newEmail, dbUser.VerificationToken); err != nil {
+						// Log the error but don't fail the update
+						log.Printf("Failed to send verification email: %v", err)
+					}
+				}
+			}
+
+			// Set a cookie with the user's email for the verification sent page
+			c.SetCookie("verification_email", newEmail, 3600, "/", "", false, false)
+
+			// Log the user out by clearing the auth cookie
+			http.SetCookie(c.Writer, &http.Cookie{
+				Name:     "auth-session",
+				Value:    "",
+				Path:     "/",
+				HttpOnly: true,
+				MaxAge:   -1,
+			})
+
+			// Redirect to verification sent page instead of profile
+			c.Redirect(http.StatusSeeOther, "/verification-sent")
+			return
+		} else {
+			// No changes, set a success message
+			if setFlash, exists := c.Get("setFlash"); exists {
+				setFlash.(func(string))("Your profile has been updated.")
+			} else {
+				// Fallback to cookie if context function not available
+				c.SetCookie("flash", "Your profile has been updated.", 3600, "/", "", false, true)
+			}
+
+			// Redirect to profile page for non-email changes
+			c.Redirect(http.StatusSeeOther, "/owner/profile")
+		}
+		return
+	}
+
+	userInfo, authenticated := authController.GetCurrentUser(c)
+	if !authenticated {
+		// Set flash message
+		if setFlash, exists := c.Get("setFlash"); exists {
+			setFlash.(func(string))("You must be logged in to access this page")
+		}
+		c.Redirect(http.StatusSeeOther, "/login")
+		return
+	}
+
+	// Get the user from the database
+	ctx := context.Background()
+	dbUser, err := o.db.GetUserByEmail(ctx, userInfo.GetUserName())
+	if err != nil {
+		c.Redirect(http.StatusSeeOther, "/login")
+		return
+	}
+
+	// Parse form data
+	if err := c.Request.ParseForm(); err != nil {
+		// Create owner data with error
+		ownerData := data.NewOwnerData().
+			WithTitle("Edit Profile").
+			WithAuthenticated(authenticated).
+			WithUser(dbUser).
+			WithError("Failed to parse form data")
+
+		// Render the profile edit page with error
+		owner.Edit(ownerData).Render(c.Request.Context(), c.Writer)
+		return
+	}
+
+	// Get email from form
+	newEmail := c.PostForm("email")
+
+	// Validate email format
+	emailRegex := regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
+	if !emailRegex.MatchString(newEmail) {
+		// Create owner data with error
+		ownerData := data.NewOwnerData().
+			WithTitle("Edit Profile").
+			WithAuthenticated(authenticated).
+			WithUser(dbUser).
+			WithError("Invalid email format")
+
+		// Render the profile edit page with error
+		c.Status(http.StatusOK)
+		owner.Edit(ownerData).Render(c.Request.Context(), c.Writer)
+		return
+	}
+
+	// Check if email is being changed
+	emailChanged := newEmail != dbUser.Email
+
+	// If email is changed, update the user's email and unset verified status
+	if emailChanged {
+		// Store the new email in the pending_email field instead of changing the actual email
+		dbUser.PendingEmail = newEmail
+		// The user remains verified for their current email
+		// Only set verified to false after verification with the new email
+		dbUser.VerificationToken = generateToken()
+		dbUser.VerificationTokenExpiry = time.Now().Add(24 * time.Hour)
+
+		// Update the user in the database
+		if err := o.db.UpdateUser(ctx, dbUser); err != nil {
+			// Create owner data with error
+			ownerData := data.NewOwnerData().
+				WithTitle("Edit Profile").
+				WithAuthenticated(authenticated).
+				WithUser(dbUser).
+				WithError("Failed to update user: " + err.Error())
+
+			// Render the profile edit page with error
+			c.Status(http.StatusOK)
+			owner.Edit(ownerData).Render(c.Request.Context(), c.Writer)
+			return
+		}
+
+		// Send verification email
+		emailService, exists := c.Get("emailService")
+		if exists {
+			if emailSvc, ok := emailService.(email.EmailService); ok {
+				if err := emailSvc.SendEmailChangeVerification(newEmail, dbUser.VerificationToken); err != nil {
+					// Log the error but don't fail the update
+					log.Printf("Failed to send verification email: %v", err)
+				}
+			}
+		}
+
+		// Set a cookie with the user's email for the verification sent page
+		c.SetCookie("verification_email", newEmail, 3600, "/", "", false, false)
+
+		// Log the user out by clearing the auth cookie
+		http.SetCookie(c.Writer, &http.Cookie{
+			Name:     "auth-session",
+			Value:    "",
+			Path:     "/",
+			HttpOnly: true,
+			MaxAge:   -1,
+		})
+
+		// Redirect to verification sent page instead of profile
+		c.Redirect(http.StatusSeeOther, "/verification-sent")
+		return
+	} else {
+		// No changes, set a success message
+		if setFlash, exists := c.Get("setFlash"); exists {
+			setFlash.(func(string))("Your profile has been updated.")
+		} else {
+			// Fallback to cookie if context function not available
+			c.SetCookie("flash", "Your profile has been updated.", 3600, "/", "", false, true)
+		}
+
+		// Redirect to profile page for non-email changes
+		c.Redirect(http.StatusSeeOther, "/owner/profile")
+	}
+}
+
+// Helper function to generate a random token
+func generateToken() string {
+	token := make([]byte, 32)
+	_, err := rand.Read(token)
+	if err != nil {
+		return ""
+	}
+	return base64.URLEncoding.EncodeToString(token)
 }

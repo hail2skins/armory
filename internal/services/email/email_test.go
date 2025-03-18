@@ -28,6 +28,11 @@ func (m *MockEmailService) SendContactEmail(name, email, subject, message string
 	return args.Error(0)
 }
 
+func (m *MockEmailService) SendEmailChangeVerification(email, token string) error {
+	args := m.Called(email, token)
+	return args.Error(0)
+}
+
 func TestNewMailjetService(t *testing.T) {
 	// Save original env vars
 	origAPIKey := os.Getenv("MAILJET_API_KEY")

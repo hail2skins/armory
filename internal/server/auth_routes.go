@@ -2,6 +2,7 @@ package server
 
 import (
 	"net/http"
+	"net/url"
 
 	"github.com/gin-gonic/gin"
 	"github.com/hail2skins/armory/cmd/web/views/auth"
@@ -25,6 +26,19 @@ func (s *Server) RegisterAuthRoutes(r *gin.Engine, authController *controller.Au
 		// Set authentication state
 		_, authenticated := authController.GetCurrentUser(c)
 		authData.Authenticated = authenticated
+
+		// Get email from cookie if it exists
+		if cookie, err := c.Cookie("verification_email"); err == nil && cookie != "" {
+			// URL decode the cookie value
+			decodedEmail, err := url.QueryUnescape(cookie)
+			if err == nil {
+				authData.Email = decodedEmail
+			} else {
+				authData.Email = cookie // Fallback to raw value if decoding fails
+			}
+			// Clear the cookie
+			c.SetCookie("verification_email", "", -1, "/", "", false, false)
+		}
 
 		// Handle flash messages
 		authData = handleAuthFlashMessage(c, authData)

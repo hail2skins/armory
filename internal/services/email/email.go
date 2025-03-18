@@ -18,6 +18,7 @@ var (
 // EmailService defines the interface for sending emails
 type EmailService interface {
 	SendVerificationEmail(email, token string) error
+	SendEmailChangeVerification(email, token string) error
 	SendPasswordResetEmail(email, token string) error
 	SendContactEmail(name, email, subject, message string) error
 }
@@ -63,7 +64,7 @@ func NewMailjetService() (*MailjetService, error) {
 	}, nil
 }
 
-// SendVerificationEmail sends a verification email to the user
+// SendVerificationEmail sends a verification email to the user for a new account
 func (s *MailjetService) SendVerificationEmail(email, token string) error {
 	// Check if the service is properly configured
 	if s.client == nil || s.baseURL == "" {
@@ -87,6 +88,43 @@ func (s *MailjetService) SendVerificationEmail(email, token string) error {
 			<p>Please verify your account by clicking the link below:</p>
 			<p><a href="%s/verify-email?token=%s">Verify Account</a></p>
 			<p>If you did not create this account, please ignore this email.</p>
+		`, s.baseURL, token),
+	}
+
+	messages := &mailjet.MessagesV31{Info: []mailjet.InfoMessagesV31{*data}}
+	_, err := s.client.SendMailV31(messages)
+	if err != nil {
+		return fmt.Errorf("%w: %v", ErrEmailSendFailed, err)
+	}
+
+	return nil
+}
+
+// SendEmailChangeVerification sends a verification email for an email address change
+func (s *MailjetService) SendEmailChangeVerification(email, token string) error {
+	// Check if the service is properly configured
+	if s.client == nil || s.baseURL == "" {
+		return ErrEmailServiceNotConfigured
+	}
+
+	data := &mailjet.InfoMessagesV31{
+		From: &mailjet.RecipientV31{
+			Email: s.senderEmail,
+			Name:  s.senderName,
+		},
+		To: &mailjet.RecipientsV31{
+			mailjet.RecipientV31{
+				Email: email,
+			},
+		},
+		Subject:  "Verify your new email address for Virtual Armory",
+		TextPart: fmt.Sprintf("Please verify your new email address by clicking this link: %s/verify-email?token=%s", s.baseURL, token),
+		HTMLPart: fmt.Sprintf(`
+			<h3>Email Change Verification</h3>
+			<p>You have requested to change your email address for your Virtual Armory account.</p>
+			<p>Please verify your new email address by clicking the link below:</p>
+			<p><a href="%s/verify-email?token=%s">Verify New Email Address</a></p>
+			<p>If you did not request this change, please ignore this email and your account will remain unchanged.</p>
 		`, s.baseURL, token),
 	}
 

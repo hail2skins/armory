@@ -119,6 +119,55 @@ func TestOwnerArsenalRoute(t *testing.T) {
 	assert.NotEqual(t, http.StatusNotFound, resp.Code, "Route GET /owner/guns/arsenal not found")
 }
 
+// TestOwnerProfileEditRoute tests that the owner profile edit route exists
+func TestOwnerProfileEditRoute(t *testing.T) {
+	// Setup
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+
+	// Create mock controllers
+	mockDB := new(mocks.MockDB)
+	mockAuthController := controller.NewAuthController(mockDB)
+
+	// Register routes
+	RegisterOwnerRoutes(router, mockDB, mockAuthController)
+
+	// Create a request to test the route exists
+	req := httptest.NewRequest("GET", "/owner/profile/edit", nil)
+	resp := httptest.NewRecorder()
+
+	// Serve the request
+	router.ServeHTTP(resp, req)
+
+	// Check that the route is registered (we don't care about the response code here)
+	assert.NotEqual(t, http.StatusNotFound, resp.Code, "Route GET /owner/profile/edit not found")
+}
+
+// TestOwnerProfileUpdateRoute tests that the owner profile update route exists
+func TestOwnerProfileUpdateRoute(t *testing.T) {
+	// Setup
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+
+	// Create mock controllers
+	mockDB := new(mocks.MockDB)
+	mockAuthController := controller.NewAuthController(mockDB)
+
+	// Register routes
+	RegisterOwnerRoutes(router, mockDB, mockAuthController)
+
+	// Create a request to test the route exists
+	req := httptest.NewRequest("POST", "/owner/profile/update", nil)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	resp := httptest.NewRecorder()
+
+	// Serve the request
+	router.ServeHTTP(resp, req)
+
+	// Check that the route is registered (we don't care about the response code here)
+	assert.NotEqual(t, http.StatusNotFound, resp.Code, "Route POST /owner/profile/update not found")
+}
+
 // NewTestServer creates a new test server with mocked dependencies
 func NewTestServer() *Server {
 	// Create a test database service

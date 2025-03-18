@@ -4,12 +4,16 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/hail2skins/armory/internal/controller"
 	"github.com/hail2skins/armory/internal/database"
+	"github.com/hail2skins/armory/internal/services/email"
 )
 
 // RegisterOwnerRoutes registers all owner-related routes
 func RegisterOwnerRoutes(router *gin.Engine, db database.Service, authController *controller.AuthController) {
 	// Create the owner controller
 	ownerController := controller.NewOwnerController(db)
+
+	// Initialize email service
+	emailService, _ := email.NewMailjetService()
 
 	// API routes
 	apiGroup := router.Group("/api")
@@ -23,6 +27,8 @@ func RegisterOwnerRoutes(router *gin.Engine, db database.Service, authController
 	// Set the auth controller in the context for all owner routes
 	ownerGroup.Use(func(c *gin.Context) {
 		c.Set("authController", authController)
+		// Add email service to context
+		c.Set("emailService", emailService)
 		c.Next()
 	})
 	// Check if user is authenticated
@@ -46,6 +52,10 @@ func RegisterOwnerRoutes(router *gin.Engine, db database.Service, authController
 
 		// Owner profile page
 		ownerGroup.GET("/profile", ownerController.Profile)
+
+		// Owner profile edit and update
+		ownerGroup.GET("/profile/edit", ownerController.EditProfile)
+		ownerGroup.POST("/profile/update", ownerController.UpdateProfile)
 
 		// Gun routes nested under owner
 		gunGroup := ownerGroup.Group("/guns")

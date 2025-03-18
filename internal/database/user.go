@@ -24,6 +24,7 @@ type User struct {
 	Email                   string `gorm:"uniqueIndex;not null"`
 	Password                string `gorm:"not null"`
 	Verified                bool   `gorm:"default:false"`
+	PendingEmail            string // Holds the new email address until it's verified
 	VerificationToken       string
 	VerificationTokenExpiry time.Time
 	VerificationSentAt      time.Time
@@ -120,6 +121,11 @@ func (u *User) GenerateRecoveryToken() string {
 
 // VerifyEmail marks the user's email as verified
 func (u *User) VerifyEmail() {
+	// If there's a pending email change, apply it now
+	if u.PendingEmail != "" {
+		u.Email = u.PendingEmail
+		u.PendingEmail = ""
+	}
 	u.Verified = true
 	u.VerificationToken = ""
 }

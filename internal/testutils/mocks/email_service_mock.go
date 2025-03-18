@@ -27,3 +27,9 @@ func (m *MockEmailService) SendContactEmail(name, email, subject, message string
 	args := m.Called(name, email, subject, message)
 	return args.Error(0)
 }
+
+// SendEmailChangeVerification mocks the SendEmailChangeVerification method
+func (m *MockEmailService) SendEmailChangeVerification(email, token string) error {
+	args := m.Called(email, token)
+	return args.Error(0)
+}

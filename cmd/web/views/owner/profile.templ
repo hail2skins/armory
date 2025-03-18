@@ -47,10 +47,10 @@ templ Profile(data *data.OwnerData) {
 						<p class="font-medium text-gunmetal-800">` + data.User.SubscriptionTier + `</p>
 					</div>
 					<div class="flex flex-wrap gap-4 mt-6">
-						<a href="/profile/edit" class="bg-gunmetal-700 hover:bg-gunmetal-600 text-white py-2 px-4 rounded transition duration-300">
+						<a href="/owner/profile/edit" class="bg-gunmetal-700 hover:bg-gunmetal-600 text-white py-2 px-4 rounded transition duration-300">
 							Edit Profile
 						</a>
-						<a href="/profile/subscription" class="bg-brass-400 hover:bg-brass-300 text-gunmetal-800 py-2 px-4 rounded transition duration-300">
+						<a href="/owner/profile/subscription" class="bg-brass-400 hover:bg-brass-300 text-gunmetal-800 py-2 px-4 rounded transition duration-300">
 							Manage Subscription
 						</a>
 						<a href="/owner/payment-history" class="bg-gunmetal-600 hover:bg-gunmetal-500 text-white py-2 px-4 rounded transition duration-300">
@@ -68,7 +68,7 @@ templ Profile(data *data.OwnerData) {
 					<p class="text-gunmetal-600 mb-4">
 						Need to take a break? You can delete your account, but all your data will be retained for 1 year in case you want to come back.
 					</p>
-					<a href="/profile/delete" class="text-red-600 hover:text-red-800 font-medium inline-flex items-center transition duration-300">
+					<a href="/owner/profile/delete" class="text-red-600 hover:text-red-800 font-medium inline-flex items-center transition duration-300">
 						<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
 						</svg>

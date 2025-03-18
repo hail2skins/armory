@@ -34,6 +34,11 @@ func (m *mockEmailService) SendContactEmail(name, email, subject, message string
 	return args.Error(0)
 }
 
+func (m *mockEmailService) SendEmailChangeVerification(email, token string) error {
+	m.Called(email, token)
+	return nil
+}
+
 func TestVerificationFlow(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	mockDB := new(mocks.MockDB)

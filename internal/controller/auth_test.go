@@ -271,6 +271,11 @@ func (m *MockEmailService) SendContactEmail(name, email, subject, message string
 	return args.Error(0)
 }
 
+func (m *MockEmailService) SendEmailChangeVerification(email, token string) error {
+	args := m.Called(email, token)
+	return args.Error(0)
+}
+
 func TestAuthenticationFlow(t *testing.T) {
 	// Setup
 	gin.SetMode(gin.TestMode)

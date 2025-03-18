@@ -34,6 +34,10 @@ func (m *MockEmailServiceWithContact) SendContactEmail(name, email, subject, mes
 	return args.Error(0)
 }
 
+func (m *MockEmailServiceWithContact) SendEmailChangeVerification(email, token string) error {
+	return nil
+}
+
 func TestHomeController_ContactHandler(t *testing.T) {
 	// Setup
 	gin.SetMode(gin.TestMode)
