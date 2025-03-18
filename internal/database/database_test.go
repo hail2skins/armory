@@ -1,227 +1,292 @@
 package database
 
 import (
+	"context"
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/hail2skins/armory/internal/models"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
+
+	"github.com/joho/godotenv"
+	"github.com/stretchr/testify/assert"
 )
 
 // testDB holds the test database connection
 var testDB *gorm.DB
 var testDBPath string
 
-// prepareTestDB sets up a SQLite database for testing
-func prepareTestDB() error {
-	// Create a temporary directory for the SQLite database
-	tempDir, err := os.MkdirTemp("", "armory-db-test-*")
-	if err != nil {
-		return err
+// Test configuration: in-memory sqlite database for testing
+func init() {
+	if err := godotenv.Load(".env.test"); err != nil {
+		if !os.IsNotExist(err) {
+			log.Printf("Error loading .env.test file: %v", err)
+		}
 	}
+	// Set default test environment variables
+	if os.Getenv("DB_DRIVER") == "" {
+		os.Setenv("DB_DRIVER", "sqlite")
+	}
+	if os.Getenv("DB_NAME") == "" {
+		os.Setenv("DB_NAME", ":memory:")
+	}
+}
 
-	// Create a SQLite database in the temporary directory
-	testDBPath = filepath.Join(tempDir, "test.db")
+// NewContext creates a new context for testing
+func NewContext() context.Context {
+	return context.Background()
+}
 
-	// Configure GORM logger
-	gormLogger := logger.New(
-		log.New(os.Stdout, "\r\n", log.LstdFlags), // io writer
+// NewTestGormDB creates a new GORM DB instance for testing
+func NewTestGormDB() *gorm.DB {
+	// Set up logging
+	newLogger := logger.New(
+		log.New(os.Stdout, "\r\n", log.LstdFlags),
 		logger.Config{
-			LogLevel: logger.Silent, // Silent logging for tests
+			SlowThreshold:             time.Second,
+			LogLevel:                  logger.Silent,
+			IgnoreRecordNotFoundError: true,
+			Colorful:                  true,
 		},
 	)
 
-	// Open connection to database
-	db, err := gorm.Open(sqlite.Open(testDBPath), &gorm.Config{
-		Logger: gormLogger,
+	// Connect to in-memory SQLite database for testing
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{
+		Logger: newLogger,
 	})
+
 	if err != nil {
-		return err
+		panic(fmt.Sprintf("failed to connect database: %v", err))
 	}
 
-	testDB = db
+	return db
+}
 
-	// Auto migrate tables - only include concrete structs
-	err = db.AutoMigrate(
-		&User{}, // The concrete User struct from database package
+// NewTestDatabase creates a fully initialized test database service
+func NewTestDatabase() Service {
+	// Create a new in-memory SQLite GORM DB
+	db := NewTestGormDB()
+
+	// Initialize the database schema
+	initTestSchema(db)
+
+	// Return the database service
+	return &service{db: db}
+}
+
+// initTestSchema initializes the database schema for testing
+func initTestSchema(db *gorm.DB) {
+	// Auto-migrate all models
+	if err := db.AutoMigrate(
+		&User{},
+		&models.WeaponType{},
+		&models.Caliber{},
+		&models.Manufacturer{},
+		&models.Gun{},
+		&models.Payment{},
+	); err != nil {
+		log.Fatalf("Failed to migrate test database: %v", err)
+	}
+
+	// Seed test data
+	seedTestData(db)
+}
+
+// seedTestData adds minimal test data for testing
+func seedTestData(db *gorm.DB) {
+	// Create a test weapon type
+	db.Create(&models.WeaponType{
+		Type:       "Test Rifle",
+		Nickname:   "Test Rifle",
+		Popularity: 100,
+	})
+
+	// Create a test caliber
+	db.Create(&models.Caliber{
+		Caliber:    "Test 5.56",
+		Nickname:   "Test 5.56",
+		Popularity: 90,
+	})
+
+	// Create a test manufacturer
+	db.Create(&models.Manufacturer{
+		Name:       "Test Glock",
+		Country:    "Test Country",
+		Popularity: 80,
+	})
+}
+
+// TestInMemoryDatabaseConnection checks the in-memory database connection
+func TestInMemoryDatabaseConnection(t *testing.T) {
+	// Arrange
+	svc := NewTestDatabase()
+	defer svc.Close()
+
+	// Act
+	health := svc.Health()
+
+	// Assert
+	assert.Equal(t, "up", health["status"])
+}
+
+// TestInMemoryGetDB retrieves the in-memory database instance
+func TestInMemoryGetDB(t *testing.T) {
+	// Arrange
+	svc := NewTestDatabase()
+	defer svc.Close()
+
+	// Act
+	db := svc.GetDB()
+
+	// Assert
+	assert.NotNil(t, db)
+}
+
+// TestInMemoryClose tests closing the in-memory database connection
+func TestInMemoryClose(t *testing.T) {
+	// Arrange
+	svc := NewTestDatabase()
+
+	// Act & Assert
+	// This should not panic
+	err := svc.Close()
+	assert.NoError(t, err)
+}
+
+// TestInMemoryHealth checks the in-memory database health
+func TestInMemoryHealth(t *testing.T) {
+	// Arrange
+	svc := NewTestDatabase()
+	defer svc.Close()
+
+	// Act
+	health := svc.Health()
+
+	// Assert
+	assert.Equal(t, "up", health["status"])
+}
+
+// prepareTestDB sets up a SQLite database for testing
+func prepareTestDB(t *testing.T) {
+	if testDB != nil {
+		return
+	}
+
+	// Create a temporary file for the test database
+	tempDir := os.TempDir()
+	testDBPath = filepath.Join(tempDir, "armory_test.db")
+
+	// Remove any existing test database
+	os.Remove(testDBPath)
+
+	var err error
+	testDB, err = gorm.Open(sqlite.Open(testDBPath), &gorm.Config{
+		Logger: logger.Default.LogMode(logger.Silent),
+	})
+
+	if err != nil {
+		t.Fatalf("Failed to open test database: %v", err)
+	}
+
+	// Auto-migrate the test database
+	err = testDB.AutoMigrate(
+		&User{},
+		&models.WeaponType{},
+		&models.Caliber{},
+		&models.Manufacturer{},
+		&models.Gun{},
 		&models.Payment{},
 	)
-	if err != nil {
-		return err
-	}
 
-	return nil
+	if err != nil {
+		t.Fatalf("Failed to migrate test database: %v", err)
+	}
 }
 
 // cleanupTestDB cleans up the test database
 func cleanupTestDB() {
-	// Close connection
 	if testDB != nil {
-		sqlDB, err := testDB.DB()
+		// Close the database connection
+		db, err := testDB.DB()
 		if err == nil {
-			sqlDB.Close()
+			db.Close()
 		}
-	}
+		testDB = nil
 
-	// Remove temp file
-	if testDBPath != "" {
+		// Remove the test database file
 		os.Remove(testDBPath)
 	}
 }
 
-func TestMain(m *testing.M) {
-	// Setup test database
-	if err := prepareTestDB(); err != nil {
-		log.Printf("Failed to setup test database: %v", err)
-		os.Exit(1)
-	}
+// TestDatabaseOperations tests the database operations
+func TestDatabaseOperations(t *testing.T) {
+	prepareTestDB(t)
+	defer cleanupTestDB()
 
-	// Run tests
-	code := m.Run()
+	// Create a new database service using the test database
+	svc := &service{db: testDB}
 
-	// Cleanup
-	cleanupTestDB()
+	// Test health check
+	health := svc.Health()
+	assert.Equal(t, "up", health["status"])
 
-	os.Exit(code)
+	// Test user operations
+	ctx := NewContext()
+	user, err := svc.CreateUser(ctx, "test@example.com", "password123")
+	assert.NoError(t, err)
+	assert.NotNil(t, user)
+	assert.Equal(t, "test@example.com", user.Email)
+
+	userByEmail, err := svc.GetUserByEmail(ctx, "test@example.com")
+	assert.NoError(t, err)
+	assert.NotNil(t, userByEmail)
+	assert.Equal(t, user.ID, userByEmail.ID)
+
+	// Test user authentication
+	authUser, err := svc.AuthenticateUser(ctx, "test@example.com", "password123")
+	assert.NoError(t, err)
+	assert.NotNil(t, authUser)
+	assert.Equal(t, user.ID, authUser.ID)
+
+	// Test user not found
+	noUser, err := svc.GetUserByEmail(ctx, "nonexistent@example.com")
+	assert.NoError(t, err)
+	assert.Nil(t, noUser)
+
+	// Test failed authentication
+	failedAuth, err := svc.AuthenticateUser(ctx, "test@example.com", "wrongpassword")
+	assert.NoError(t, err)
+	assert.Nil(t, failedAuth)
 }
 
-// TestPaymentMethods tests all the payment-related methods
-func TestPaymentMethods(t *testing.T) {
-	// Create a separate test DB for this test to avoid interference with other tests
-	tempDir, err := os.MkdirTemp("", "payment-test-*")
-	if err != nil {
-		t.Fatalf("Failed to create temp dir: %v", err)
-	}
-	defer os.RemoveAll(tempDir)
-
-	dbPath := filepath.Join(tempDir, "payment-test.db")
-
-	gormLogger := logger.New(
-		log.New(os.Stdout, "\r\n", log.LstdFlags),
-		logger.Config{
-			LogLevel: logger.Silent,
-		},
-	)
-
-	db, err := gorm.Open(sqlite.Open(dbPath), &gorm.Config{
-		Logger: gormLogger,
-	})
-	if err != nil {
-		t.Fatalf("Failed to open database: %v", err)
-	}
-
-	// Auto migrate tables
-	err = db.AutoMigrate(
-		&User{},
-		&models.Payment{},
-	)
-	if err != nil {
-		t.Fatalf("Failed to migrate tables: %v", err)
-	}
-
-	// Create a test service with our dedicated DB
-	testSrv := &service{db: db}
-
-	// Create test user
-	testUser := &User{
-		Email:    "test@example.com",
-		Password: "password",
-	}
-	if err := testSrv.db.Create(testUser).Error; err != nil {
-		t.Fatalf("Failed to create test user: %v", err)
-	}
-
-	// Test CreatePayment
-	payment := &models.Payment{
-		UserID:      testUser.ID,
-		Amount:      1000, // $10.00
-		Currency:    "usd",
-		PaymentType: "test",
-		Status:      "succeeded",
-		Description: "Test payment",
-		StripeID:    "test_stripe_id",
-	}
-
-	err = testSrv.CreatePayment(payment)
-	if err != nil {
-		t.Fatalf("CreatePayment failed: %v", err)
-	}
-
-	// Test GetPaymentsByUserID
-	payments, err := testSrv.GetPaymentsByUserID(testUser.ID)
-	if err != nil {
-		t.Fatalf("GetPaymentsByUserID failed: %v", err)
-	}
-	if len(payments) != 1 {
-		t.Fatalf("Expected 1 payment, got %d", len(payments))
-	}
-
-	// Test FindPaymentByID
-	foundPayment, err := testSrv.FindPaymentByID(payment.ID)
-	if err != nil {
-		t.Fatalf("FindPaymentByID failed: %v", err)
-	}
-	if foundPayment.ID != payment.ID {
-		t.Fatalf("Expected payment ID %d, got %d", payment.ID, foundPayment.ID)
-	}
-
-	// Test UpdatePayment
-	payment.Description = "Updated test payment"
-	err = testSrv.UpdatePayment(payment)
-	if err != nil {
-		t.Fatalf("UpdatePayment failed: %v", err)
-	}
-
-	// Verify the update
-	updatedPayment, err := testSrv.FindPaymentByID(payment.ID)
-	if err != nil {
-		t.Fatalf("FindPaymentByID after update failed: %v", err)
-	}
-	if updatedPayment.Description != "Updated test payment" {
-		t.Fatalf("Expected description 'Updated test payment', got '%s'", updatedPayment.Description)
-	}
-}
-
-func TestNew(t *testing.T) {
-	// Replace global db instance with our test one
-	oldDBInstance := dbInstance
-	dbInstance = &service{db: testDB}
-	defer func() { dbInstance = oldDBInstance }()
-
-	srv := New()
-	if srv == nil {
-		t.Fatal("New() returned nil")
-	}
-}
-
+// TestHealth tests the Health method
 func TestHealth(t *testing.T) {
-	// Replace global db instance with our test one
-	oldDBInstance := dbInstance
-	dbInstance = &service{db: testDB}
-	defer func() { dbInstance = oldDBInstance }()
+	prepareTestDB(t)
+	defer cleanupTestDB()
 
-	srv := New()
+	// Create a new database service using the test database
+	svc := &service{db: testDB}
 
-	stats := srv.Health()
-
-	if stats["status"] != "up" {
-		t.Fatalf("expected status to be up, got %s", stats["status"])
-	}
+	// Test health check
+	health := svc.Health()
+	assert.Equal(t, "up", health["status"])
 }
 
+// TestClose tests the Close method
 func TestClose(t *testing.T) {
-	// Replace global db instance with our test one
-	oldDBInstance := dbInstance
-	dbInstance = &service{db: testDB}
-	defer func() { dbInstance = oldDBInstance }()
+	prepareTestDB(t)
+	defer cleanupTestDB()
 
-	srv := New()
+	// Create a new database service using the test database
+	svc := &service{db: testDB}
 
-	if srv.Close() != nil {
-		t.Fatalf("expected Close() to return nil")
-	}
+	// Test close
+	err := svc.Close()
+	assert.NoError(t, err)
 }

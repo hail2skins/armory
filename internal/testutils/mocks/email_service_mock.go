@@ -10,25 +10,25 @@ type MockEmailService struct {
 	mock.Mock
 }
 
-// SendVerificationEmail mocks the SendVerificationEmail method
+// SendVerificationEmail mocks sending a verification email
 func (m *MockEmailService) SendVerificationEmail(email, token string) error {
 	args := m.Called(email, token)
 	return args.Error(0)
 }
 
-// SendPasswordResetEmail mocks the SendPasswordResetEmail method
+// SendPasswordResetEmail mocks sending a password reset email
 func (m *MockEmailService) SendPasswordResetEmail(email, token string) error {
 	args := m.Called(email, token)
 	return args.Error(0)
 }
 
-// SendContactEmail mocks the SendContactEmail method
+// SendContactEmail mocks sending a contact form email
 func (m *MockEmailService) SendContactEmail(name, email, subject, message string) error {
 	args := m.Called(name, email, subject, message)
 	return args.Error(0)
 }
 
-// SendEmailChangeVerification mocks the SendEmailChangeVerification method
+// SendEmailChangeVerification mocks sending an email change verification
 func (m *MockEmailService) SendEmailChangeVerification(email, token string) error {
 	args := m.Called(email, token)
 	return args.Error(0)

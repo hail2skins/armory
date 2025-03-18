@@ -4,26 +4,19 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"gorm.io/driver/sqlite"
-	"gorm.io/gorm"
 )
 
 func TestCaliberModel(t *testing.T) {
-	// Setup in-memory database for testing
-	db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{})
-	assert.NoError(t, err)
+	// Get a shared database instance for testing
+	db := GetTestDB()
 
-	// Auto migrate the schema
-	err = db.AutoMigrate(&Caliber{})
-	assert.NoError(t, err)
-
-	// Clear any existing calibers
-	db.Exec("DELETE FROM calibers")
+	// Clear any existing test calibers
+	db.Exec("DELETE FROM calibers WHERE caliber LIKE 'Test Custom%'")
 
 	// Test creating a caliber
 	caliber := Caliber{
-		Caliber:    "9mm",
-		Nickname:   "Nine",
+		Caliber:    "Test Custom 9mm",
+		Nickname:   "Test Custom Nine",
 		Popularity: 10,
 	}
 
@@ -36,13 +29,13 @@ func TestCaliberModel(t *testing.T) {
 	var retrievedCaliber Caliber
 	result = db.First(&retrievedCaliber, caliber.ID)
 	assert.NoError(t, result.Error)
-	assert.Equal(t, "9mm", retrievedCaliber.Caliber)
-	assert.Equal(t, "Nine", retrievedCaliber.Nickname)
+	assert.Equal(t, "Test Custom 9mm", retrievedCaliber.Caliber)
+	assert.Equal(t, "Test Custom Nine", retrievedCaliber.Nickname)
 	assert.Equal(t, 10, retrievedCaliber.Popularity)
 
 	// Test updating the caliber
-	retrievedCaliber.Caliber = "9x19mm"
-	retrievedCaliber.Nickname = "Parabellum"
+	retrievedCaliber.Caliber = "Test Custom 9x19mm"
+	retrievedCaliber.Nickname = "Test Custom Parabellum"
 	result = db.Save(&retrievedCaliber)
 	assert.NoError(t, result.Error)
 
@@ -50,8 +43,8 @@ func TestCaliberModel(t *testing.T) {
 	var updatedCaliber Caliber
 	result = db.First(&updatedCaliber, caliber.ID)
 	assert.NoError(t, result.Error)
-	assert.Equal(t, "9x19mm", updatedCaliber.Caliber)
-	assert.Equal(t, "Parabellum", updatedCaliber.Nickname)
+	assert.Equal(t, "Test Custom 9x19mm", updatedCaliber.Caliber)
+	assert.Equal(t, "Test Custom Parabellum", updatedCaliber.Nickname)
 
 	// Test deleting the caliber
 	result = db.Delete(&updatedCaliber)
@@ -60,5 +53,5 @@ func TestCaliberModel(t *testing.T) {
 	// Verify deletion
 	result = db.First(&Caliber{}, caliber.ID)
 	assert.Error(t, result.Error)
-	assert.True(t, result.Error == gorm.ErrRecordNotFound)
+	assert.True(t, result.Error.Error() == "record not found")
 }

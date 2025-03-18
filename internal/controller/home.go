@@ -26,7 +26,7 @@ func NewHomeController(db database.Service) *HomeController {
 // HomeHandler handles the home page route
 func (h *HomeController) HomeHandler(c *gin.Context) {
 	// Get the current user's authentication status and email
-	userInfo, authenticated := c.MustGet("authController").(*AuthController).GetCurrentUser(c)
+	userInfo, authenticated := c.MustGet("auth").(AuthService).GetCurrentUser(c)
 
 	// Create HomeData with proper AuthData
 	authData := data.NewAuthData()
@@ -49,7 +49,7 @@ func (h *HomeController) HomeHandler(c *gin.Context) {
 // AboutHandler handles the about page route
 func (h *HomeController) AboutHandler(c *gin.Context) {
 	// Get the current user's authentication status and email
-	userInfo, authenticated := c.MustGet("authController").(*AuthController).GetCurrentUser(c)
+	userInfo, authenticated := c.MustGet("auth").(AuthService).GetCurrentUser(c)
 
 	// Create AuthData
 	authData := data.NewAuthData()
@@ -73,7 +73,7 @@ func (h *HomeController) AboutHandler(c *gin.Context) {
 // ContactHandler handles the contact page route
 func (h *HomeController) ContactHandler(c *gin.Context) {
 	// Get the current user's authentication status and email
-	userInfo, authenticated := c.MustGet("authController").(*AuthController).GetCurrentUser(c)
+	userInfo, authenticated := c.MustGet("auth").(AuthService).GetCurrentUser(c)
 
 	// Create AuthData
 	authData := data.NewAuthData()
@@ -125,4 +125,9 @@ func (h *HomeController) ContactHandler(c *gin.Context) {
 
 	// Render the contact page with the data
 	home.Contact(contactData).Render(c.Request.Context(), c.Writer)
+}
+
+// SetEmailService allows replacing the email service (mainly for testing)
+func (h *HomeController) SetEmailService(emailService email.EmailService) {
+	h.emailService = emailService
 }

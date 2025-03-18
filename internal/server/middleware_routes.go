@@ -47,6 +47,10 @@ func (s *Server) RegisterMiddleware(r *gin.Engine, authController *controller.Au
 
 		// Add authData to context
 		c.Set("authData", authData)
+
+		// Set both auth keys for compatibility - the new pattern uses "auth"
+		// while some existing code might still use "authController"
+		c.Set("auth", authController)
 		c.Set("authController", authController)
 
 		c.Next()

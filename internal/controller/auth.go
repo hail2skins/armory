@@ -376,7 +376,7 @@ func (a *AuthController) AuthMiddleware() gin.HandlerFunc {
 	}
 }
 
-// isAuthenticated checks if the user is authenticated
+// isAuthenticated checks if the current request is authenticated
 func (a *AuthController) isAuthenticated(c *gin.Context) bool {
 	// Get the session cookie
 	cookie, err := c.Request.Cookie("auth-session")
@@ -389,7 +389,12 @@ func (a *AuthController) isAuthenticated(c *gin.Context) bool {
 	return found
 }
 
-// GetCurrentUser gets the current authenticated user
+// IsAuthenticated is the public interface method that calls the private implementation
+func (a *AuthController) IsAuthenticated(c *gin.Context) bool {
+	return a.isAuthenticated(c)
+}
+
+// GetCurrentUser returns the currently authenticated user info
 func (a *AuthController) GetCurrentUser(c *gin.Context) (auth.Info, bool) {
 	// Get the session cookie
 	cookie, err := c.Request.Cookie("auth-session")

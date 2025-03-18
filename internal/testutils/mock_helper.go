@@ -1,8 +1,10 @@
-package mocks
+package testutils
 
 import (
 	"context"
 
+	"github.com/gin-gonic/gin"
+	"github.com/hail2skins/armory/internal/controller"
 	"github.com/hail2skins/armory/internal/database"
 	"github.com/hail2skins/armory/internal/models"
 	"github.com/stretchr/testify/mock"
@@ -24,11 +26,11 @@ func (m *MockDB) GetDB() *gorm.DB {
 }
 
 func (m *MockDB) Close() error {
-	return m.Called().Error(0)
+	return nil
 }
 
 func (m *MockDB) Health() map[string]string {
-	return m.Called().Get(0).(map[string]string)
+	return map[string]string{"status": "up"}
 }
 
 func (m *MockDB) GetUserByEmail(ctx context.Context, email string) (*database.User, error) {
@@ -48,7 +50,8 @@ func (m *MockDB) CreateUser(ctx context.Context, email string, password string) 
 }
 
 func (m *MockDB) UpdateUser(ctx context.Context, user *database.User) error {
-	return m.Called(ctx, user).Error(0)
+	args := m.Called(ctx, user)
+	return args.Error(0)
 }
 
 func (m *MockDB) AuthenticateUser(ctx context.Context, email, password string) (*database.User, error) {
@@ -100,7 +103,8 @@ func (m *MockDB) RequestPasswordReset(ctx context.Context, email string) (*datab
 }
 
 func (m *MockDB) ResetPassword(ctx context.Context, token, newPassword string) error {
-	return m.Called(ctx, token, newPassword).Error(0)
+	args := m.Called(ctx, token, newPassword)
+	return args.Error(0)
 }
 
 func (m *MockDB) IsRecoveryExpired(ctx context.Context, token string) (bool, error) {
@@ -117,7 +121,8 @@ func (m *MockDB) GetUserByStripeCustomerID(customerID string) (*database.User, e
 }
 
 func (m *MockDB) CreatePayment(payment *models.Payment) error {
-	return m.Called(payment).Error(0)
+	args := m.Called(payment)
+	return args.Error(0)
 }
 
 func (m *MockDB) GetPaymentsByUserID(userID uint) ([]models.Payment, error) {
@@ -134,7 +139,8 @@ func (m *MockDB) FindPaymentByID(id uint) (*models.Payment, error) {
 }
 
 func (m *MockDB) UpdatePayment(payment *models.Payment) error {
-	return m.Called(payment).Error(0)
+	args := m.Called(payment)
+	return args.Error(0)
 }
 
 func (m *MockDB) FindAllManufacturers() ([]models.Manufacturer, error) {
@@ -151,15 +157,18 @@ func (m *MockDB) FindManufacturerByID(id uint) (*models.Manufacturer, error) {
 }
 
 func (m *MockDB) CreateManufacturer(manufacturer *models.Manufacturer) error {
-	return m.Called(manufacturer).Error(0)
+	args := m.Called(manufacturer)
+	return args.Error(0)
 }
 
 func (m *MockDB) UpdateManufacturer(manufacturer *models.Manufacturer) error {
-	return m.Called(manufacturer).Error(0)
+	args := m.Called(manufacturer)
+	return args.Error(0)
 }
 
 func (m *MockDB) DeleteManufacturer(id uint) error {
-	return m.Called(id).Error(0)
+	args := m.Called(id)
+	return args.Error(0)
 }
 
 func (m *MockDB) FindAllCalibers() ([]models.Caliber, error) {
@@ -176,15 +185,18 @@ func (m *MockDB) FindCaliberByID(id uint) (*models.Caliber, error) {
 }
 
 func (m *MockDB) CreateCaliber(caliber *models.Caliber) error {
-	return m.Called(caliber).Error(0)
+	args := m.Called(caliber)
+	return args.Error(0)
 }
 
 func (m *MockDB) UpdateCaliber(caliber *models.Caliber) error {
-	return m.Called(caliber).Error(0)
+	args := m.Called(caliber)
+	return args.Error(0)
 }
 
 func (m *MockDB) DeleteCaliber(id uint) error {
-	return m.Called(id).Error(0)
+	args := m.Called(id)
+	return args.Error(0)
 }
 
 func (m *MockDB) FindAllWeaponTypes() ([]models.WeaponType, error) {
@@ -201,31 +213,89 @@ func (m *MockDB) FindWeaponTypeByID(id uint) (*models.WeaponType, error) {
 }
 
 func (m *MockDB) CreateWeaponType(weaponType *models.WeaponType) error {
-	return m.Called(weaponType).Error(0)
+	args := m.Called(weaponType)
+	return args.Error(0)
 }
 
 func (m *MockDB) UpdateWeaponType(weaponType *models.WeaponType) error {
-	return m.Called(weaponType).Error(0)
+	args := m.Called(weaponType)
+	return args.Error(0)
 }
 
 func (m *MockDB) DeleteWeaponType(id uint) error {
-	return m.Called(id).Error(0)
+	args := m.Called(id)
+	return args.Error(0)
 }
 
 func (m *MockDB) DeleteGun(db *gorm.DB, gunID uint, userID uint) error {
-	return m.Called(db, gunID, userID).Error(0)
+	args := m.Called(db, gunID, userID)
+	return args.Error(0)
 }
 
-// NewHomeController is a method used for reflection-based testing
-func (m *MockDB) NewHomeController(db database.Service) interface{} {
-	args := m.Called(db)
-	return args.Get(0)
+// MockAuthController is a standardized mock auth controller implementation
+type MockAuthController struct {
+	mock.Mock
 }
 
-// Factory function to create a mock implementation of a controller
-func (m *MockDB) MockController(name string, args ...interface{}) interface{} {
-	callArgs := make([]interface{}, 0, len(args)+1)
-	callArgs = append(callArgs, name)
-	callArgs = append(callArgs, args...)
-	return m.Called(callArgs...).Get(0)
+// Implement AuthControllerInterface
+func (m *MockAuthController) GetCurrentUser(c *gin.Context) (interface{}, bool) {
+	args := m.Called(c)
+	return args.Get(0), args.Bool(1)
+}
+
+// NewMockTestSetup creates a complete mock test setup
+func NewMockTestSetup() (*gin.Engine, *MockDB, *MockAuthController) {
+	// Set Gin to test mode
+	gin.SetMode(gin.TestMode)
+
+	// Create a new router
+	router := gin.New()
+	router.Use(gin.Recovery())
+
+	// Create mock objects
+	mockDB := new(MockDB)
+	mockAuthController := new(MockAuthController)
+
+	// Set up flash middleware
+	router.Use(func(c *gin.Context) {
+		c.Set("setFlash", func(msg string) {
+			c.Set("flash_message", msg)
+		})
+		c.Next()
+	})
+
+	// Make auth controller available in context
+	router.Use(func(c *gin.Context) {
+		c.Set("authController", mockAuthController)
+		c.Next()
+	})
+
+	return router, mockDB, mockAuthController
+}
+
+// SetupMockUser configures standard mocks for an authenticated user
+func SetupMockUser(mockDB *MockDB, mockAuth *MockAuthController, user *database.User) {
+	// Setup user retrieval
+	mockDB.On("GetUserByEmail", mock.Anything, user.Email).Return(user, nil)
+
+	// Setup authentication
+	mockAuth.On("GetCurrentUser", mock.Anything).Return(user, true)
+}
+
+// SetupTestUser creates a test user for use in tests
+func SetupTestUser() *database.User {
+	user := &database.User{
+		Email:    "test@example.com",
+		Verified: true,
+	}
+	// Set the ID using gorm.Model embedded struct
+	user.Model.ID = 1
+	return user
+}
+
+// CreateMockControllers creates controllers with the mock database
+func CreateMockControllers(mockDB *MockDB) (*controller.AuthController, *controller.OwnerController) {
+	authController := controller.NewAuthController(mockDB)
+	ownerController := controller.NewOwnerController(mockDB)
+	return authController, ownerController
 }

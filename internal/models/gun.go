@@ -3,6 +3,8 @@ package models
 import (
 	"time"
 
+	"errors"
+
 	"gorm.io/gorm"
 )
 
@@ -93,5 +95,17 @@ func UpdateGun(db *gorm.DB, gun *Gun) error {
 
 // DeleteGun deletes a gun from the database
 func DeleteGun(db *gorm.DB, id uint, ownerID uint) error {
-	return db.Where("id = ? AND owner_id = ?", id, ownerID).Delete(&Gun{}).Error
+	// First check if the gun exists and belongs to the specified owner
+	var gun Gun
+	if err := db.Where("id = ?", id).First(&gun).Error; err != nil {
+		return err
+	}
+
+	// Verify ownership
+	if gun.OwnerID != ownerID {
+		return errors.New("not authorized: gun does not belong to this owner")
+	}
+
+	// If all checks pass, delete the gun
+	return db.Delete(&gun).Error
 }

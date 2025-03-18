@@ -65,3 +65,38 @@ func (m *MockAuthController) GetCurrentUser(c *gin.Context) (auth.Info, bool) {
 	}
 	return args.Get(0).(auth.Info), args.Bool(1)
 }
+
+// IsAuthenticated mocks the IsAuthenticated method
+func (m *MockAuthController) IsAuthenticated(c *gin.Context) bool {
+	return m.Called(c).Bool(0)
+}
+
+// LoginHandler mocks the LoginHandler method
+func (m *MockAuthController) LoginHandler(c *gin.Context) {
+	m.Called(c)
+}
+
+// LogoutHandler mocks the LogoutHandler method
+func (m *MockAuthController) LogoutHandler(c *gin.Context) {
+	m.Called(c)
+}
+
+// RegisterHandler mocks the RegisterHandler method
+func (m *MockAuthController) RegisterHandler(c *gin.Context) {
+	m.Called(c)
+}
+
+// VerifyEmailHandler mocks the VerifyEmailHandler method
+func (m *MockAuthController) VerifyEmailHandler(c *gin.Context) {
+	m.Called(c)
+}
+
+// ForgotPasswordHandler mocks the ForgotPasswordHandler method
+func (m *MockAuthController) ForgotPasswordHandler(c *gin.Context) {
+	m.Called(c)
+}
+
+// ResetPasswordHandler mocks the ResetPasswordHandler method
+func (m *MockAuthController) ResetPasswordHandler(c *gin.Context) {
+	m.Called(c)
+}

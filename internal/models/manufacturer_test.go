@@ -4,25 +4,18 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"gorm.io/driver/sqlite"
-	"gorm.io/gorm"
 )
 
 func TestManufacturerModel(t *testing.T) {
-	// Setup in-memory database for testing
-	db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{})
-	assert.NoError(t, err)
+	// Get a shared database instance for testing
+	db := GetTestDB()
 
-	// Auto migrate the schema
-	err = db.AutoMigrate(&Manufacturer{})
-	assert.NoError(t, err)
-
-	// Clear any existing manufacturers
-	db.Exec("DELETE FROM manufacturers")
+	// Clear any existing test manufacturers
+	db.Exec("DELETE FROM manufacturers WHERE name LIKE 'Test Manufacturer%'")
 
 	// Test creating a manufacturer
 	manufacturer := Manufacturer{
-		Name:       "Test Manufacturer",
+		Name:       "Test Manufacturer Model",
 		Nickname:   "Test",
 		Country:    "Test Country",
 		Popularity: 5,
@@ -37,14 +30,14 @@ func TestManufacturerModel(t *testing.T) {
 	var retrievedManufacturer Manufacturer
 	result = db.First(&retrievedManufacturer, manufacturer.ID)
 	assert.NoError(t, result.Error)
-	assert.Equal(t, "Test Manufacturer", retrievedManufacturer.Name)
+	assert.Equal(t, "Test Manufacturer Model", retrievedManufacturer.Name)
 	assert.Equal(t, "Test", retrievedManufacturer.Nickname)
 	assert.Equal(t, "Test Country", retrievedManufacturer.Country)
 	assert.Equal(t, 5, retrievedManufacturer.Popularity)
 
 	// Test getter methods
 	assert.Equal(t, manufacturer.ID, retrievedManufacturer.GetID())
-	assert.Equal(t, "Test Manufacturer", retrievedManufacturer.GetName())
+	assert.Equal(t, "Test Manufacturer Model", retrievedManufacturer.GetName())
 	assert.Equal(t, "Test", retrievedManufacturer.GetNickname())
 	assert.Equal(t, "Test Country", retrievedManufacturer.GetCountry())
 
@@ -76,5 +69,5 @@ func TestManufacturerModel(t *testing.T) {
 	// Verify deletion
 	result = db.First(&Manufacturer{}, manufacturer.ID)
 	assert.Error(t, result.Error)
-	assert.True(t, result.Error == gorm.ErrRecordNotFound)
+	assert.True(t, result.Error.Error() == "record not found")
 }
