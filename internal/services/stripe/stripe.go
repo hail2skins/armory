@@ -135,111 +135,104 @@ func (s *service) HandleWebhook(payload []byte, signature string) error {
 	// Handle different event types
 	switch event.Type {
 	case "checkout.session.completed":
-		// Handle successful checkout
+		// Handle checkout completion events
 		var session stripe.CheckoutSession
 		err := json.Unmarshal(event.Data.Raw, &session)
 		if err != nil {
 			return err
 		}
 
-		// Get the user ID from the client reference ID
-		userID, err := strconv.ParseUint(session.ClientReferenceID, 10, 64)
-		if err != nil {
-			return err
-		}
-
-		// Log the event
-		fmt.Printf("User %d completed checkout for subscription %s\n", userID, session.ID)
-
-		// Get the user from the database
-		user, err := s.db.GetUserByID(uint(userID))
-		if err != nil {
-			return err
-		}
-
-		// For one-time payments, we'll create a payment record here
-		if session.Mode == "payment" {
-			// Create a payment record
-			payment := &models.Payment{
-				UserID:      uint(userID),
-				Amount:      session.AmountTotal,
-				Currency:    string(session.Currency),
-				PaymentType: "one-time",
-				Status:      "succeeded",
-				Description: "Lifetime subscription",
-				StripeID:    session.ID,
-			}
-
-			// Save the payment to the database
-			if err := s.db.CreatePayment(payment); err != nil {
+		// Process only if the session was successful and has required data
+		if session.PaymentStatus == "paid" && session.ClientReferenceID != "" {
+			// Get the user ID from the client reference ID
+			userID, err := strconv.ParseUint(session.ClientReferenceID, 10, 64)
+			if err != nil {
 				return err
 			}
 
-			// Determine the subscription tier from the amount
-			var tier string
-			if session.AmountTotal == 10000 {
-				tier = "lifetime"
-			} else if session.AmountTotal == 100000 {
-				tier = "premium_lifetime"
+			// Get the user from the database
+			user, err := s.db.GetUserByID(uint(userID))
+			if err != nil {
+				return err
 			}
 
+			if user == nil {
+				return errors.New("user not found")
+			}
+
+			// Get the subscription
+			subscription, err := sub.Get(session.Subscription.ID, nil)
+			if err != nil {
+				return err
+			}
+
+			// Update the user's Stripe customer ID if not already set
+			if user.StripeCustomerID == "" {
+				user.StripeCustomerID = session.Customer.ID
+			}
+
+			// Determine the subscription tier based on the line items
+			var tier string
+			if session.LineItems != nil {
+				items := session.LineItems.Data
+				for _, item := range items {
+					if strings.Contains(strings.ToLower(item.Description), "monthly") {
+						tier = "monthly"
+						break
+					} else if strings.Contains(strings.ToLower(item.Description), "yearly") {
+						tier = "yearly"
+						break
+					} else if strings.Contains(strings.ToLower(item.Description), "lifetime") {
+						tier = "lifetime"
+						break
+					} else if strings.Contains(strings.ToLower(item.Description), "premium") {
+						tier = "premium_lifetime"
+						break
+					}
+				}
+			}
+
+			// If tier still not determined, try the subscription items
+			if tier == "" && subscription.Items != nil && len(subscription.Items.Data) > 0 {
+				for _, item := range subscription.Items.Data {
+					price := item.Price
+					if price != nil && price.Nickname != "" {
+						nickname := strings.ToLower(price.Nickname)
+						if strings.Contains(nickname, "monthly") {
+							tier = "monthly"
+							break
+						} else if strings.Contains(nickname, "yearly") {
+							tier = "yearly"
+							break
+						} else if strings.Contains(nickname, "lifetime") {
+							tier = "lifetime"
+							break
+						} else if strings.Contains(nickname, "premium") {
+							tier = "premium_lifetime"
+							break
+						}
+					}
+				}
+			}
+
+			// If we still couldn't determine the tier, default to monthly
+			if tier == "" {
+				tier = "monthly"
+			}
+
+			// Update the user's subscription information
 			user.SubscriptionTier = tier
 			user.SubscriptionStatus = "active"
+			user.StripeSubscriptionID = subscription.ID
+
+			// Set subscription end date based on the tier
+			if subscription.CurrentPeriodEnd > 0 {
+				setSubscriptionEndDate(user, subscription.CurrentPeriodEnd, tier, event.Type)
+			}
 
 			// Update the user in the database
 			if err := s.db.UpdateUser(nil, user); err != nil {
 				return err
-			}
-		} else if session.Mode == "subscription" {
-			// For subscription mode, we'll set the subscription tier based on the line items
-			// The actual payment record will be created when we receive the invoice.payment_succeeded event
-
-			// Get the subscription ID from the session
-			if session.Subscription != nil {
-				// Get subscription details
-				subscription, err := s.GetSubscriptionDetails(session.Subscription.ID)
-				if err != nil {
-					return err
-				}
-
-				// Determine the subscription tier
-				var tier string
-				if subscription.Items != nil && len(subscription.Items.Data) > 0 {
-					amount := subscription.Items.Data[0].Price.UnitAmount
-					if amount == 500 {
-						tier = "monthly"
-					} else if amount == 3000 {
-						tier = "yearly"
-					}
-				}
-
-				// If we couldn't determine the tier, check the metadata
-				if tier == "" && subscription.Metadata != nil {
-					if t, ok := subscription.Metadata["tier"]; ok {
-						tier = t
-					}
-				}
-
-				// If we still couldn't determine the tier, default to monthly
-				if tier == "" {
-					tier = "monthly"
-				}
-
-				// Update the user's subscription information
-				user.SubscriptionTier = tier
-				user.SubscriptionStatus = "active"
-				user.StripeSubscriptionID = subscription.ID
-
-				// Set subscription end date if available
-				if subscription.CurrentPeriodEnd > 0 {
-					endDate := time.Unix(subscription.CurrentPeriodEnd, 0)
-					user.SubscriptionEndDate = endDate
-				}
-
-				// Update the user in the database
-				if err := s.db.UpdateUser(nil, user); err != nil {
-					return err
-				}
 			}
 		}
 
@@ -329,10 +322,9 @@ func (s *service) HandleWebhook(payload []byte, signature string) error {
 		user.SubscriptionStatus = "active"
 		user.StripeSubscriptionID = subscription.ID
 
-		// Set subscription end date if available
+		// Set subscription end date based on the tier
 		if subscription.CurrentPeriodEnd > 0 {
-			endDate := time.Unix(subscription.CurrentPeriodEnd, 0)
-			user.SubscriptionEndDate = endDate
+			setSubscriptionEndDate(user, subscription.CurrentPeriodEnd, tier, event.Type)
 		}
 
 		// Update the user in the database
@@ -361,14 +353,40 @@ func (s *service) HandleWebhook(payload []byte, signature string) error {
 			return fmt.Errorf("user not found for Stripe customer ID: %s", subscription.Customer.ID)
 		}
 
+		// Check if this is a plan change/upgrade
+		isPlanChange := false
+		var newTier string
+
+		// Determine the subscription tier
+		if subscription.Items != nil && len(subscription.Items.Data) > 0 {
+			amount := subscription.Items.Data[0].Price.UnitAmount
+
+			// Map amount to tier
+			if amount == 500 {
+				newTier = "monthly"
+			} else if amount == 3000 {
+				newTier = "yearly"
+			}
+
+			// If the tier is changing, it's a plan change
+			if newTier != "" && newTier != user.SubscriptionTier {
+				isPlanChange = true
+				fmt.Printf("Plan change detected: %s to %s\n", user.SubscriptionTier, newTier)
+			}
+		}
+
 		// Update the user's subscription information
 		user.StripeSubscriptionID = subscription.ID
 		user.SubscriptionStatus = string(subscription.Status)
 
-		// Set subscription end date if available
-		if subscription.CurrentPeriodEnd > 0 {
-			endDate := time.Unix(subscription.CurrentPeriodEnd, 0)
-			user.SubscriptionEndDate = endDate
+		// If this is a plan change, update the tier
+		if isPlanChange && newTier != "" {
+			user.SubscriptionTier = newTier
+		}
+
+		// Special handling for upgrades - only process if it's a confirmed plan upgrade
+		if isPlanChange && subscription.CurrentPeriodEnd > 0 {
+			setSubscriptionEndDate(user, subscription.CurrentPeriodEnd, newTier, event.Type)
 		}
 
 		// Update the user in the database
@@ -531,4 +549,38 @@ func getProductIDForTier(tier string) (string, error) {
 	}
 
 	return productID, nil
+}
+
+// setSubscriptionEndDate sets the subscription end date for a user,
+// adding to the existing end date if one exists
+func setSubscriptionEndDate(user *database.User, endTimestamp int64, newTier string, eventType string) {
+	// Only process in checkout.session.completed events
+	if eventType != "checkout.session.completed" {
+		fmt.Printf("Skipping end date update for event type: %s\n", eventType)
+		return
+	}
+
+	// Always convert the Stripe timestamp to a time.Time
+	newEndDate := time.Unix(endTimestamp, 0)
+
+	// Simple rule: if there's an existing end date, add the new duration to it
+	if !user.SubscriptionEndDate.IsZero() {
+		// Calculate the duration of the new subscription from now
+		duration := newEndDate.Sub(time.Now())
+
+		// Add that duration to the existing end date
+		oldEndDate := user.SubscriptionEndDate
+		user.SubscriptionEndDate = user.SubscriptionEndDate.Add(duration)
+
+		fmt.Printf("Adding %s to existing end date %s, new end date: %s (from event: %s)\n",
+			duration.String(),
+			oldEndDate.Format(time.RFC3339),
+			user.SubscriptionEndDate.Format(time.RFC3339),
+			eventType)
+	} else {
+		// No existing end date, use the new one directly
+		user.SubscriptionEndDate = newEndDate
+		fmt.Printf("Setting new end date: %s for tier: %s (from event: %s)\n",
+			newEndDate.Format(time.RFC3339), newTier, eventType)
+	}
 }

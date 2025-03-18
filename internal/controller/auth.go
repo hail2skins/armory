@@ -187,6 +187,22 @@ func (a *AuthController) LoginHandler(c *gin.Context) {
 		return
 	}
 
+	// Check if the user's email is verified
+	if !user.Verified {
+		logger.Warn("Unverified user attempted login", map[string]interface{}{
+			"email": req.Email,
+		})
+
+		// Use our custom auth error
+		c.Error(customerrors.NewAuthError("Email not verified"))
+
+		// Also render the form with the error
+		authData := data.NewAuthData().WithTitle("Login").WithError("Please verify your email before logging in")
+		authData.Email = req.Email
+		a.RenderLogin(c, authData)
+		return
+	}
+
 	// Create user info for Go-Guardian
 	userInfo := auth.NewUserInfo(req.Email, strconv.FormatUint(uint64(user.ID), 10), nil, nil)
 
