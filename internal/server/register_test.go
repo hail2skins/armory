@@ -73,9 +73,10 @@ func TestUserRegistration(t *testing.T) {
 
 // TestRegistrationValidation tests validation of the registration form
 func TestRegistrationValidation(t *testing.T) {
-	// Create a test database
-	db := testutils.NewTestService()
-	defer db.Close()
+	// IMPORTANT: Use SharedTestService to avoid repeatedly seeding the database
+	// The shared database is seeded only once and reused across tests
+	db := testutils.SharedTestService()
+	defer db.Close() // This is a no-op for shared service
 
 	// Create a new server
 	server := &Server{

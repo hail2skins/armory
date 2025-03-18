@@ -52,9 +52,10 @@ func TestPasswordResetIntegration(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	// Setup test database
-	db := testutils.NewTestService()
-	defer db.Close()
+	// IMPORTANT: Use SharedTestService to avoid repeatedly seeding the database
+	// The shared database is seeded only once and reused across tests
+	db := testutils.SharedTestService()
+	defer db.Close() // This is a no-op for shared service
 
 	// Create test user
 	emailAddr := "passwordreset@test.com"
@@ -133,9 +134,10 @@ func TestPasswordResetIntegrationWithExpiredToken(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	// Setup test database
-	db := testutils.NewTestService()
-	defer db.Close()
+	// IMPORTANT: Use SharedTestService to avoid repeatedly seeding the database
+	// The shared database is seeded only once and reused across tests
+	db := testutils.SharedTestService()
+	defer db.Close() // This is a no-op for shared service
 
 	// Create test user
 	emailAddr := "expiredtoken@test.com"
@@ -270,9 +272,10 @@ func TestPasswordResetFullFlow(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	// Setup test database
-	db := testutils.NewTestService()
-	defer db.Close()
+	// IMPORTANT: Use SharedTestService to avoid repeatedly seeding the database
+	// The shared database is seeded only once and reused across tests
+	db := testutils.SharedTestService()
+	defer db.Close() // This is a no-op for shared service
 
 	// Create test user
 	emailAddr := "resetfull@example.com"
@@ -363,9 +366,10 @@ func TestPasswordResetDirectFromDB(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	// Setup test database
-	db := testutils.NewTestService()
-	defer db.Close()
+	// IMPORTANT: Use SharedTestService to avoid repeatedly seeding the database
+	// The shared database is seeded only once and reused across tests
+	db := testutils.SharedTestService()
+	defer db.Close() // This is a no-op for shared service
 
 	// Create test user
 	emailAddr := "resetdirect@example.com"

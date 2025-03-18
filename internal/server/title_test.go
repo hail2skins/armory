@@ -12,9 +12,11 @@ import (
 )
 
 func TestPageTitles(t *testing.T) {
-	// Create a test database
-	db := testutils.NewTestService()
-	defer db.Close()
+	// Create a new database instance for testing
+	// IMPORTANT: Use SharedTestService to avoid repeatedly seeding the database
+	// The shared database is seeded only once and reused across tests
+	db := testutils.SharedTestService()
+	defer db.Close() // This is a no-op for shared service
 
 	// Create a new server
 	s := &Server{

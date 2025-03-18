@@ -494,9 +494,10 @@ func TestAuthenticationFlow(t *testing.T) {
 }
 
 func TestLogoutRedirectsToHome(t *testing.T) {
-	// Create a test database
-	db := testutils.NewTestService()
-	defer db.Close()
+	// IMPORTANT: Use SharedTestService to avoid repeatedly seeding the database
+	// The shared database is seeded only once and reused across tests
+	db := testutils.SharedTestService()
+	defer db.Close() // This is a no-op for shared service
 
 	// Create a test user
 	ctx := context.Background()
@@ -599,9 +600,10 @@ func TestEmailVerification(t *testing.T) {
 }
 
 func TestRegisterUser(t *testing.T) {
-	// Create a test database
-	db := testutils.NewTestService()
-	defer db.Close()
+	// IMPORTANT: Use SharedTestService to avoid repeatedly seeding the database
+	// The shared database is seeded only once and reused across tests
+	db := testutils.SharedTestService()
+	defer db.Close() // This is a no-op for shared service
 
 	// Create a new auth controller
 	authController := NewAuthController(db)

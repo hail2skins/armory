@@ -794,9 +794,10 @@ func TestRealPaymentSuccessUpdatesUserAndPayment(t *testing.T) {
 	// Setup
 	gin.SetMode(gin.TestMode)
 
-	// Use the test database service from testutils
-	testDB := testutils.NewTestService()
-	defer testDB.Close()
+	// IMPORTANT: Use SharedTestService to avoid repeatedly seeding the database
+	// The shared database is seeded only once and reused across tests
+	testDB := testutils.SharedTestService()
+	defer testDB.Close() // This is a no-op for shared service
 
 	// Create a test user
 	testCtx := context.Background()
@@ -979,7 +980,7 @@ func TestPaymentSuccessHandlerUpdatesDatabase(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	// Use the test database service from testutils
-	testDB := testutils.NewTestService()
+	testDB := testutils.SharedTestService()
 	defer testDB.Close()
 
 	// Create a test user
@@ -1079,7 +1080,7 @@ func TestPaymentSuccessPageRedirectsToOwner(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	// Create a test database service
-	testDB := testutils.NewTestService()
+	testDB := testutils.SharedTestService()
 	defer testDB.Close()
 
 	// Create payment controller with the test DB

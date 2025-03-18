@@ -89,6 +89,30 @@ func NewTestService() database.Service {
 	}
 }
 
+// Global shared database instance for testing
+var (
+	sharedDBInstance    database.Service
+	sharedDBInitialized bool
+)
+
+// SharedTestService returns a singleton database service for testing
+//
+// IMPORTANT: Use this function instead of NewTestService() when possible to avoid
+// repeatedly seeding the database in each test file. The shared database is seeded only
+// once and reused across tests, which significantly improves test performance.
+//
+// Example usage:
+//
+//	db := testutils.SharedTestService()
+//	defer db.Close() // Close is a no-op for the shared service, so it's safe to call
+func SharedTestService() database.Service {
+	if !sharedDBInitialized {
+		sharedDBInstance = NewTestService()
+		sharedDBInitialized = true
+	}
+	return sharedDBInstance
+}
+
 // TestService is a test implementation of the database.Service interface
 type TestService struct {
 	db *gorm.DB
@@ -104,10 +128,18 @@ func (s *TestService) Health() map[string]string {
 
 // Close closes the database connection
 func (s *TestService) Close() error {
+	// If this is the shared instance, don't actually close it
+	if sharedDBInitialized && sharedDBInstance == s {
+		return nil
+	}
+
+	// Get the database connection
 	sqlDB, err := s.db.DB()
 	if err != nil {
 		return err
 	}
+
+	// Close the database connection
 	return sqlDB.Close()
 }
 

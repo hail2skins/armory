@@ -170,8 +170,10 @@ func TestOwnerProfileUpdateRoute(t *testing.T) {
 
 // NewTestServer creates a new test server with mocked dependencies
 func NewTestServer() *Server {
-	// Create a test database service
-	db := testutils.NewTestService()
+	// IMPORTANT: Use SharedTestService to avoid repeatedly seeding the database
+	// The shared database is seeded only once and reused across tests
+	db := testutils.SharedTestService()
+	defer db.Close() // This is a no-op for shared service
 
 	// Create a new server with the test database
 	return &Server{
