@@ -233,7 +233,7 @@ func (rl *RateLimiter) RateLimit(limit int, duration time.Duration) gin.HandlerF
 		// Check if limit exceeded
 		if len(valid) >= limit {
 			errorMessage := fmt.Sprintf("Rate limit exceeded. Try again in %v", duration)
-			err := errors.NewValidationError(errorMessage)
+			err := errors.NewRateLimitError(errorMessage)
 
 			// Log the rate limit error with detailed information
 			logger.Error("Rate limit exceeded", err, map[string]interface{}{
@@ -248,46 +248,31 @@ func (rl *RateLimiter) RateLimit(limit int, duration time.Duration) gin.HandlerF
 			// First check if this is a user-facing route
 			isUserRoute := isUserFacingRoute(path)
 
-			logger.Info("Rate limit check for user-facing route", map[string]interface{}{
-				"path":           path,
-				"is_user_facing": isUserRoute,
-			})
-
 			// For user-facing routes, use a flash message and redirect
 			if isUserRoute {
 				// Try to set a flash message if the function is available
 				if setFlash, exists := getFlashFunction(c); exists {
-					logger.Info("Setting flash message for rate-limited user", map[string]interface{}{
-						"path": path,
-					})
-
 					setFlash(errorMessage)
-
-					// Redirect to the home page instead of the original page to avoid redirect loops
 					c.Redirect(http.StatusSeeOther, "/")
-					c.Abort()    // Stop further processing
+					c.Abort()
 					c.Error(err) // Record the error
 					return
-				} else {
-					logger.Warn("Flash function not available for user-facing route", map[string]interface{}{
-						"path": path,
-					})
-
-					// If no flash function, use a plain HTML message instead of JSON
-					c.Header("Content-Type", "text/html; charset=utf-8")
-					c.String(http.StatusTooManyRequests, "<html><body><h1>Rate Limit Exceeded</h1><p>"+errorMessage+"</p><p><a href=\"/\">Return to home page</a></p></body></html>")
-					c.Abort()
-					c.Error(err)
-					return
 				}
-			} else {
-				// For API routes, return a JSON response
-				c.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{
-					"error": errorMessage,
-				})
+
+				// If no flash function, use a plain HTML message
+				c.Header("Content-Type", "text/html; charset=utf-8")
+				c.String(http.StatusTooManyRequests, "<html><body><h1>Rate Limit Exceeded</h1><p>%s</p><p><a href=\"/\">Return to home page</a></p></body></html>", errorMessage)
+				c.Abort()
 				c.Error(err)
 				return
 			}
+
+			// For API routes, return a JSON response
+			c.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{
+				"error": errorMessage,
+			})
+			c.Error(err)
+			return
 		}
 
 		// Add current request

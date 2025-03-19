@@ -89,7 +89,7 @@ func (s *Server) RegisterMiddleware(r *gin.Engine, authController *controller.Au
 		// Set up a function to set flash messages
 		c.Set("setFlash", func(message string) {
 			// Set the flash message in a cookie
-			c.SetCookie("flash", message, 3600, "/", "", false, false)
+			c.SetCookie("flash", message, 10, "/", "", false, false)
 		})
 		c.Next()
 	})

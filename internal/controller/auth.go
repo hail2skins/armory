@@ -228,7 +228,7 @@ func (a *AuthController) LoginHandler(c *gin.Context) {
 		setFlash.(func(string))("Welcome back, " + user.Email)
 	} else {
 		// Fallback to setting the cookie directly if middleware is not available
-		c.SetCookie("flash", "Welcome back, "+user.Email, 3600, "/", "", false, false)
+		c.SetCookie("flash", "Welcome back, "+user.Email, 10, "/", "", false, false)
 	}
 
 	// Redirect to owner page
@@ -296,7 +296,7 @@ func (a *AuthController) RegisterHandler(c *gin.Context) {
 		}
 
 		// Set success flash message
-		c.SetCookie("flash", "Your previous account has been restored with all your data. Please log in.", 3600, "/", "", false, false)
+		c.SetCookie("flash", "Your previous account has been restored with all your data. Please log in.", 10, "/", "", false, false)
 
 		// Redirect to login page
 		c.Redirect(http.StatusSeeOther, "/login")
@@ -332,9 +332,21 @@ func (a *AuthController) RegisterHandler(c *gin.Context) {
 	if a.emailService != nil {
 		err := a.emailService.SendVerificationEmail(user.Email, token)
 		if err != nil {
-			// Log the error but continue
-			// TODO: Add proper logging
+			// Log the error but continue with registration
+			logger.Error("Failed to send verification email during registration", err, map[string]interface{}{
+				"email": user.Email,
+				"path":  c.Request.URL.Path,
+			})
+		} else {
+			// Log successful email send
+			logger.Info("Verification email sent during registration", map[string]interface{}{
+				"email": user.Email,
+			})
 		}
+	} else {
+		logger.Warn("Email service not available during registration", map[string]interface{}{
+			"email": user.Email,
+		})
 	}
 
 	// Redirect to verification sent page or home page based on test environment
@@ -347,6 +359,13 @@ func (a *AuthController) RegisterHandler(c *gin.Context) {
 
 // LogoutHandler handles user logout
 func (a *AuthController) LogoutHandler(c *gin.Context) {
+	// Set a friendly logout message
+	if setFlash, exists := c.Get("setFlash"); exists {
+		if flashFunc, ok := setFlash.(func(string)); ok {
+			flashFunc("Come back soon!")
+		}
+	}
+
 	// Clear the session cookie
 	http.SetCookie(c.Writer, &http.Cookie{
 		Name:     "auth-session",
@@ -372,7 +391,7 @@ func (a *AuthController) AuthMiddleware() gin.HandlerFunc {
 				}
 			} else {
 				// Fallback to cookie if setFlash function is not available
-				c.SetCookie("flash", "You must log in to access that resource", 3600, "/", "", false, false)
+				c.SetCookie("flash", "You must log in to access that resource", 10, "/", "", false, false)
 			}
 
 			// Redirect to home page
@@ -690,13 +709,22 @@ func (a *AuthController) ResendVerificationHandler(c *gin.Context) {
 	if a.emailService != nil {
 		err := a.emailService.SendVerificationEmail(user.Email, token)
 		if err != nil {
-			// Log the error but continue
-			// TODO: Add proper logging
+			// Log the error with detailed information
+			logger.Error("Failed to send verification email", err, map[string]interface{}{
+				"email": user.Email,
+				"path":  c.Request.URL.Path,
+			})
+
 			authData := data.NewAuthData().WithTitle("Verification Email Sent").WithError("Failed to send verification email")
 			authData.Email = email
 			a.RenderVerificationSent(c, authData)
 			return
 		}
+
+		// Log successful email send
+		logger.Info("Verification email sent", map[string]interface{}{
+			"email": user.Email,
+		})
 	}
 
 	// Show success message

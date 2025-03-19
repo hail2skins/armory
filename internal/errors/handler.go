@@ -40,6 +40,11 @@ func HandleError(c *gin.Context, err error) {
 			Code:    http.StatusBadRequest,
 			Message: e.Error(),
 		}
+	case *RateLimitError:
+		response = ErrorResponse{
+			Code:    http.StatusTooManyRequests,
+			Message: e.Error(),
+		}
 	default:
 		response = ErrorResponse{
 			Code:    http.StatusInternalServerError,

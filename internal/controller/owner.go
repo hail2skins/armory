@@ -1973,7 +1973,7 @@ func (o *OwnerController) UpdateProfile(c *gin.Context) {
 				setFlash.(func(string))("Your profile has been updated.")
 			} else {
 				// Fallback to cookie if context function not available
-				c.SetCookie("flash", "Your profile has been updated.", 3600, "/", "", false, true)
+				c.SetCookie("flash", "Your profile has been updated.", 10, "/", "", false, true)
 			}
 
 			// Redirect to profile page for non-email changes
@@ -2092,7 +2092,7 @@ func (o *OwnerController) UpdateProfile(c *gin.Context) {
 			setFlash.(func(string))("Your profile has been updated.")
 		} else {
 			// Fallback to cookie if context function not available
-			c.SetCookie("flash", "Your profile has been updated.", 3600, "/", "", false, true)
+			c.SetCookie("flash", "Your profile has been updated.", 10, "/", "", false, true)
 		}
 
 		// Redirect to profile page for non-email changes
@@ -2393,7 +2393,7 @@ func (o *OwnerController) DeleteAccountHandler(c *gin.Context) {
 		})
 
 		// Set flash message
-		c.SetCookie("flash", "Your account has been deleted. Please come back any time!", 3600, "/", "", false, false)
+		c.SetCookie("flash", "Your account has been deleted. Please come back any time!", 10, "/", "", false, false)
 
 		// Redirect to home page
 		c.Redirect(http.StatusSeeOther, "/")
@@ -2446,7 +2446,7 @@ func (o *OwnerController) DeleteAccountHandler(c *gin.Context) {
 	})
 
 	// Set flash message
-	c.SetCookie("flash", "Your account has been deleted. Please come back any time!", 3600, "/", "", false, false)
+	c.SetCookie("flash", "Your account has been deleted. Please come back any time!", 10, "/", "", false, false)
 
 	// Redirect to home page
 	c.Redirect(http.StatusSeeOther, "/")

@@ -528,7 +528,7 @@ func TestGuestSubscriptionRedirectToLogin(t *testing.T) {
 		c.Set("setFlash", func(message string) {
 			flashMessage = message
 			// Also set the cookie to simulate the real middleware
-			c.SetCookie("flash", message, 3600, "/", "", false, false)
+			c.SetCookie("flash", message, 10, "/", "", false, false)
 		})
 		c.Set("authController", authController)
 		c.Next()
@@ -596,7 +596,7 @@ func TestGuestRedirectToLoginFromPricingPage(t *testing.T) {
 		c.Set("setFlash", func(message string) {
 			flashMessage = message
 			// Also set the cookie to simulate the real middleware
-			c.SetCookie("flash", message, 3600, "/", "", false, false)
+			c.SetCookie("flash", message, 10, "/", "", false, false)
 		})
 		c.Set("authController", authController)
 		c.Next()

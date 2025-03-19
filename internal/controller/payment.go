@@ -225,7 +225,7 @@ func (p *PaymentController) HandlePaymentSuccess(c *gin.Context) {
 // HandlePaymentCancellation handles the cancellation callback from Stripe
 func (p *PaymentController) HandlePaymentCancellation(c *gin.Context) {
 	// Set a flash message
-	c.SetCookie("flash", "Payment cancelled", 3600, "/", "", false, true)
+	c.SetCookie("flash", "Payment cancelled", 10, "/", "", false, true)
 
 	// Redirect to the pricing page
 	c.Redirect(http.StatusSeeOther, "/pricing")
@@ -412,7 +412,7 @@ func (p *PaymentController) CancelSubscription(c *gin.Context) {
 	}
 
 	// Set a flash message
-	c.SetCookie("flash", expiresMessage, 3600, "/", "", false, true)
+	c.SetCookie("flash", expiresMessage, 10, "/", "", false, true)
 
 	// Redirect to the owner dashboard
 	c.Redirect(http.StatusSeeOther, "/owner")

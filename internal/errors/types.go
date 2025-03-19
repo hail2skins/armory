@@ -17,17 +17,24 @@ type PaymentError struct {
 	code    string
 }
 
+// RateLimitError represents a rate limit exceeded error
+type RateLimitError struct {
+	message string
+}
+
 // Implement error interface for all types
 func (e *ValidationError) Error() string { return e.message }
 func (e *AuthError) Error() string       { return e.message }
 func (e *NotFoundError) Error() string   { return e.message }
 func (e *PaymentError) Error() string    { return e.message }
+func (e *RateLimitError) Error() string  { return e.message }
 
 // Add ErrorType methods for metrics tracking
 func (e *ValidationError) ErrorType() string { return "validation_error" }
 func (e *AuthError) ErrorType() string       { return "auth_error" }
 func (e *NotFoundError) ErrorType() string   { return "not_found_error" }
 func (e *PaymentError) ErrorType() string    { return "payment_error" }
+func (e *RateLimitError) ErrorType() string  { return "rate_limit_error" }
 
 // Constructor functions
 func NewValidationError(msg string) *ValidationError {
@@ -44,4 +51,8 @@ func NewNotFoundError(msg string) *NotFoundError {
 
 func NewPaymentError(msg, code string) *PaymentError {
 	return &PaymentError{message: msg, code: code}
+}
+
+func NewRateLimitError(message string) *RateLimitError {
+	return &RateLimitError{message: message}
 }

@@ -101,7 +101,7 @@ func setFlashMessage(c *gin.Context, message string) {
 		}
 	} else {
 		// Fallback to cookie if setFlash function is not available
-		c.SetCookie("flash", message, 3600, "/", "", false, false)
+		c.SetCookie("flash", message, 10, "/", "", false, false)
 	}
 }
 
