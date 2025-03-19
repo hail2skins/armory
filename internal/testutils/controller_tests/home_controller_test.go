@@ -10,28 +10,29 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-// MockEmailServiceWithContact is a mock implementation of the email.EmailService interface
+// MockEmailServiceWithContact is a mock implementation of email.EmailService
 type MockEmailServiceWithContact struct {
 	mock.Mock
 }
 
-func (m *MockEmailServiceWithContact) SendVerificationEmail(email, token string) error {
-	args := m.Called(email, token)
+func (m *MockEmailServiceWithContact) SendVerificationEmail(email, token, baseURL string) error {
+	args := m.Called(email, token, baseURL)
 	return args.Error(0)
 }
 
-func (m *MockEmailServiceWithContact) SendPasswordResetEmail(email, token string) error {
-	args := m.Called(email, token)
+func (m *MockEmailServiceWithContact) SendEmailChangeVerification(email, token, baseURL string) error {
+	args := m.Called(email, token, baseURL)
+	return args.Error(0)
+}
+
+func (m *MockEmailServiceWithContact) SendPasswordResetEmail(email, token, baseURL string) error {
+	args := m.Called(email, token, baseURL)
 	return args.Error(0)
 }
 
 func (m *MockEmailServiceWithContact) SendContactEmail(name, email, subject, message string) error {
 	args := m.Called(name, email, subject, message)
 	return args.Error(0)
-}
-
-func (m *MockEmailServiceWithContact) SendEmailChangeVerification(email, token string) error {
-	return nil
 }
 
 // HomeControllerTestSuite is a test suite for the HomeController

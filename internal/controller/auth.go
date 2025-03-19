@@ -330,7 +330,14 @@ func (a *AuthController) RegisterHandler(c *gin.Context) {
 
 	// Send verification email
 	if a.emailService != nil {
-		err := a.emailService.SendVerificationEmail(user.Email, token)
+		// Get the scheme and host from the request
+		scheme := "http"
+		if c.Request.TLS != nil || c.Request.Header.Get("X-Forwarded-Proto") == "https" {
+			scheme = "https"
+		}
+		baseURL := fmt.Sprintf("%s://%s", scheme, c.Request.Host)
+
+		err := a.emailService.SendVerificationEmail(user.Email, token, baseURL)
 		if err != nil {
 			// Log the error but continue with registration
 			logger.Error("Failed to send verification email during registration", err, map[string]interface{}{
@@ -532,22 +539,20 @@ func (a *AuthController) ForgotPasswordHandler(c *gin.Context) {
 
 	// Send the recovery email
 	if a.emailService != nil {
-		err := a.emailService.SendPasswordResetEmail(user.Email, user.RecoveryToken)
+		// Get the scheme and host from the request
+		scheme := "http"
+		if c.Request.TLS != nil || c.Request.Header.Get("X-Forwarded-Proto") == "https" {
+			scheme = "https"
+		}
+		baseURL := fmt.Sprintf("%s://%s", scheme, c.Request.Host)
+
+		err := a.emailService.SendPasswordResetEmail(user.Email, user.RecoveryToken, baseURL)
 		if err != nil {
 			// Log the error but continue
 			logger.Error("Failed to send password reset email", err, map[string]interface{}{
 				"email": user.Email,
 			})
-
-			// For troubleshooting
-			fmt.Printf("DEBUG: Failed to send password reset email: %v\n", err)
-		} else {
-			// For troubleshooting
-			fmt.Printf("DEBUG: Successfully sent password reset email to %s with token %s\n", user.Email, user.RecoveryToken)
 		}
-	} else {
-		// For troubleshooting
-		fmt.Printf("DEBUG: Email service is nil\n")
 	}
 
 	// In test mode, redirect to a specific URL
@@ -707,7 +712,14 @@ func (a *AuthController) ResendVerificationHandler(c *gin.Context) {
 
 	// Send verification email
 	if a.emailService != nil {
-		err := a.emailService.SendVerificationEmail(user.Email, token)
+		// Get the scheme and host from the request
+		scheme := "http"
+		if c.Request.TLS != nil || c.Request.Header.Get("X-Forwarded-Proto") == "https" {
+			scheme = "https"
+		}
+		baseURL := fmt.Sprintf("%s://%s", scheme, c.Request.Host)
+
+		err := a.emailService.SendVerificationEmail(user.Email, token, baseURL)
 		if err != nil {
 			// Log the error with detailed information
 			logger.Error("Failed to send verification email", err, map[string]interface{}{

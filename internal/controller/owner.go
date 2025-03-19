@@ -1945,7 +1945,14 @@ func (o *OwnerController) UpdateProfile(c *gin.Context) {
 			emailService, exists := c.Get("emailService")
 			if exists {
 				if emailSvc, ok := emailService.(email.EmailService); ok {
-					if err := emailSvc.SendEmailChangeVerification(newEmail, dbUser.VerificationToken); err != nil {
+					// Get the scheme and host from the request
+					scheme := "http"
+					if c.Request.TLS != nil || c.Request.Header.Get("X-Forwarded-Proto") == "https" {
+						scheme = "https"
+					}
+					baseURL := fmt.Sprintf("%s://%s", scheme, c.Request.Host)
+
+					if err := emailSvc.SendEmailChangeVerification(newEmail, dbUser.VerificationToken, baseURL); err != nil {
 						// Log the error but don't fail the update
 						log.Printf("Failed to send verification email: %v", err)
 					}
@@ -2064,7 +2071,14 @@ func (o *OwnerController) UpdateProfile(c *gin.Context) {
 		emailService, exists := c.Get("emailService")
 		if exists {
 			if emailSvc, ok := emailService.(email.EmailService); ok {
-				if err := emailSvc.SendEmailChangeVerification(newEmail, dbUser.VerificationToken); err != nil {
+				// Get the scheme and host from the request
+				scheme := "http"
+				if c.Request.TLS != nil || c.Request.Header.Get("X-Forwarded-Proto") == "https" {
+					scheme = "https"
+				}
+				baseURL := fmt.Sprintf("%s://%s", scheme, c.Request.Host)
+
+				if err := emailSvc.SendEmailChangeVerification(newEmail, dbUser.VerificationToken, baseURL); err != nil {
 					// Log the error but don't fail the update
 					log.Printf("Failed to send verification email: %v", err)
 				}

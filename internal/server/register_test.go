@@ -10,12 +10,20 @@ import (
 
 	"github.com/hail2skins/armory/internal/testutils"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
 func TestUserRegistration(t *testing.T) {
 	// Setup test router with mock database and email service
 	router, _, mockEmail := setupTestRouter(t)
+
+	// Set up mock expectations for email service BEFORE making the request
+	mockEmail.On("SendVerificationEmail",
+		"test@example.com",
+		mock.AnythingOfType("string"), // Token will be generated dynamically
+		mock.AnythingOfType("string"), // baseURL will be constructed from request
+	).Return(nil)
 
 	// Create registration form data
 	form := url.Values{}
@@ -39,8 +47,13 @@ func TestUserRegistration(t *testing.T) {
 	assert.Equal(t, "/verification-sent", resp.Header().Get("Location"))
 
 	// Verify that the verification email was sent
-	assert.True(t, mockEmail.SendVerificationEmailCalled, "SendVerificationEmail should have been called")
-	assert.Equal(t, "test@example.com", mockEmail.SendVerificationEmailEmail, "SendVerificationEmail should have been called with the correct email")
+	assert.True(t, mockEmail.VerificationEmailSent, "SendVerificationEmail should have been called")
+	assert.Equal(t, "test@example.com", mockEmail.LastVerificationEmail, "SendVerificationEmail should have been called with the correct email")
+	assert.NotEmpty(t, mockEmail.LastVerificationToken, "SendVerificationEmail should have been called with a token")
+	assert.NotEmpty(t, mockEmail.LastBaseURL, "SendVerificationEmail should have been called with a baseURL")
+
+	// Verify all mock expectations were met
+	mockEmail.AssertExpectations(t)
 
 	// Now try to login with the new user
 	loginForm := url.Values{}

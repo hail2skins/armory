@@ -21,71 +21,6 @@ import (
 	"gorm.io/gorm"
 )
 
-// MockEmailService is a mock implementation of the EmailService interface for testing
-type MockEmailService struct {
-	mock.Mock
-
-	// Track calls for verification
-	SendVerificationEmailCalled bool
-	SendVerificationEmailEmail  string
-	SendVerificationEmailToken  string
-	SendVerificationEmailError  error
-
-	SendPasswordResetEmailCalled bool
-	SendPasswordResetEmailEmail  string
-	SendPasswordResetEmailToken  string
-	SendPasswordResetEmailError  error
-
-	IsConfiguredCalled bool
-	IsConfiguredResult bool
-
-	SendContactEmailCalled  bool
-	SendContactEmailName    string
-	SendContactEmailEmail   string
-	SendContactEmailSubject string
-	SendContactEmailMessage string
-	SendContactEmailError   error
-
-	SendEmailChangeVerificationCalled bool
-	SendEmailChangeVerificationEmail  string
-	SendEmailChangeVerificationToken  string
-	SendEmailChangeVerificationError  error
-}
-
-// SendVerificationEmail is a mock implementation that records the call
-func (m *MockEmailService) SendVerificationEmail(email, token string) error {
-	m.SendVerificationEmailCalled = true
-	m.SendVerificationEmailEmail = email
-	m.SendVerificationEmailToken = token
-	return m.SendVerificationEmailError
-}
-
-// SendPasswordResetEmail is a mock implementation that records the call
-func (m *MockEmailService) SendPasswordResetEmail(email, token string) error {
-	m.SendPasswordResetEmailCalled = true
-	m.SendPasswordResetEmailEmail = email
-	m.SendPasswordResetEmailToken = token
-	return m.SendPasswordResetEmailError
-}
-
-// SendContactEmail is a mock implementation that records the call
-func (m *MockEmailService) SendContactEmail(name, email, subject, message string) error {
-	m.SendContactEmailCalled = true
-	m.SendContactEmailName = name
-	m.SendContactEmailEmail = email
-	m.SendContactEmailSubject = subject
-	m.SendContactEmailMessage = message
-	return m.SendContactEmailError
-}
-
-// SendEmailChangeVerification is a mock implementation that records the call
-func (m *MockEmailService) SendEmailChangeVerification(email, token string) error {
-	m.SendEmailChangeVerificationCalled = true
-	m.SendEmailChangeVerificationEmail = email
-	m.SendEmailChangeVerificationToken = token
-	return m.SendEmailChangeVerificationError
-}
-
 // MockDBWithContext is a mock implementation of the database.Service interface with context
 type MockDBWithContext struct {
 	mock.Mock
@@ -342,7 +277,7 @@ func (m *MockDBWithContext) FindRecentUsers(offset, limit int, sortBy, sortOrder
 }
 
 // Setup TestUserRegistration mock responses
-func setupTestRouter(t *testing.T) (*gin.Engine, *MockDBWithContext, *MockEmailService) {
+func setupTestRouter(t *testing.T) (*gin.Engine, *MockDBWithContext, *mocks.MockEmailService) {
 	// Create Gin router
 	router := gin.Default()
 
@@ -385,9 +320,7 @@ func setupTestRouter(t *testing.T) (*gin.Engine, *MockDBWithContext, *MockEmailS
 	mockDB.On("GetUserByEmail", mock.Anything, mock.Anything).Return(nil, nil)
 
 	// Create a mock email service
-	mockEmail := &MockEmailService{
-		IsConfiguredResult: true,
-	}
+	mockEmail := new(mocks.MockEmailService)
 
 	// Setup mock responses
 	testUser2 := &database.User{

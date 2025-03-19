@@ -89,7 +89,14 @@ func (a *TestAuthController) ForgotPasswordHandler(c *gin.Context) {
 
 	// Send password reset email
 	if a.EmailService != nil {
-		err = a.EmailService.SendPasswordResetEmail(user.Email, user.RecoveryToken)
+		// Get the scheme and host from the request
+		scheme := "http"
+		if c.Request.TLS != nil || c.Request.Header.Get("X-Forwarded-Proto") == "https" {
+			scheme = "https"
+		}
+		baseURL := fmt.Sprintf("%s://%s", scheme, c.Request.Host)
+
+		err = a.EmailService.SendPasswordResetEmail(user.Email, user.RecoveryToken, baseURL)
 		if err != nil {
 			authData := data.NewAuthData().WithTitle("Reset Password").WithError("Failed to send password reset email")
 			if a.RenderForgotPassword != nil {
