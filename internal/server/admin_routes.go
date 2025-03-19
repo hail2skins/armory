@@ -4,9 +4,11 @@ import (
 	"path/filepath"
 
 	"github.com/gin-gonic/gin"
+	"github.com/hail2skins/armory/cmd/web/views/data"
 	"github.com/hail2skins/armory/internal/controller"
 	"github.com/hail2skins/armory/internal/logger"
 	"github.com/hail2skins/armory/internal/middleware"
+	"github.com/shaj13/go-guardian/v2/auth"
 )
 
 // RegisterAdminRoutes registers all admin routes
@@ -16,17 +18,20 @@ func (s *Server) RegisterAdminRoutes(r *gin.Engine, authController *controller.A
 	adminCaliberController := controller.NewAdminCaliberController(s.db)
 	adminWeaponTypeController := controller.NewAdminWeaponTypeController(s.db)
 
-	// Get config directory for Casbin
-	configDir := filepath.Join("configs", "casbin")
-
-	// Create Casbin auth middleware
-	casbinAuth, err := middleware.NewCasbinAuth(
-		filepath.Join(configDir, "rbac_model.conf"),
-		filepath.Join(configDir, "rbac_policy.csv"),
-	)
-	if err != nil {
-		// Log and continue without Casbin protection - will use existing auth
-		logger.Error("Failed to initialize Casbin", err, nil)
+	// Use the shared Casbin auth instance from the server
+	casbinAuth := s.casbinAuth
+	if casbinAuth == nil {
+		// If the shared instance is not available, create a new one
+		configDir := filepath.Join("configs", "casbin")
+		var err error
+		casbinAuth, err = middleware.NewCasbinAuth(
+			filepath.Join(configDir, "rbac_model.conf"),
+			filepath.Join(configDir, "rbac_policy.csv"),
+		)
+		if err != nil {
+			// Log and continue without Casbin protection - will use existing auth
+			logger.Error("Failed to initialize Casbin", err, nil)
+		}
 	}
 
 	// Create admin route group with authentication middleware
@@ -34,6 +39,51 @@ func (s *Server) RegisterAdminRoutes(r *gin.Engine, authController *controller.A
 	{
 		// Apply the authentication middleware to ensure user is logged in
 		adminGroup.Use(authController.AuthMiddleware())
+
+		// Add middleware to ensure roles are set in the context
+		adminGroup.Use(func(c *gin.Context) {
+			// Get authData from context
+			authDataInterface, exists := c.Get("authData")
+			if !exists {
+				c.Next()
+				return
+			}
+
+			// Get the auth info for current user
+			userInfo, exists := c.Get("auth_info")
+			if !exists {
+				c.Next()
+				return
+			}
+
+			info, ok := userInfo.(auth.Info)
+			if !ok {
+				c.Next()
+				return
+			}
+
+			// Update authData with roles
+			authData, ok := authDataInterface.(data.AuthData)
+			if ok && casbinAuth != nil {
+				roles := casbinAuth.GetUserRoles(info.GetUserName())
+				isAdmin := false
+				for _, role := range roles {
+					if role == "admin" {
+						isAdmin = true
+						break
+					}
+				}
+
+				// Update authData
+				authData.Roles = roles
+				authData.IsCasbinAdmin = isAdmin
+
+				// Put back in context
+				c.Set("authData", authData)
+			}
+
+			c.Next()
+		})
 
 		// If Casbin auth is available, also apply role-based access control for admin
 		if casbinAuth != nil {

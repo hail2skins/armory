@@ -7,14 +7,19 @@ type AuthData struct {
 	Success       string
 	Title         string
 	SiteName      string
-	Token         string // For verification and reset tokens
+	Token         string   // For verification and reset tokens
+	Roles         []string // User roles from Casbin
+	IsCasbinAdmin bool     // Quick check if user is an admin (renamed from IsAdmin)
+	AlwaysTrue    bool     // Test property that is always true
 }
 
 // NewAuthData creates a new AuthData with default values
 func NewAuthData() AuthData {
 	return AuthData{
-		Title:    "",
-		SiteName: "The Virtual Armory",
+		Title:      "",
+		SiteName:   "The Virtual Armory",
+		Roles:      []string{},
+		AlwaysTrue: true, // Set this to always be true
 	}
 }
 
@@ -46,4 +51,29 @@ func (a AuthData) WithEmail(email string) AuthData {
 func (a AuthData) WithToken(token string) AuthData {
 	a.Token = token
 	return a
+}
+
+// WithRoles returns a copy of the AuthData with user roles
+func (a AuthData) WithRoles(roles []string) AuthData {
+	a.Roles = roles
+
+	// Set IsCasbinAdmin flag for quick access
+	for _, role := range roles {
+		if role == "admin" {
+			a.IsCasbinAdmin = true
+			break
+		}
+	}
+
+	return a
+}
+
+// HasRole checks if the user has a specific role
+func (a AuthData) HasRole(role string) bool {
+	for _, r := range a.Roles {
+		if r == role {
+			return true
+		}
+	}
+	return false
 }

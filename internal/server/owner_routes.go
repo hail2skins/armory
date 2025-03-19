@@ -24,10 +24,9 @@ func RegisterOwnerRoutes(router *gin.Engine, db database.Service, authController
 
 	// Owner routes (require authentication)
 	ownerGroup := router.Group("/owner")
-	// Set the auth controller in the context for all owner routes
+	// Set email service in the context for all owner routes
 	ownerGroup.Use(func(c *gin.Context) {
-		c.Set("authController", authController)
-		// Add email service to context
+		// Add email service to context (but don't override auth controller)
 		c.Set("emailService", emailService)
 		c.Next()
 	})

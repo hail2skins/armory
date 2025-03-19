@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/base64"
+	"fmt"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -104,6 +105,14 @@ func (o *OwnerController) LandingPage(c *gin.Context) {
 				subscriptionEndsAt,
 			)
 
+		// Get authData from context to preserve roles
+		if authDataInterface, exists := c.Get("authData"); exists {
+			if authData, ok := authDataInterface.(data.AuthData); ok {
+				// Use the auth data that already has roles, maintaining our title and other changes
+				ownerData.Auth = authData.WithTitle("Owner Dashboard")
+			}
+		}
+
 		// If the user has more guns than shown, add a message
 		if totalGuns > 2 && dbUser.SubscriptionTier == "free" {
 			ownerData.WithError("Please subscribe to see the rest of your collection")
@@ -112,6 +121,7 @@ func (o *OwnerController) LandingPage(c *gin.Context) {
 		// Check for flash message from cookie
 		if flashCookie, err := c.Cookie("flash"); err == nil && flashCookie != "" {
 			// Add flash message to success messages
+
 			ownerData.WithSuccess(flashCookie)
 			// Clear the flash cookie
 			c.SetCookie("flash", "", -1, "/", "", false, false)
@@ -176,6 +186,14 @@ func (o *OwnerController) LandingPage(c *gin.Context) {
 			dbUser.SubscriptionTier,
 			subscriptionEndsAt,
 		)
+
+	// Get authData from context to preserve roles
+	if authDataInterface, exists := c.Get("authData"); exists {
+		if authData, ok := authDataInterface.(data.AuthData); ok {
+			// Use the auth data that already has roles, maintaining our title and other changes
+			ownerData.Auth = authData.WithTitle("Owner Dashboard")
+		}
+	}
 
 	// If the user has more guns than shown, add a message
 	if totalGuns > 2 && dbUser.SubscriptionTier == "free" {
@@ -254,6 +272,14 @@ func (o *OwnerController) New(c *gin.Context) {
 			WithCalibers(calibers).
 			WithManufacturers(manufacturers)
 
+		// Get authData from context to preserve roles
+		if authDataInterface, exists := c.Get("authData"); exists {
+			if authData, ok := authDataInterface.(data.AuthData); ok {
+				// Use the auth data that already has roles, maintaining our title and other changes
+				ownerData.Auth = authData.WithTitle("Add New Firearm")
+			}
+		}
+
 		// Check for flash message from cookie
 		if flashCookie, err := c.Cookie("flash"); err == nil && flashCookie != "" {
 			// Add flash message to success messages
@@ -309,6 +335,14 @@ func (o *OwnerController) New(c *gin.Context) {
 		WithWeaponTypes(weaponTypes).
 		WithCalibers(calibers).
 		WithManufacturers(manufacturers)
+
+	// Get authData from context to preserve roles
+	if authDataInterface, exists := c.Get("authData"); exists {
+		if authData, ok := authDataInterface.(data.AuthData); ok {
+			// Use the auth data that already has roles, maintaining our title and other changes
+			ownerData.Auth = authData.WithTitle("Add New Firearm")
+		}
+	}
 
 	// Check for flash message from cookie
 	if flashCookie, err := c.Cookie("flash"); err == nil && flashCookie != "" {
@@ -696,7 +730,7 @@ func (o *OwnerController) Show(c *gin.Context) {
 
 		// Create owner data
 		ownerData := data.NewOwnerData().
-			WithTitle("Firearm Details").
+			WithTitle(fmt.Sprintf("Gun: %s", gun.Name)).
 			WithAuthenticated(authenticated).
 			WithUser(dbUser).
 			WithGun(&gun).
@@ -705,6 +739,14 @@ func (o *OwnerController) Show(c *gin.Context) {
 				dbUser.SubscriptionTier,
 				subscriptionEndsAt,
 			)
+
+		// Get authData from context to preserve roles
+		if authDataInterface, exists := c.Get("authData"); exists {
+			if authData, ok := authDataInterface.(data.AuthData); ok {
+				// Use the auth data that already has roles, maintaining our title and other changes
+				ownerData.Auth = authData.WithTitle(fmt.Sprintf("Gun: %s", gun.Name))
+			}
+		}
 
 		// Check for flash message from cookie
 		if flashCookie, err := c.Cookie("flash"); err == nil && flashCookie != "" {
@@ -751,7 +793,7 @@ func (o *OwnerController) Show(c *gin.Context) {
 
 	// Create owner data
 	ownerData := data.NewOwnerData().
-		WithTitle("Firearm Details").
+		WithTitle(fmt.Sprintf("Gun: %s", gun.Name)).
 		WithAuthenticated(authenticated).
 		WithUser(dbUser).
 		WithGun(&gun).
@@ -760,6 +802,14 @@ func (o *OwnerController) Show(c *gin.Context) {
 			dbUser.SubscriptionTier,
 			subscriptionEndsAt,
 		)
+
+	// Get authData from context to preserve roles
+	if authDataInterface, exists := c.Get("authData"); exists {
+		if authData, ok := authDataInterface.(data.AuthData); ok {
+			// Use the auth data that already has roles, maintaining our title and other changes
+			ownerData.Auth = authData.WithTitle(fmt.Sprintf("Gun: %s", gun.Name))
+		}
+	}
 
 	// Check for flash message from cookie
 	if flashCookie, err := c.Cookie("flash"); err == nil && flashCookie != "" {
@@ -772,7 +822,7 @@ func (o *OwnerController) Show(c *gin.Context) {
 	gunView.Show(ownerData).Render(c.Request.Context(), c.Writer)
 }
 
-// Edit handles the edit gun page
+// Edit handles the gun edit route
 func (o *OwnerController) Edit(c *gin.Context) {
 	// Get the current user's authentication status and email
 	authController, ok := c.MustGet("authController").(AuthControllerInterface)
@@ -832,13 +882,34 @@ func (o *OwnerController) Edit(c *gin.Context) {
 
 		// Create the data for the view
 		viewData := data.NewOwnerData().
-			WithTitle("Edit Firearm").
-			WithAuthenticated(true).
+			WithTitle(fmt.Sprintf("Edit Gun: %s", gun.Name)).
+			WithAuthenticated(authenticated).
 			WithUser(user).
 			WithGun(&gun).
 			WithWeaponTypes(weaponTypes).
 			WithCalibers(calibers).
 			WithManufacturers(manufacturers)
+
+		// Format subscription end date if available
+		var subscriptionEndsAt string
+		if !user.SubscriptionEndDate.IsZero() {
+			subscriptionEndsAt = user.SubscriptionEndDate.Format("January 2, 2006")
+		}
+
+		// Add subscription info
+		viewData = viewData.WithSubscriptionInfo(
+			user.HasActiveSubscription(),
+			user.SubscriptionTier,
+			subscriptionEndsAt,
+		)
+
+		// Get authData from context to preserve roles
+		if authDataInterface, exists := c.Get("authData"); exists {
+			if authData, ok := authDataInterface.(data.AuthData); ok {
+				// Use the auth data that already has roles, maintaining our title and other changes
+				viewData.Auth = authData.WithTitle(fmt.Sprintf("Edit Gun: %s", gun.Name))
+			}
+		}
 
 		// Render the edit form
 		c.Status(http.StatusOK)
@@ -896,13 +967,34 @@ func (o *OwnerController) Edit(c *gin.Context) {
 
 	// Create the data for the view
 	viewData := data.NewOwnerData().
-		WithTitle("Edit Firearm").
-		WithAuthenticated(true).
+		WithTitle(fmt.Sprintf("Edit Gun: %s", gun.Name)).
+		WithAuthenticated(authenticated).
 		WithUser(user).
 		WithGun(&gun).
 		WithWeaponTypes(weaponTypes).
 		WithCalibers(calibers).
 		WithManufacturers(manufacturers)
+
+	// Format subscription end date if available
+	var subscriptionEndsAt string
+	if !user.SubscriptionEndDate.IsZero() {
+		subscriptionEndsAt = user.SubscriptionEndDate.Format("January 2, 2006")
+	}
+
+	// Add subscription info
+	viewData = viewData.WithSubscriptionInfo(
+		user.HasActiveSubscription(),
+		user.SubscriptionTier,
+		subscriptionEndsAt,
+	)
+
+	// Get authData from context to preserve roles
+	if authDataInterface, exists := c.Get("authData"); exists {
+		if authData, ok := authDataInterface.(data.AuthData); ok {
+			// Use the auth data that already has roles, maintaining our title and other changes
+			viewData.Auth = authData.WithTitle(fmt.Sprintf("Edit Gun: %s", gun.Name))
+		}
+	}
 
 	// Render the edit form
 	c.Status(http.StatusOK)
@@ -1417,6 +1509,14 @@ func (o *OwnerController) Arsenal(c *gin.Context) {
 				subscriptionEndsAt,
 			)
 
+		// Get authData from context to preserve roles
+		if authDataInterface, exists := c.Get("authData"); exists {
+			if authData, ok := authDataInterface.(data.AuthData); ok {
+				// Use the auth data that already has roles, maintaining our title and other changes
+				ownerData.Auth = authData.WithTitle("Your Arsenal")
+			}
+		}
+
 		// If the user has more guns than shown, add a message
 		if totalGuns > 2 && dbUser.SubscriptionTier == "free" {
 			ownerData.WithError("Please subscribe to see the rest of your collection")
@@ -1484,6 +1584,14 @@ func (o *OwnerController) Arsenal(c *gin.Context) {
 			subscriptionEndsAt,
 		)
 
+	// Get authData from context to preserve roles
+	if authDataInterface, exists := c.Get("authData"); exists {
+		if authData, ok := authDataInterface.(data.AuthData); ok {
+			// Use the auth data that already has roles, maintaining our title and other changes
+			ownerData.Auth = authData.WithTitle("Your Arsenal")
+		}
+	}
+
 	// If the user has more guns than shown, add a message
 	if totalGuns > 2 && dbUser.SubscriptionTier == "free" {
 		ownerData.WithError("Please subscribe to see the rest of your collection")
@@ -1546,6 +1654,14 @@ func (o *OwnerController) Profile(c *gin.Context) {
 				subscriptionEndsAt,
 			)
 
+		// Get authData from context to preserve roles
+		if authDataInterface, exists := c.Get("authData"); exists {
+			if authData, ok := authDataInterface.(data.AuthData); ok {
+				// Use the auth data that already has roles, maintaining our title and other changes
+				ownerData.Auth = authData.WithTitle("Profile")
+			}
+		}
+
 		// Check for flash message from cookie
 		if flashCookie, err := c.Cookie("flash"); err == nil && flashCookie != "" {
 			// Add flash message to success messages
@@ -1593,6 +1709,14 @@ func (o *OwnerController) Profile(c *gin.Context) {
 			dbUser.SubscriptionTier,
 			subscriptionEndsAt,
 		)
+
+	// Get authData from context to preserve roles
+	if authDataInterface, exists := c.Get("authData"); exists {
+		if authData, ok := authDataInterface.(data.AuthData); ok {
+			// Use the auth data that already has roles, maintaining our title and other changes
+			ownerData.Auth = authData.WithTitle("Profile")
+		}
+	}
 
 	// Check for flash message from cookie
 	if flashCookie, err := c.Cookie("flash"); err == nil && flashCookie != "" {
@@ -1652,6 +1776,14 @@ func (o *OwnerController) EditProfile(c *gin.Context) {
 				subscriptionEndsAt,
 			)
 
+		// Get authData from context to preserve roles
+		if authDataInterface, exists := c.Get("authData"); exists {
+			if authData, ok := authDataInterface.(data.AuthData); ok {
+				// Use the auth data that already has roles, maintaining our title and other changes
+				ownerData.Auth = authData.WithTitle("Edit Profile")
+			}
+		}
+
 		// Check for flash message from cookie
 		if flashCookie, err := c.Cookie("flash"); err == nil && flashCookie != "" {
 			// Add flash message to success messages
@@ -1699,6 +1831,14 @@ func (o *OwnerController) EditProfile(c *gin.Context) {
 			dbUser.SubscriptionTier,
 			subscriptionEndsAt,
 		)
+
+	// Get authData from context to preserve roles
+	if authDataInterface, exists := c.Get("authData"); exists {
+		if authData, ok := authDataInterface.(data.AuthData); ok {
+			// Use the auth data that already has roles, maintaining our title and other changes
+			ownerData.Auth = authData.WithTitle("Edit Profile")
+		}
+	}
 
 	// Check for flash message from cookie
 	if flashCookie, err := c.Cookie("flash"); err == nil && flashCookie != "" {
@@ -2023,6 +2163,14 @@ func (o *OwnerController) Subscription(c *gin.Context) {
 			).
 			WithPayments(payments)
 
+		// Get authData from context to preserve roles
+		if authDataInterface, exists := c.Get("authData"); exists {
+			if authData, ok := authDataInterface.(data.AuthData); ok {
+				// Use the auth data that already has roles, maintaining our title and other changes
+				ownerData.Auth = authData.WithTitle("Subscription Management")
+			}
+		}
+
 		// Check for flash message from cookie
 		if flashCookie, err := c.Cookie("flash"); err == nil && flashCookie != "" {
 			// Add flash message to success messages
@@ -2077,6 +2225,14 @@ func (o *OwnerController) Subscription(c *gin.Context) {
 			subscriptionEndsAt,
 		).
 		WithPayments(payments)
+
+	// Get authData from context to preserve roles
+	if authDataInterface, exists := c.Get("authData"); exists {
+		if authData, ok := authDataInterface.(data.AuthData); ok {
+			// Use the auth data that already has roles, maintaining our title and other changes
+			ownerData.Auth = authData.WithTitle("Subscription Management")
+		}
+	}
 
 	// Check for flash message from cookie
 	if flashCookie, err := c.Cookie("flash"); err == nil && flashCookie != "" {

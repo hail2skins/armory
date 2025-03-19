@@ -72,6 +72,9 @@ func (s *Server) RegisterMiddleware(r *gin.Engine, authController *controller.Au
 
 	// Set up auth data middleware
 	r.Use(func(c *gin.Context) {
+		// Make casbinAuth available in the context
+		c.Set("casbinAuth", casbinAuth)
+
 		// Get the current user's authentication status and email
 		userInfo, authenticated := authController.GetCurrentUser(c)
 
@@ -82,6 +85,12 @@ func (s *Server) RegisterMiddleware(r *gin.Engine, authController *controller.Au
 		// Set email if authenticated
 		if authenticated {
 			authData.Email = userInfo.GetUserName()
+
+			// Get user roles from Casbin if available
+			if s.casbinAuth != nil {
+				roles := s.casbinAuth.GetUserRoles(userInfo.GetUserName())
+				authData = authData.WithRoles(roles)
+			}
 		}
 
 		// Add authData to context

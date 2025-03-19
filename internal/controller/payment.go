@@ -89,6 +89,14 @@ func (p *PaymentController) PricingHandler(c *gin.Context) {
 		authData.Email = userInfo.GetUserName()
 	}
 
+	// Check for authData from context to preserve roles
+	if authDataInterface, exists := c.Get("authData"); exists {
+		if contextAuthData, ok := authDataInterface.(data.AuthData); ok {
+			// Use the auth data that already has roles, maintaining our title
+			authData = contextAuthData.WithTitle("Pricing")
+		}
+	}
+
 	// Create PricingData with the AuthData
 	pricingData := payment.PricingData{
 		AuthData: authData,
@@ -187,6 +195,14 @@ func (p *PaymentController) HandlePaymentSuccess(c *gin.Context) {
 	authData.Authenticated = authenticated
 	authData.Title = "Payment Success"
 
+	// Check for authData from context to preserve roles
+	if authDataInterface, exists := c.Get("authData"); exists {
+		if contextAuthData, ok := authDataInterface.(data.AuthData); ok {
+			// Use the auth data that already has roles, maintaining our title
+			authData = contextAuthData.WithTitle("Payment Success")
+		}
+	}
+
 	// Create SuccessData with the AuthData
 	successData := payment.SuccessData{
 		AuthData:  authData,
@@ -272,6 +288,14 @@ func (p *PaymentController) ShowPaymentHistory(c *gin.Context) {
 	authData.Authenticated = authenticated
 	authData.Title = "Payment History"
 
+	// Check for authData from context to preserve roles
+	if authDataInterface, exists := c.Get("authData"); exists {
+		if contextAuthData, ok := authDataInterface.(data.AuthData); ok {
+			// Use the auth data that already has roles, maintaining our title
+			authData = contextAuthData.WithTitle("Payment History")
+		}
+	}
+
 	// Create PaymentHistoryData with the AuthData
 	paymentHistoryData := payment.PaymentHistoryData{
 		AuthData: authData,
@@ -315,6 +339,14 @@ func (p *PaymentController) ShowCancelConfirmation(c *gin.Context) {
 	authData := data.NewAuthData()
 	authData.Authenticated = authenticated
 	authData.Title = "Cancel Subscription"
+
+	// Check for authData from context to preserve roles
+	if authDataInterface, exists := c.Get("authData"); exists {
+		if contextAuthData, ok := authDataInterface.(data.AuthData); ok {
+			// Use the auth data that already has roles, maintaining our title
+			authData = contextAuthData.WithTitle("Cancel Subscription")
+		}
+	}
 
 	// Create CancelConfirmationData with the AuthData
 	cancelConfirmationData := payment.CancelConfirmationData{

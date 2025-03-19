@@ -87,3 +87,11 @@ func (a *AdminData) WithWeaponType(weaponType *models.WeaponType) *AdminData {
 	a.WeaponType = weaponType
 	return a
 }
+
+// WithRoles returns a copy of the AdminData with user roles
+func (a *AdminData) WithRoles(roles []string) *AdminData {
+	// Call the parent WithRoles
+	authData := a.AuthData.WithRoles(roles)
+	a.AuthData = authData
+	return a
+}

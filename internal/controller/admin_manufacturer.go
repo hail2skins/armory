@@ -23,11 +23,34 @@ func NewAdminManufacturerController(db database.Service) *AdminManufacturerContr
 	}
 }
 
+// Helper function to get admin data from context
+func getAdminDataFromContext(ctx *gin.Context, title string) *data.AdminData {
+	// Get auth data from context
+	authDataInterface, exists := ctx.Get("authData")
+	var adminData *data.AdminData
+
+	if exists {
+		// Try to use the auth data from context
+		if authData, ok := authDataInterface.(data.AuthData); ok {
+			adminData = data.NewAdminData()
+			adminData.AuthData = authData
+			adminData = adminData.WithTitle(title)
+		}
+	}
+
+	// If we couldn't get auth data from context, create a new one
+	if adminData == nil {
+		adminData = data.NewAdminData().
+			WithTitle(title)
+	}
+
+	return adminData
+}
+
 // Index shows all manufacturers
 func (c *AdminManufacturerController) Index(ctx *gin.Context) {
-	// Create admin data
-	adminData := data.NewAdminData().
-		WithTitle("Manufacturers")
+	// Get auth data from context
+	adminData := getAdminDataFromContext(ctx, "Manufacturers")
 
 	// Get success message from query params
 	success := ctx.Query("success")
@@ -51,9 +74,8 @@ func (c *AdminManufacturerController) Index(ctx *gin.Context) {
 
 // New shows the form to create a new manufacturer
 func (c *AdminManufacturerController) New(ctx *gin.Context) {
-	// Create admin data
-	adminData := data.NewAdminData().
-		WithTitle("New Manufacturer")
+	// Get auth data from context
+	adminData := getAdminDataFromContext(ctx, "New Manufacturer")
 
 	// Render the template
 	manufacturer.New(adminData).Render(ctx.Request.Context(), ctx.Writer)
@@ -61,9 +83,8 @@ func (c *AdminManufacturerController) New(ctx *gin.Context) {
 
 // Create creates a new manufacturer
 func (c *AdminManufacturerController) Create(ctx *gin.Context) {
-	// Create admin data
-	adminData := data.NewAdminData().
-		WithTitle("New Manufacturer")
+	// Get auth data from context
+	adminData := getAdminDataFromContext(ctx, "New Manufacturer")
 
 	// Get form values
 	name := ctx.PostForm("name")
@@ -96,9 +117,8 @@ func (c *AdminManufacturerController) Create(ctx *gin.Context) {
 
 // Show shows a manufacturer
 func (c *AdminManufacturerController) Show(ctx *gin.Context) {
-	// Create admin data
-	adminData := data.NewAdminData().
-		WithTitle("Manufacturer Details")
+	// Get auth data from context
+	adminData := getAdminDataFromContext(ctx, "Manufacturer Details")
 
 	// Get the manufacturer ID from the URL
 	id, err := strconv.ParseUint(ctx.Param("id"), 10, 64)
@@ -123,9 +143,8 @@ func (c *AdminManufacturerController) Show(ctx *gin.Context) {
 
 // Edit shows the form to edit a manufacturer
 func (c *AdminManufacturerController) Edit(ctx *gin.Context) {
-	// Create admin data
-	adminData := data.NewAdminData().
-		WithTitle("Edit Manufacturer")
+	// Get auth data from context
+	adminData := getAdminDataFromContext(ctx, "Edit Manufacturer")
 
 	// Get the manufacturer ID from the URL
 	id, err := strconv.ParseUint(ctx.Param("id"), 10, 64)
@@ -150,9 +169,8 @@ func (c *AdminManufacturerController) Edit(ctx *gin.Context) {
 
 // Update updates a manufacturer
 func (c *AdminManufacturerController) Update(ctx *gin.Context) {
-	// Create admin data
-	adminData := data.NewAdminData().
-		WithTitle("Edit Manufacturer")
+	// Get auth data from context
+	adminData := getAdminDataFromContext(ctx, "Edit Manufacturer")
 
 	// Get the manufacturer ID from the URL
 	id, err := strconv.ParseUint(ctx.Param("id"), 10, 64)
@@ -203,18 +221,23 @@ func (c *AdminManufacturerController) Update(ctx *gin.Context) {
 
 // Delete deletes a manufacturer
 func (c *AdminManufacturerController) Delete(ctx *gin.Context) {
+	// Get auth data just in case we need to display an error page
+	adminData := getAdminDataFromContext(ctx, "Delete Manufacturer")
+
 	// Get the manufacturer ID from the URL
 	id, err := strconv.ParseUint(ctx.Param("id"), 10, 64)
 	if err != nil {
-		// Redirect to the index page with an error message
-		ctx.Redirect(http.StatusSeeOther, "/admin/manufacturers?error=Invalid manufacturer ID")
+		// Render error page instead of redirecting
+		ctx.HTML(http.StatusBadRequest, "error.templ", adminData.
+			WithError("Invalid manufacturer ID"))
 		return
 	}
 
 	// Delete the manufacturer
 	if err := c.db.DeleteManufacturer(uint(id)); err != nil {
-		// Redirect to the index page with an error message
-		ctx.Redirect(http.StatusSeeOther, "/admin/manufacturers?error=Failed to delete manufacturer")
+		// Render error page instead of redirecting
+		ctx.HTML(http.StatusInternalServerError, "error.templ", adminData.
+			WithError("Failed to delete manufacturer"))
 		return
 	}
 

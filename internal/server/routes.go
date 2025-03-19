@@ -27,6 +27,7 @@ func (s *Server) RegisterRoutes() http.Handler {
 	authController := controller.NewAuthController(s.db)
 	homeController := controller.NewHomeController(s.db)
 	paymentController := controller.NewPaymentController(s.db)
+	debugController := controller.NewDebugController()
 
 	// Register middleware
 	s.RegisterMiddleware(r, authController)
@@ -45,6 +46,9 @@ func (s *Server) RegisterRoutes() http.Handler {
 
 	// Register payment routes
 	s.RegisterPaymentRoutes(r, paymentController)
+
+	// Register debug routes (add directly to main router)
+	debugController.RegisterRoutes(r.Group(""))
 
 	// Register admin routes
 	s.RegisterAdminRoutes(r, authController)
