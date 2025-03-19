@@ -365,10 +365,25 @@ func (a *AuthController) AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Check if the user is authenticated
 		if !a.isAuthenticated(c) {
-			// User is not authenticated, redirect to login page
-			c.Redirect(http.StatusSeeOther, "/login")
+			// User is not authenticated, set a flash message
+			if setFlash, exists := c.Get("setFlash"); exists {
+				if flashFunc, ok := setFlash.(func(string)); ok {
+					flashFunc("You must log in to access that resource")
+				}
+			} else {
+				// Fallback to cookie if setFlash function is not available
+				c.SetCookie("flash", "You must log in to access that resource", 3600, "/", "", false, false)
+			}
+
+			// Redirect to home page
+			c.Redirect(http.StatusSeeOther, "/")
 			c.Abort()
 			return
+		}
+
+		// Get the current user info and set it in the context for Casbin
+		if authInfo, exists := a.GetCurrentUser(c); exists {
+			c.Set("auth_info", authInfo)
 		}
 
 		// User is authenticated, continue

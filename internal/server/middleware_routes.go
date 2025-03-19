@@ -1,12 +1,14 @@
 package server
 
 import (
+	"os"
 	"strings"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/hail2skins/armory/cmd/web/views/data"
 	"github.com/hail2skins/armory/internal/controller"
+	"github.com/hail2skins/armory/internal/logger"
 	"github.com/hail2skins/armory/internal/middleware"
 )
 
@@ -46,6 +48,28 @@ func (s *Server) RegisterMiddleware(r *gin.Engine, authController *controller.Au
 		AllowCredentials: true, // Enable cookies/auth
 	}))
 
+	// Initialize Casbin (store in the server instance for admin routes to use)
+	casbinAuth, err := middleware.SetupCasbin()
+	if err != nil {
+		// Log the error but continue (admin routes will check for nil)
+		logger.Warn("Casbin setup failed, RBAC will be disabled", map[string]interface{}{
+			"error": err.Error(),
+		})
+	}
+
+	// Configure initial admin users
+	adminEmails := getAdminEmails()
+	if casbinAuth != nil && len(adminEmails) > 0 {
+		if err := middleware.ConfigureInitialRoles(casbinAuth, adminEmails); err != nil {
+			logger.Warn("Failed to configure initial admin roles", map[string]interface{}{
+				"error": err.Error(),
+			})
+		}
+	}
+
+	// Store the casbin auth in the server for admin routes to use
+	s.casbinAuth = casbinAuth
+
 	// Set up auth data middleware
 	r.Use(func(c *gin.Context) {
 		// Get the current user's authentication status and email
@@ -70,4 +94,20 @@ func (s *Server) RegisterMiddleware(r *gin.Engine, authController *controller.Au
 
 		c.Next()
 	})
+}
+
+// getAdminEmails returns the list of admin emails from environment variables or configuration
+func getAdminEmails() []string {
+	// Get admin emails from environment variable
+	adminEmail := os.Getenv("CASBIN_ADMIN")
+	if adminEmail != "" {
+		// Split by comma if multiple emails are provided
+		if strings.Contains(adminEmail, ",") {
+			return strings.Split(adminEmail, ",")
+		}
+		return []string{adminEmail}
+	}
+
+	// Default admin user if not specified in environment
+	return []string{"support@hamcois.com"}
 }

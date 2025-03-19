@@ -42,3 +42,6 @@ tailwindcss
 # Cursor instructions
 cursor.md
 
+# Casbin policy files (contains user emails)
+configs/casbin/rbac_policy.csv
+

@@ -11,12 +11,14 @@ import (
 
 	"github.com/hail2skins/armory/internal/database"
 	"github.com/hail2skins/armory/internal/logger"
+	"github.com/hail2skins/armory/internal/middleware"
 )
 
 type Server struct {
 	port int
 
-	db database.Service
+	db         database.Service
+	casbinAuth *middleware.CasbinAuth
 }
 
 func NewServer() *http.Server {

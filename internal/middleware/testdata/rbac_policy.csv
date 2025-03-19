@@ -1,0 +1,22 @@
+p, admin, *, *
+p, admin, manufacturers, *
+p, admin, calibers, *
+p, admin, weapon_types, *
+
+p, editor, manufacturers, read
+p, editor, manufacturers, write
+p, editor, manufacturers, update
+p, editor, calibers, read
+p, editor, calibers, write
+p, editor, calibers, update
+p, editor, weapon_types, read
+p, editor, weapon_types, write
+p, editor, weapon_types, update
+
+p, viewer, manufacturers, read
+p, viewer, calibers, read
+p, viewer, weapon_types, read
+
+g, admin@example.com, admin
+g, editor@example.com, editor
+g, viewer@example.com, viewer 
