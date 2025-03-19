@@ -12,13 +12,13 @@ import (
 templ Index(data *data.AdminData) {
 	@partials.Base(data.AuthData, templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
 		_, err := io.WriteString(w, `
-		<div class="container mx-auto px-4 py-8">
-			<div class="flex justify-between items-center mb-6">
-				<h1 class="text-3xl font-bold text-gunmetal-800">Manufacturers</h1>
-				<a href="/admin/manufacturers/new" class="bg-gunmetal-800 hover:bg-gunmetal-700 text-white font-bold py-2 px-4 rounded">
-					New Manufacturer
-				</a>
-			</div>
+				<div class="bg-white shadow-md rounded-lg p-6">
+					<div class="flex justify-between items-center mb-6">
+						<h1 class="text-2xl font-bold text-gunmetal-800">Manufacturers</h1>
+						<a href="/admin/manufacturers/new" class="bg-brass-500 hover:bg-brass-600 text-white font-bold py-2 px-4 rounded">
+							New Manufacturer
+						</a>
+					</div>
 		`)
 		if err != nil {
 			return err
@@ -26,9 +26,9 @@ templ Index(data *data.AdminData) {
 
 		if data.Success != "" {
 			_, err = io.WriteString(w, `
-			<div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4" role="alert">
-				<span class="block sm:inline">`+data.Success+`</span>
-			</div>
+					<div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4" role="alert">
+						<span class="block sm:inline">`+data.Success+`</span>
+					</div>
 			`)
 			if err != nil {
 				return err
@@ -37,9 +37,9 @@ templ Index(data *data.AdminData) {
 
 		if data.Error != "" {
 			_, err = io.WriteString(w, `
-			<div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
-				<span class="block sm:inline">`+data.Error+`</span>
-			</div>
+					<div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+						<span class="block sm:inline">`+data.Error+`</span>
+					</div>
 			`)
 			if err != nil {
 				return err
@@ -48,40 +48,40 @@ templ Index(data *data.AdminData) {
 
 		if data.AuthData.IsCasbinAdmin {
 			_, err = io.WriteString(w, `
-			<div class="bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded relative mb-4" role="alert">
-				<span class="block sm:inline">Admin Access Detected</span>
-			</div>
+					<div class="bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded relative mb-4" role="alert">
+						<span class="block sm:inline">Admin Access Detected</span>
+					</div>
 			`)
 		}
 
 		_, err = io.WriteString(w, `
-		<div class="mb-4">
-			<input type="text" id="searchInput" placeholder="Search manufacturers..." 
-				class="w-full px-4 py-2 border rounded-lg text-gunmetal-800 focus:outline-none focus:ring-2 focus:ring-gunmetal-500"
-				onkeyup="searchTable()">
-		</div>
-		<div class="overflow-x-auto bg-white rounded-lg shadow overflow-y-auto">
-			<table class="min-w-full bg-white" id="manufacturersTable">
-				<thead class="bg-gunmetal-800 text-white">
-					<tr>
-						<th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer" onclick="sortTable(0)">
-							Name <span class="ml-1">↕</span>
-						</th>
-						<th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer" onclick="sortTable(1)">
-							Nickname <span class="ml-1">↕</span>
-						</th>
-						<th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer" onclick="sortTable(2)">
-							Country <span class="ml-1">↕</span>
-						</th>
-						<th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer" onclick="sortTable(3)">
-							Popularity <span class="ml-1">↕</span>
-						</th>
-						<th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
-							Actions
-						</th>
-					</tr>
-				</thead>
-				<tbody class="divide-y divide-gray-200 text-gunmetal-800">
+					<div class="mb-4">
+						<input type="text" id="searchInput" placeholder="Search manufacturers..." 
+							class="w-full px-4 py-2 border rounded-lg text-gunmetal-800 focus:outline-none focus:ring-2 focus:ring-brass-500"
+							onkeyup="searchTable()">
+					</div>
+					<div class="overflow-x-auto bg-white rounded-lg shadow overflow-y-auto">
+						<table class="min-w-full bg-white border border-gunmetal-200 rounded-lg overflow-hidden" id="manufacturersTable">
+							<thead class="bg-gunmetal-200">
+								<tr>
+									<th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer text-gunmetal-800" onclick="sortTable(0)">
+										Name <span class="ml-1">↕</span>
+									</th>
+									<th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer text-gunmetal-800" onclick="sortTable(1)">
+										Nickname <span class="ml-1">↕</span>
+									</th>
+									<th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer text-gunmetal-800" onclick="sortTable(2)">
+										Country <span class="ml-1">↕</span>
+									</th>
+									<th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer text-gunmetal-800" onclick="sortTable(3)">
+										Popularity <span class="ml-1">↕</span>
+									</th>
+									<th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gunmetal-800">
+										Actions
+									</th>
+								</tr>
+							</thead>
+							<tbody class="divide-y divide-gunmetal-200 text-gunmetal-800">
 		`)
 		if err != nil {
 			return err
@@ -89,9 +89,9 @@ templ Index(data *data.AdminData) {
 
 		if len(data.Manufacturers) == 0 {
 			_, err = io.WriteString(w, `
-			<tr>
-				<td colspan="5" class="px-6 py-4 text-center text-gunmetal-800">No manufacturers found</td>
-			</tr>
+								<tr>
+									<td colspan="5" class="px-6 py-4 text-center text-gunmetal-800">No manufacturers found</td>
+								</tr>
 			`)
 			if err != nil {
 				return err
@@ -99,19 +99,19 @@ templ Index(data *data.AdminData) {
 		} else {
 			for _, m := range data.Manufacturers {
 				_, err = io.WriteString(w, `
-				<tr class="hover:bg-gray-100">
-					<td class="px-6 py-4 whitespace-nowrap">`+m.Name+`</td>
-					<td class="px-6 py-4 whitespace-nowrap">`+m.Nickname+`</td>
-					<td class="px-6 py-4 whitespace-nowrap">`+m.Country+`</td>
-					<td class="px-6 py-4 whitespace-nowrap">`+strconv.Itoa(int(m.Popularity))+`</td>
-					<td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-						<a href="/admin/manufacturers/`+strconv.Itoa(int(m.ID))+`" class="text-blue-600 hover:text-blue-900 mr-3">View</a>
-						<a href="/admin/manufacturers/`+strconv.Itoa(int(m.ID))+`/edit" class="text-amber-600 hover:text-amber-900 mr-3">Edit</a>
-						<form action="/admin/manufacturers/`+strconv.Itoa(int(m.ID))+`/delete" method="post" class="inline">
-							<button type="submit" class="text-red-600 hover:text-red-900" onclick="return confirm('Are you sure?')">Delete</button>
-						</form>
-					</td>
-				</tr>
+								<tr class="hover:bg-gunmetal-50">
+									<td class="px-6 py-4 whitespace-nowrap">`+m.Name+`</td>
+									<td class="px-6 py-4 whitespace-nowrap">`+m.Nickname+`</td>
+									<td class="px-6 py-4 whitespace-nowrap">`+m.Country+`</td>
+									<td class="px-6 py-4 whitespace-nowrap">`+strconv.Itoa(int(m.Popularity))+`</td>
+									<td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+										<a href="/admin/manufacturers/`+strconv.Itoa(int(m.ID))+`" class="text-brass-600 hover:text-brass-700 font-medium mr-3">View</a>
+										<a href="/admin/manufacturers/`+strconv.Itoa(int(m.ID))+`/edit" class="text-brass-600 hover:text-brass-700 font-medium mr-3">Edit</a>
+										<form action="/admin/manufacturers/`+strconv.Itoa(int(m.ID))+`/delete" method="post" class="inline">
+											<button type="submit" class="text-red-600 hover:text-red-700 font-medium" onclick="return confirm('Are you sure?')">Delete</button>
+										</form>
+									</td>
+								</tr>
 				`)
 				if err != nil {
 					return err
@@ -120,102 +120,102 @@ templ Index(data *data.AdminData) {
 		}
 
 		_, err = io.WriteString(w, `
-				</tbody>
-			</table>
-		</div>
+							</tbody>
+						</table>
+					</div>
 
-		<script>
-		function searchTable() {
-			// Declare variables
-			var input, filter, table, tr, td, i, j, txtValue, found;
-			input = document.getElementById("searchInput");
-			filter = input.value.toUpperCase();
-			table = document.getElementById("manufacturersTable");
-			tr = table.getElementsByTagName("tr");
+					<script>
+					function searchTable() {
+						// Declare variables
+						var input, filter, table, tr, i, j, txtValue, found;
+						input = document.getElementById("searchInput");
+						filter = input.value.toUpperCase();
+						table = document.getElementById("manufacturersTable");
+						tr = table.getElementsByTagName("tr");
 
-			// Loop through all table rows except the header
-			for (i = 1; i < tr.length; i++) {
-				found = false;
-				// Loop through all columns in each row
-				for (j = 0; j < 4; j++) { // Only search first 4 columns (excluding Actions)
-					td = tr[i].getElementsByTagName("td")[j];
-					if (td) {
-						txtValue = td.textContent || td.innerText;
-						if (txtValue.toUpperCase().indexOf(filter) > -1) {
-							found = true;
-							break;
-						}
-					}
-				}
-				// Show/hide row based on search match
-				if (found) {
-					tr[i].style.display = "";
-				} else {
-					tr[i].style.display = "none";
-				}
-			}
-		}
-
-		function sortTable(n) {
-			var table, rows, switching, i, x, y, shouldSwitch, dir, switchcount = 0;
-			table = document.getElementById("manufacturersTable");
-			switching = true;
-			// Set the sorting direction to ascending
-			dir = "asc";
-			
-			while (switching) {
-				switching = false;
-				rows = table.rows;
-				
-				for (i = 1; i < (rows.length - 1); i++) {
-					shouldSwitch = false;
-					x = rows[i].getElementsByTagName("TD")[n];
-					y = rows[i + 1].getElementsByTagName("TD")[n];
-					
-					// Check if the two rows should switch place based on direction
-					if (dir == "asc") {
-						if (n === 3) { // Popularity column - numeric sort
-							if (Number(x.innerHTML) > Number(y.innerHTML)) {
-								shouldSwitch = true;
-								break;
+						// Loop through all table rows except the header
+						for (i = 1; i < tr.length; i++) {
+							found = false;
+							// Loop through all columns in each row
+							for (j = 0; j < 4; j++) { // Only search first 4 columns (excluding Actions)
+								var td = tr[i].getElementsByTagName("td")[j];
+								if (td) {
+									txtValue = td.textContent || td.innerText;
+									if (txtValue.toUpperCase().indexOf(filter) > -1) {
+										found = true;
+										break;
+									}
+								}
 							}
-						} else { // Text sort
-							if (x.innerHTML.toLowerCase() > y.innerHTML.toLowerCase()) {
-								shouldSwitch = true;
-								break;
-							}
-						}
-					} else if (dir == "desc") {
-						if (n === 3) { // Popularity column - numeric sort
-							if (Number(x.innerHTML) < Number(y.innerHTML)) {
-								shouldSwitch = true;
-								break;
-							}
-						} else { // Text sort
-							if (x.innerHTML.toLowerCase() < y.innerHTML.toLowerCase()) {
-								shouldSwitch = true;
-								break;
+							// Show/hide row based on search match
+							if (found) {
+								tr[i].style.display = "";
+							} else {
+								tr[i].style.display = "none";
 							}
 						}
 					}
-				}
-				
-				if (shouldSwitch) {
-					rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
-					switching = true;
-					switchcount++;
-				} else {
-					// If no switching has been done AND the direction is "asc",
-					// set the direction to "desc" and run the while loop again.
-					if (switchcount == 0 && dir == "asc") {
-						dir = "desc";
+
+					function sortTable(n) {
+						var table, rows, switching, i, x, y, shouldSwitch, dir, switchcount = 0;
+						table = document.getElementById("manufacturersTable");
 						switching = true;
+						// Set the sorting direction to ascending
+						dir = "asc";
+						
+						while (switching) {
+							switching = false;
+							rows = table.rows;
+							
+							for (i = 1; i < (rows.length - 1); i++) {
+								shouldSwitch = false;
+								x = rows[i].getElementsByTagName("TD")[n];
+								y = rows[i + 1].getElementsByTagName("TD")[n];
+								
+								// Check if the two rows should switch place based on direction
+								if (dir == "asc") {
+									if (n === 3) { // Popularity column - numeric sort
+										if (Number(x.innerHTML) > Number(y.innerHTML)) {
+											shouldSwitch = true;
+											break;
+										}
+									} else { // Text sort
+										if (x.innerHTML.toLowerCase() > y.innerHTML.toLowerCase()) {
+											shouldSwitch = true;
+											break;
+										}
+									}
+								} else if (dir == "desc") {
+									if (n === 3) { // Popularity column - numeric sort
+										if (Number(x.innerHTML) < Number(y.innerHTML)) {
+											shouldSwitch = true;
+											break;
+										}
+									} else { // Text sort
+										if (x.innerHTML.toLowerCase() < y.innerHTML.toLowerCase()) {
+											shouldSwitch = true;
+											break;
+										}
+									}
+								}
+							}
+							
+							if (shouldSwitch) {
+								rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+								switching = true;
+								switchcount++;
+							} else {
+								// If no switching has been done AND the direction is "asc",
+								// set the direction to "desc" and run the while loop again.
+								if (switchcount == 0 && dir == "asc") {
+									dir = "desc";
+									switching = true;
+								}
+							}
+						}
 					}
-				}
-			}
-		}
-		</script>
-		</div>
+					</script>
+				</div>
 		`)
 		return err
 	}))

@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -472,4 +473,35 @@ func (s *TestService) IsRecoveryExpired(ctx context.Context, token string) (bool
 		return true, err
 	}
 	return user.IsRecoveryExpired(), nil
+}
+
+// CountUsers returns the count of users
+func (s *TestService) CountUsers() (int64, error) {
+	var count int64
+	err := s.db.Model(&database.User{}).Count(&count).Error
+	return count, err
+}
+
+// FindRecentUsers returns a list of recent users with pagination and sorting
+func (s *TestService) FindRecentUsers(offset, limit int, sortBy, sortOrder string) ([]database.User, error) {
+	var users []database.User
+	query := s.db.Model(&database.User{})
+
+	// Apply sorting
+	if sortBy != "" && sortOrder != "" {
+		query = query.Order(fmt.Sprintf("%s %s", sortBy, sortOrder))
+	} else {
+		query = query.Order("created_at desc")
+	}
+
+	// Apply pagination
+	if limit > 0 {
+		query = query.Limit(limit)
+	}
+	if offset > 0 {
+		query = query.Offset(offset)
+	}
+
+	err := query.Find(&users).Error
+	return users, err
 }

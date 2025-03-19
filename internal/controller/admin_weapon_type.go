@@ -23,11 +23,42 @@ func NewAdminWeaponTypeController(db database.Service) *AdminWeaponTypeControlle
 	}
 }
 
+// getAdminWeaponTypeDataFromContext gets admin data from context
+func getAdminWeaponTypeDataFromContext(ctx *gin.Context, title string, currentPath string) *data.AdminData {
+	// Get admin data from context
+	adminDataInterface, exists := ctx.Get("admin_data")
+	if exists && adminDataInterface != nil {
+		if adminData, ok := adminDataInterface.(*data.AdminData); ok {
+			// Update the title and current path
+			adminData.AuthData = adminData.AuthData.WithTitle(title).WithCurrentPath(currentPath)
+			return adminData
+		}
+	}
+
+	// Get auth data from context
+	authDataInterface, exists := ctx.Get("authData")
+	if exists && authDataInterface != nil {
+		if authData, ok := authDataInterface.(data.AuthData); ok {
+			// Set the title and current path
+			authData = authData.WithTitle(title).WithCurrentPath(currentPath)
+
+			// Create admin data with auth data
+			adminData := data.NewAdminData()
+			adminData.AuthData = authData
+			return adminData
+		}
+	}
+
+	// If we couldn't get auth data from context, create a new one
+	adminData := data.NewAdminData()
+	adminData.AuthData = adminData.AuthData.WithTitle(title).WithCurrentPath(currentPath)
+	return adminData
+}
+
 // Index lists all weapon types
 func (c *AdminWeaponTypeController) Index(ctx *gin.Context) {
-	// Create admin data
-	adminData := data.NewAdminData().
-		WithTitle("Weapon Types")
+	// Get admin data from context
+	adminData := getAdminWeaponTypeDataFromContext(ctx, "Weapon Types", ctx.Request.URL.Path)
 
 	// Get all weapon types
 	weaponTypes, err := c.db.FindAllWeaponTypes()
@@ -46,18 +77,16 @@ func (c *AdminWeaponTypeController) Index(ctx *gin.Context) {
 
 // New shows the form to create a new weapon type
 func (c *AdminWeaponTypeController) New(ctx *gin.Context) {
-	// Create admin data
-	adminData := data.NewAdminData().
-		WithTitle("New Weapon Type")
+	// Get admin data from context
+	adminData := getAdminWeaponTypeDataFromContext(ctx, "New Weapon Type", ctx.Request.URL.Path)
 
 	weapon_type.New(adminData).Render(ctx.Request.Context(), ctx.Writer)
 }
 
 // Create creates a new weapon type
 func (c *AdminWeaponTypeController) Create(ctx *gin.Context) {
-	// Create admin data
-	adminData := data.NewAdminData().
-		WithTitle("New Weapon Type")
+	// Get admin data from context
+	adminData := getAdminWeaponTypeDataFromContext(ctx, "Create Weapon Type", ctx.Request.URL.Path)
 
 	// Get form values
 	typeName := ctx.PostForm("type")
@@ -88,9 +117,8 @@ func (c *AdminWeaponTypeController) Create(ctx *gin.Context) {
 
 // Show shows a weapon type
 func (c *AdminWeaponTypeController) Show(ctx *gin.Context) {
-	// Create admin data
-	adminData := data.NewAdminData().
-		WithTitle("Weapon Type Details")
+	// Get admin data from context
+	adminData := getAdminWeaponTypeDataFromContext(ctx, "Weapon Type Details", ctx.Request.URL.Path)
 
 	// Get the weapon type ID from the URL
 	id, err := strconv.ParseUint(ctx.Param("id"), 10, 64)
@@ -115,9 +143,8 @@ func (c *AdminWeaponTypeController) Show(ctx *gin.Context) {
 
 // Edit shows the form to edit a weapon type
 func (c *AdminWeaponTypeController) Edit(ctx *gin.Context) {
-	// Create admin data
-	adminData := data.NewAdminData().
-		WithTitle("Edit Weapon Type")
+	// Get admin data from context
+	adminData := getAdminWeaponTypeDataFromContext(ctx, "Edit Weapon Type", ctx.Request.URL.Path)
 
 	// Get the weapon type ID from the URL
 	id, err := strconv.ParseUint(ctx.Param("id"), 10, 64)
@@ -142,9 +169,8 @@ func (c *AdminWeaponTypeController) Edit(ctx *gin.Context) {
 
 // Update updates a weapon type
 func (c *AdminWeaponTypeController) Update(ctx *gin.Context) {
-	// Create admin data
-	adminData := data.NewAdminData().
-		WithTitle("Edit Weapon Type")
+	// Get admin data from context
+	adminData := getAdminWeaponTypeDataFromContext(ctx, "Update Weapon Type", ctx.Request.URL.Path)
 
 	// Get the weapon type ID from the URL
 	id, err := strconv.ParseUint(ctx.Param("id"), 10, 64)
@@ -193,21 +219,23 @@ func (c *AdminWeaponTypeController) Update(ctx *gin.Context) {
 
 // Delete deletes a weapon type
 func (c *AdminWeaponTypeController) Delete(ctx *gin.Context) {
+	// Get admin data from context
+	adminData := getAdminWeaponTypeDataFromContext(ctx, "Delete Weapon Type", ctx.Request.URL.Path)
+
 	// Get the weapon type ID from the URL
 	id, err := strconv.ParseUint(ctx.Param("id"), 10, 64)
 	if err != nil {
-		// Redirect to the index page with an error message
-		ctx.Redirect(http.StatusSeeOther, "/admin/weapon_types?error=Invalid weapon type ID")
+		ctx.HTML(http.StatusBadRequest, "error.templ", adminData.WithError("Invalid weapon type ID"))
 		return
 	}
 
 	// Delete the weapon type
-	if err := c.db.DeleteWeaponType(uint(id)); err != nil {
-		// Redirect to the index page with an error message
-		ctx.Redirect(http.StatusSeeOther, "/admin/weapon_types?error=Failed to delete weapon type")
+	err = c.db.DeleteWeaponType(uint(id))
+	if err != nil {
+		ctx.HTML(http.StatusInternalServerError, "error.templ", adminData.WithError("Failed to delete weapon type"))
 		return
 	}
 
-	// Redirect to the index page with a success message
+	// Redirect to the weapon types page with success message
 	ctx.Redirect(http.StatusSeeOther, "/admin/weapon_types?success=Weapon type deleted successfully")
 }

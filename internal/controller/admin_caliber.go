@@ -23,11 +23,42 @@ func NewAdminCaliberController(db database.Service) *AdminCaliberController {
 	}
 }
 
+// getAdminCaliberDataFromContext gets admin data from context
+func getAdminCaliberDataFromContext(ctx *gin.Context, title string, currentPath string) *data.AdminData {
+	// Get admin data from context
+	adminDataInterface, exists := ctx.Get("admin_data")
+	if exists && adminDataInterface != nil {
+		if adminData, ok := adminDataInterface.(*data.AdminData); ok {
+			// Update the title and current path
+			adminData.AuthData = adminData.AuthData.WithTitle(title).WithCurrentPath(currentPath)
+			return adminData
+		}
+	}
+
+	// Get auth data from context
+	authDataInterface, exists := ctx.Get("authData")
+	if exists && authDataInterface != nil {
+		if authData, ok := authDataInterface.(data.AuthData); ok {
+			// Set the title and current path
+			authData = authData.WithTitle(title).WithCurrentPath(currentPath)
+
+			// Create admin data with auth data
+			adminData := data.NewAdminData()
+			adminData.AuthData = authData
+			return adminData
+		}
+	}
+
+	// If we couldn't get auth data from context, create a new one
+	adminData := data.NewAdminData()
+	adminData.AuthData = adminData.AuthData.WithTitle(title).WithCurrentPath(currentPath)
+	return adminData
+}
+
 // Index lists all calibers
 func (c *AdminCaliberController) Index(ctx *gin.Context) {
-	// Create admin data
-	adminData := data.NewAdminData().
-		WithTitle("Calibers")
+	// Get admin data from context
+	adminData := getAdminCaliberDataFromContext(ctx, "Calibers", ctx.Request.URL.Path)
 
 	// Get all calibers
 	calibers, err := c.db.FindAllCalibers()
@@ -46,18 +77,16 @@ func (c *AdminCaliberController) Index(ctx *gin.Context) {
 
 // New shows the form to create a new caliber
 func (c *AdminCaliberController) New(ctx *gin.Context) {
-	// Create admin data
-	adminData := data.NewAdminData().
-		WithTitle("New Caliber")
+	// Get admin data from context
+	adminData := getAdminCaliberDataFromContext(ctx, "New Caliber", ctx.Request.URL.Path)
 
 	caliber.New(adminData).Render(ctx.Request.Context(), ctx.Writer)
 }
 
 // Create creates a new caliber
 func (c *AdminCaliberController) Create(ctx *gin.Context) {
-	// Create admin data
-	adminData := data.NewAdminData().
-		WithTitle("New Caliber")
+	// Get admin data from context
+	adminData := getAdminCaliberDataFromContext(ctx, "Create Caliber", ctx.Request.URL.Path)
 
 	// Get form values
 	caliberName := ctx.PostForm("caliber")
@@ -88,9 +117,8 @@ func (c *AdminCaliberController) Create(ctx *gin.Context) {
 
 // Show shows a caliber
 func (c *AdminCaliberController) Show(ctx *gin.Context) {
-	// Create admin data
-	adminData := data.NewAdminData().
-		WithTitle("Caliber Details")
+	// Get admin data from context
+	adminData := getAdminCaliberDataFromContext(ctx, "Caliber Details", ctx.Request.URL.Path)
 
 	// Get the caliber ID from the URL
 	id, err := strconv.ParseUint(ctx.Param("id"), 10, 64)
@@ -115,9 +143,8 @@ func (c *AdminCaliberController) Show(ctx *gin.Context) {
 
 // Edit shows the form to edit a caliber
 func (c *AdminCaliberController) Edit(ctx *gin.Context) {
-	// Create admin data
-	adminData := data.NewAdminData().
-		WithTitle("Edit Caliber")
+	// Get admin data from context
+	adminData := getAdminCaliberDataFromContext(ctx, "Edit Caliber", ctx.Request.URL.Path)
 
 	// Get the caliber ID from the URL
 	id, err := strconv.ParseUint(ctx.Param("id"), 10, 64)
@@ -142,9 +169,8 @@ func (c *AdminCaliberController) Edit(ctx *gin.Context) {
 
 // Update updates a caliber
 func (c *AdminCaliberController) Update(ctx *gin.Context) {
-	// Create admin data
-	adminData := data.NewAdminData().
-		WithTitle("Edit Caliber")
+	// Get admin data from context
+	adminData := getAdminCaliberDataFromContext(ctx, "Update Caliber", ctx.Request.URL.Path)
 
 	// Get the caliber ID from the URL
 	id, err := strconv.ParseUint(ctx.Param("id"), 10, 64)
@@ -193,21 +219,23 @@ func (c *AdminCaliberController) Update(ctx *gin.Context) {
 
 // Delete deletes a caliber
 func (c *AdminCaliberController) Delete(ctx *gin.Context) {
+	// Get admin data from context
+	adminData := getAdminCaliberDataFromContext(ctx, "Delete Caliber", ctx.Request.URL.Path)
+
 	// Get the caliber ID from the URL
 	id, err := strconv.ParseUint(ctx.Param("id"), 10, 64)
 	if err != nil {
-		// Redirect to the index page with an error message
-		ctx.Redirect(http.StatusSeeOther, "/admin/calibers?error=Invalid caliber ID")
+		ctx.HTML(http.StatusBadRequest, "error.templ", adminData.WithError("Invalid caliber ID"))
 		return
 	}
 
 	// Delete the caliber
-	if err := c.db.DeleteCaliber(uint(id)); err != nil {
-		// Redirect to the index page with an error message
-		ctx.Redirect(http.StatusSeeOther, "/admin/calibers?error=Failed to delete caliber")
+	err = c.db.DeleteCaliber(uint(id))
+	if err != nil {
+		ctx.HTML(http.StatusInternalServerError, "error.templ", adminData.WithError("Failed to delete caliber"))
 		return
 	}
 
-	// Redirect to the index page with a success message
+	// Redirect to the calibers page with success message
 	ctx.Redirect(http.StatusSeeOther, "/admin/calibers?success=Caliber deleted successfully")
 }

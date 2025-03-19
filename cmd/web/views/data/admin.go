@@ -1,6 +1,8 @@
 package data
 
 import (
+	"time"
+
 	"github.com/hail2skins/armory/internal/models"
 )
 
@@ -19,6 +21,40 @@ type AdminData struct {
 	// For weapon types
 	WeaponTypes []models.WeaponType
 	WeaponType  *models.WeaponType
+
+	// For dashboard
+	TotalUsers                 int64
+	UserGrowthRate             float64
+	SubscribedUsers            int64
+	SubscribedGrowthRate       float64
+	NewRegistrations           int64
+	NewRegistrationsGrowthRate float64
+	NewSubscriptions           int64
+	NewSubscriptionsGrowthRate float64
+	MonthlySubscribers         int64
+	MonthlyGrowthRate          float64
+	YearlySubscribers          int64
+	YearlyGrowthRate           float64
+	LifetimeSubscribers        int64
+	LifetimeGrowthRate         float64
+	PremiumSubscribers         int64
+	PremiumGrowthRate          float64
+	RecentUsers                []models.User
+	CurrentPage                int
+	PerPage                    int
+	TotalPages                 int
+	SortBy                     string
+	SortOrder                  string
+}
+
+// User interface for dashboard
+type User interface {
+	GetID() uint
+	GetUserName() string
+	GetCreatedAt() time.Time
+	GetLastLogin() time.Time
+	GetSubscriptionTier() string
+	IsDeleted() bool
 }
 
 // NewAdminData creates a new AdminData with default values
@@ -93,5 +129,56 @@ func (a *AdminData) WithRoles(roles []string) *AdminData {
 	// Call the parent WithRoles
 	authData := a.AuthData.WithRoles(roles)
 	a.AuthData = authData
+	return a
+}
+
+// WithDashboardData sets all dashboard statistics data
+func (a *AdminData) WithDashboardData(
+	totalUsers int64, userGrowthRate float64,
+	subscribedUsers int64, subscribedGrowthRate float64,
+	newRegistrations int64, newRegistrationsGrowthRate float64,
+	newSubscriptions int64, newSubscriptionsGrowthRate float64,
+	monthlySubscribers int64, monthlyGrowthRate float64,
+	yearlySubscribers int64, yearlyGrowthRate float64,
+	lifetimeSubscribers int64, lifetimeGrowthRate float64,
+	premiumSubscribers int64, premiumGrowthRate float64,
+) *AdminData {
+	a.TotalUsers = totalUsers
+	a.UserGrowthRate = userGrowthRate
+	a.SubscribedUsers = subscribedUsers
+	a.SubscribedGrowthRate = subscribedGrowthRate
+	a.NewRegistrations = newRegistrations
+	a.NewRegistrationsGrowthRate = newRegistrationsGrowthRate
+	a.NewSubscriptions = newSubscriptions
+	a.NewSubscriptionsGrowthRate = newSubscriptionsGrowthRate
+	a.MonthlySubscribers = monthlySubscribers
+	a.MonthlyGrowthRate = monthlyGrowthRate
+	a.YearlySubscribers = yearlySubscribers
+	a.YearlyGrowthRate = yearlyGrowthRate
+	a.LifetimeSubscribers = lifetimeSubscribers
+	a.LifetimeGrowthRate = lifetimeGrowthRate
+	a.PremiumSubscribers = premiumSubscribers
+	a.PremiumGrowthRate = premiumGrowthRate
+	return a
+}
+
+// WithRecentUsers sets the recent users data
+func (a *AdminData) WithRecentUsers(users []models.User) *AdminData {
+	a.RecentUsers = users
+	return a
+}
+
+// WithPagination sets the pagination data
+func (a *AdminData) WithPagination(currentPage, perPage, totalPages int) *AdminData {
+	a.CurrentPage = currentPage
+	a.PerPage = perPage
+	a.TotalPages = totalPages
+	return a
+}
+
+// WithSorting sets the sorting data
+func (a *AdminData) WithSorting(sortBy, sortOrder string) *AdminData {
+	a.SortBy = sortBy
+	a.SortOrder = sortOrder
 	return a
 }

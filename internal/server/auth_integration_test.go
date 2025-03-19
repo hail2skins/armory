@@ -329,6 +329,18 @@ func (m *MockDBWithContext) IsRecoveryExpired(ctx context.Context, token string)
 	return args.Bool(0), args.Error(1)
 }
 
+// CountUsers returns the count of users
+func (m *MockDBWithContext) CountUsers() (int64, error) {
+	args := m.Called()
+	return args.Get(0).(int64), args.Error(1)
+}
+
+// FindRecentUsers finds recent users with pagination and sorting
+func (m *MockDBWithContext) FindRecentUsers(offset, limit int, sortBy, sortOrder string) ([]database.User, error) {
+	args := m.Called(offset, limit, sortBy, sortOrder)
+	return args.Get(0).([]database.User), args.Error(1)
+}
+
 // Setup TestUserRegistration mock responses
 func setupTestRouter(t *testing.T) (*gin.Engine, *MockDBWithContext, *MockEmailService) {
 	// Create Gin router

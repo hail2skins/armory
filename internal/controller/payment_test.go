@@ -313,6 +313,18 @@ func (m *MockDB) IsRecoveryExpired(ctx context.Context, token string) (bool, err
 	return args.Bool(0), args.Error(1)
 }
 
+// CountUsers counts the number of users
+func (m *MockDB) CountUsers() (int64, error) {
+	args := m.Called()
+	return args.Get(0).(int64), args.Error(1)
+}
+
+// FindRecentUsers finds recent users with pagination and sorting
+func (m *MockDB) FindRecentUsers(offset, limit int, sortBy, sortOrder string) ([]database.User, error) {
+	args := m.Called(offset, limit, sortBy, sortOrder)
+	return args.Get(0).([]database.User), args.Error(1)
+}
+
 // TestRedirectGuestToLogin tests that guests are redirected to login when attempting to access pricing
 func TestRedirectGuestToLogin(t *testing.T) {
 	// Setup

@@ -45,6 +45,12 @@ type UserService interface {
 
 	// IsRecoveryExpired checks if a recovery token is expired
 	IsRecoveryExpired(ctx context.Context, token string) (bool, error)
+
+	// CountUsers returns the total number of users in the database
+	CountUsers() (int64, error)
+
+	// FindRecentUsers returns a list of recent users with pagination and sorting
+	FindRecentUsers(offset, limit int, sortBy, sortOrder string) ([]User, error)
 }
 
 // Ensure service implements UserService
@@ -226,4 +232,22 @@ func (s *service) IsRecoveryExpired(ctx context.Context, token string) (bool, er
 		return true, err
 	}
 	return user.IsRecoveryExpired(), nil
+}
+
+// CountUsers returns the total number of users in the database
+func (s *service) CountUsers() (int64, error) {
+	var count int64
+	result := s.db.Model(&User{}).Count(&count)
+	return count, result.Error
+}
+
+// FindRecentUsers returns a list of recent users with pagination and sorting
+func (s *service) FindRecentUsers(offset, limit int, sortBy, sortOrder string) ([]User, error) {
+	var users []User
+	result := s.db.Model(&User{}).
+		Order(sortBy + " " + sortOrder).
+		Offset(offset).
+		Limit(limit).
+		Find(&users)
+	return users, result.Error
 }

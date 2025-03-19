@@ -229,3 +229,15 @@ func (m *MockDB) MockController(name string, args ...interface{}) interface{} {
 	callArgs = append(callArgs, args...)
 	return m.Called(callArgs...).Get(0)
 }
+
+// CountUsers mocks the CountUsers method
+func (m *MockDB) CountUsers() (int64, error) {
+	args := m.Called()
+	return args.Get(0).(int64), args.Error(1)
+}
+
+// FindRecentUsers mocks the FindRecentUsers method
+func (m *MockDB) FindRecentUsers(offset, limit int, sortBy, sortOrder string) ([]database.User, error) {
+	args := m.Called(offset, limit, sortBy, sortOrder)
+	return args.Get(0).([]database.User), args.Error(1)
+}

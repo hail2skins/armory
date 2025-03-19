@@ -1,0 +1,200 @@
+package admin
+
+import (
+	"context"
+	"io"
+	"time"
+
+	"github.com/hail2skins/armory/cmd/web/views/data"
+	"github.com/hail2skins/armory/cmd/web/views/partials"
+)
+
+// ErrorMetrics renders the admin error metrics page
+templ ErrorMetrics(data *data.AdminData) {
+	@partials.Base(data.AuthData, templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+		_, err := io.WriteString(w, `
+				<div class="bg-white shadow-md rounded-lg p-6">
+					<h1 class="text-2xl font-bold mb-6 text-gunmetal-800">Error Metrics</h1>
+		`)
+		if err != nil {
+			return err
+		}
+
+		if data.Success != "" {
+			_, err = io.WriteString(w, `
+					<div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4" role="alert">
+						<span class="block sm:inline">`+data.Success+`</span>
+					</div>
+			`)
+			if err != nil {
+				return err
+			}
+		}
+
+		if data.Error != "" {
+			_, err = io.WriteString(w, `
+					<div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+						<span class="block sm:inline">`+data.Error+`</span>
+					</div>
+			`)
+			if err != nil {
+				return err
+			}
+		}
+
+		_, err = io.WriteString(w, `
+					<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+						<div class="bg-red-50 p-4 rounded-lg shadow-md border border-red-100">
+							<h3 class="text-lg font-semibold mb-2 text-red-800">Critical Errors</h3>
+							<p class="text-3xl font-bold text-red-900">0</p>
+							<p class="text-sm text-red-700 mt-2">Last 24 hours</p>
+						</div>
+						
+						<div class="bg-yellow-50 p-4 rounded-lg shadow-md border border-yellow-100">
+							<h3 class="text-lg font-semibold mb-2 text-yellow-800">Warnings</h3>
+							<p class="text-3xl font-bold text-yellow-900">2</p>
+							<p class="text-sm text-yellow-700 mt-2">Last 24 hours</p>
+						</div>
+						
+						<div class="bg-blue-50 p-4 rounded-lg shadow-md border border-blue-100">
+							<h3 class="text-lg font-semibold mb-2 text-blue-800">Info Messages</h3>
+							<p class="text-3xl font-bold text-blue-900">42</p>
+							<p class="text-sm text-blue-700 mt-2">Last 24 hours</p>
+						</div>
+					</div>
+					
+					<div class="mb-8">
+						<h2 class="text-xl font-semibold mb-4 text-gunmetal-800">Recent Errors</h2>
+						<div class="overflow-x-auto">
+							<table class="min-w-full bg-white border border-gunmetal-200 rounded-lg overflow-hidden">
+								<thead class="bg-gunmetal-200">
+									<tr>
+										<th class="py-3 px-4 text-left text-gunmetal-800">Timestamp</th>
+										<th class="py-3 px-4 text-left text-gunmetal-800">Level</th>
+										<th class="py-3 px-4 text-left text-gunmetal-800">Service</th>
+										<th class="py-3 px-4 text-left text-gunmetal-800">Message</th>
+										<th class="py-3 px-4 text-left text-gunmetal-800">Actions</th>
+									</tr>
+								</thead>
+								<tbody class="divide-y divide-gunmetal-200">
+									<tr class="hover:bg-gunmetal-50">
+										<td class="py-3 px-4 text-gunmetal-800">`+time.Now().Add(-15*time.Minute).Format("Jan 2, 15:04:05")+`</td>
+										<td class="py-3 px-4">
+											<span class="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-medium">WARNING</span>
+										</td>
+										<td class="py-3 px-4 text-gunmetal-800">Authentication</td>
+										<td class="py-3 px-4 text-gunmetal-800">Failed login attempt for user admin@example.com</td>
+										<td class="py-3 px-4">
+											<a href="#" class="text-brass-600 hover:text-brass-700 font-medium">Details</a>
+										</td>
+									</tr>
+									<tr class="hover:bg-gunmetal-50">
+										<td class="py-3 px-4 text-gunmetal-800">`+time.Now().Add(-45*time.Minute).Format("Jan 2, 15:04:05")+`</td>
+										<td class="py-3 px-4">
+											<span class="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-medium">WARNING</span>
+										</td>
+										<td class="py-3 px-4 text-gunmetal-800">Database</td>
+										<td class="py-3 px-4 text-gunmetal-800">Slow query detected: SELECT * FROM users WHERE email = ?</td>
+										<td class="py-3 px-4">
+											<a href="#" class="text-brass-600 hover:text-brass-700 font-medium">Details</a>
+										</td>
+									</tr>
+									<tr class="hover:bg-gunmetal-50">
+										<td class="py-3 px-4 text-gunmetal-800">`+time.Now().Add(-2*time.Hour).Format("Jan 2, 15:04:05")+`</td>
+										<td class="py-3 px-4">
+											<span class="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">INFO</span>
+										</td>
+										<td class="py-3 px-4 text-gunmetal-800">System</td>
+										<td class="py-3 px-4 text-gunmetal-800">Server restarted successfully</td>
+										<td class="py-3 px-4">
+											<a href="#" class="text-brass-600 hover:text-brass-700 font-medium">Details</a>
+										</td>
+									</tr>
+									<tr class="hover:bg-gunmetal-50">
+										<td class="py-3 px-4 text-gunmetal-800">`+time.Now().Add(-24*time.Hour).Format("Jan 2, 15:04:05")+`</td>
+										<td class="py-3 px-4">
+											<span class="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs font-medium">ERROR</span>
+										</td>
+										<td class="py-3 px-4 text-gunmetal-800">Payment</td>
+										<td class="py-3 px-4 text-gunmetal-800">Payment processing failed for transaction #12345</td>
+										<td class="py-3 px-4">
+											<a href="#" class="text-brass-600 hover:text-brass-700 font-medium">Details</a>
+										</td>
+									</tr>
+								</tbody>
+							</table>
+						</div>
+					</div>
+					
+					<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+						<div>
+							<h2 class="text-xl font-semibold mb-4 text-gunmetal-800">Error Rate Trends</h2>
+							<div class="bg-gunmetal-100 p-4 rounded-lg h-64 flex items-center justify-center border border-gunmetal-200 shadow-md">
+								<p class="text-gunmetal-700">Error rate graph visualization would be here</p>
+							</div>
+						</div>
+						
+						<div>
+							<h2 class="text-xl font-semibold mb-4 text-gunmetal-800">Top Error Sources</h2>
+							<div class="bg-gunmetal-100 p-4 rounded-lg border border-gunmetal-200 shadow-md">
+								<div class="mb-3">
+									<div class="flex justify-between mb-1">
+										<span class="text-gunmetal-800">Authentication Service</span>
+										<span class="text-gunmetal-800">35%</span>
+									</div>
+									<div class="w-full bg-gunmetal-200 rounded-full h-2.5">
+										<div class="bg-brass-500 h-2.5 rounded-full" style="width: 35%"></div>
+									</div>
+								</div>
+								
+								<div class="mb-3">
+									<div class="flex justify-between mb-1">
+										<span class="text-gunmetal-800">Database Service</span>
+										<span class="text-gunmetal-800">28%</span>
+									</div>
+									<div class="w-full bg-gunmetal-200 rounded-full h-2.5">
+										<div class="bg-brass-500 h-2.5 rounded-full" style="width: 28%"></div>
+									</div>
+								</div>
+								
+								<div class="mb-3">
+									<div class="flex justify-between mb-1">
+										<span class="text-gunmetal-800">Payment Service</span>
+										<span class="text-gunmetal-800">20%</span>
+									</div>
+									<div class="w-full bg-gunmetal-200 rounded-full h-2.5">
+										<div class="bg-brass-500 h-2.5 rounded-full" style="width: 20%"></div>
+									</div>
+								</div>
+								
+								<div class="mb-3">
+									<div class="flex justify-between mb-1">
+										<span class="text-gunmetal-800">API Gateway</span>
+										<span class="text-gunmetal-800">12%</span>
+									</div>
+									<div class="w-full bg-gunmetal-200 rounded-full h-2.5">
+										<div class="bg-brass-500 h-2.5 rounded-full" style="width: 12%"></div>
+									</div>
+								</div>
+								
+								<div>
+									<div class="flex justify-between mb-1">
+										<span class="text-gunmetal-800">Other Services</span>
+										<span class="text-gunmetal-800">5%</span>
+									</div>
+									<div class="w-full bg-gunmetal-200 rounded-full h-2.5">
+										<div class="bg-brass-500 h-2.5 rounded-full" style="width: 5%"></div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+					
+					<div class="mt-6 text-right">
+						<a href="/admin/dashboard" class="px-4 py-2 bg-brass-500 hover:bg-brass-600 text-white rounded-md inline-block text-sm font-medium">Back to Dashboard</a>
+					</div>
+				</div>
+		`)
+		return err
+	}))
+} 

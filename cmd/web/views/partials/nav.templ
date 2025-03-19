@@ -53,13 +53,13 @@ templ Nav(data data.AuthData) {
 					} else {
 						if data.IsCasbinAdmin {
 							<li class="mr-3">
-								<a class="inline-block py-2 px-4 bg-brass-500 text-white font-medium no-underline hover:bg-brass-600 rounded" href="/admin/manufacturers">
+								<a class="inline-block py-2 px-4 bg-brass-500 text-white font-medium no-underline hover:bg-brass-600 rounded" href="/admin/dashboard">
 									Admin
 								</a>
 							</li>
 						} else if data.HasRole("editor") {
 							<li class="mr-3">
-								<a class="inline-block py-2 px-4 bg-brass-500 text-white font-medium no-underline hover:bg-brass-600 rounded" href="/admin/manufacturers">
+								<a class="inline-block py-2 px-4 bg-brass-500 text-white font-medium no-underline hover:bg-brass-600 rounded" href="/admin/dashboard">
 									Editor
 								</a>
 							</li>

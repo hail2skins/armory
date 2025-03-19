@@ -11,6 +11,7 @@ type AuthData struct {
 	Roles         []string // User roles from Casbin
 	IsCasbinAdmin bool     // Quick check if user is an admin (renamed from IsAdmin)
 	AlwaysTrue    bool     // Test property that is always true
+	CurrentPath   string   // Current route path for navigation highlighting
 }
 
 // NewAuthData creates a new AuthData with default values
@@ -65,6 +66,12 @@ func (a AuthData) WithRoles(roles []string) AuthData {
 		}
 	}
 
+	return a
+}
+
+// WithCurrentPath returns a copy of the AuthData with the current path
+func (a AuthData) WithCurrentPath(path string) AuthData {
+	a.CurrentPath = path
 	return a
 }
 

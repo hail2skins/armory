@@ -23,34 +23,42 @@ func NewAdminManufacturerController(db database.Service) *AdminManufacturerContr
 	}
 }
 
-// Helper function to get admin data from context
-func getAdminDataFromContext(ctx *gin.Context, title string) *data.AdminData {
+// getAdminDataFromContext gets admin data from context
+func getAdminDataFromContext(ctx *gin.Context, title string, currentPath string) *data.AdminData {
+	// Get admin data from context
+	adminDataInterface, exists := ctx.Get("admin_data")
+	if exists && adminDataInterface != nil {
+		if adminData, ok := adminDataInterface.(*data.AdminData); ok {
+			// Update the title and current path
+			adminData.AuthData = adminData.AuthData.WithTitle(title).WithCurrentPath(currentPath)
+			return adminData
+		}
+	}
+
 	// Get auth data from context
 	authDataInterface, exists := ctx.Get("authData")
-	var adminData *data.AdminData
-
-	if exists {
-		// Try to use the auth data from context
+	if exists && authDataInterface != nil {
 		if authData, ok := authDataInterface.(data.AuthData); ok {
-			adminData = data.NewAdminData()
+			// Set the title and current path
+			authData = authData.WithTitle(title).WithCurrentPath(currentPath)
+
+			// Create admin data with auth data
+			adminData := data.NewAdminData()
 			adminData.AuthData = authData
-			adminData = adminData.WithTitle(title)
+			return adminData
 		}
 	}
 
 	// If we couldn't get auth data from context, create a new one
-	if adminData == nil {
-		adminData = data.NewAdminData().
-			WithTitle(title)
-	}
-
+	adminData := data.NewAdminData()
+	adminData.AuthData = adminData.AuthData.WithTitle(title).WithCurrentPath(currentPath)
 	return adminData
 }
 
 // Index shows all manufacturers
 func (c *AdminManufacturerController) Index(ctx *gin.Context) {
 	// Get auth data from context
-	adminData := getAdminDataFromContext(ctx, "Manufacturers")
+	adminData := getAdminDataFromContext(ctx, "Manufacturers", ctx.Request.URL.Path)
 
 	// Get success message from query params
 	success := ctx.Query("success")
@@ -75,7 +83,7 @@ func (c *AdminManufacturerController) Index(ctx *gin.Context) {
 // New shows the form to create a new manufacturer
 func (c *AdminManufacturerController) New(ctx *gin.Context) {
 	// Get auth data from context
-	adminData := getAdminDataFromContext(ctx, "New Manufacturer")
+	adminData := getAdminDataFromContext(ctx, "New Manufacturer", ctx.Request.URL.Path)
 
 	// Render the template
 	manufacturer.New(adminData).Render(ctx.Request.Context(), ctx.Writer)
@@ -84,7 +92,7 @@ func (c *AdminManufacturerController) New(ctx *gin.Context) {
 // Create creates a new manufacturer
 func (c *AdminManufacturerController) Create(ctx *gin.Context) {
 	// Get auth data from context
-	adminData := getAdminDataFromContext(ctx, "New Manufacturer")
+	adminData := getAdminDataFromContext(ctx, "New Manufacturer", ctx.Request.URL.Path)
 
 	// Get form values
 	name := ctx.PostForm("name")
@@ -118,7 +126,7 @@ func (c *AdminManufacturerController) Create(ctx *gin.Context) {
 // Show shows a manufacturer
 func (c *AdminManufacturerController) Show(ctx *gin.Context) {
 	// Get auth data from context
-	adminData := getAdminDataFromContext(ctx, "Manufacturer Details")
+	adminData := getAdminDataFromContext(ctx, "Manufacturer Details", ctx.Request.URL.Path)
 
 	// Get the manufacturer ID from the URL
 	id, err := strconv.ParseUint(ctx.Param("id"), 10, 64)
@@ -144,7 +152,7 @@ func (c *AdminManufacturerController) Show(ctx *gin.Context) {
 // Edit shows the form to edit a manufacturer
 func (c *AdminManufacturerController) Edit(ctx *gin.Context) {
 	// Get auth data from context
-	adminData := getAdminDataFromContext(ctx, "Edit Manufacturer")
+	adminData := getAdminDataFromContext(ctx, "Edit Manufacturer", ctx.Request.URL.Path)
 
 	// Get the manufacturer ID from the URL
 	id, err := strconv.ParseUint(ctx.Param("id"), 10, 64)
@@ -170,7 +178,7 @@ func (c *AdminManufacturerController) Edit(ctx *gin.Context) {
 // Update updates a manufacturer
 func (c *AdminManufacturerController) Update(ctx *gin.Context) {
 	// Get auth data from context
-	adminData := getAdminDataFromContext(ctx, "Edit Manufacturer")
+	adminData := getAdminDataFromContext(ctx, "Edit Manufacturer", ctx.Request.URL.Path)
 
 	// Get the manufacturer ID from the URL
 	id, err := strconv.ParseUint(ctx.Param("id"), 10, 64)
@@ -222,7 +230,7 @@ func (c *AdminManufacturerController) Update(ctx *gin.Context) {
 // Delete deletes a manufacturer
 func (c *AdminManufacturerController) Delete(ctx *gin.Context) {
 	// Get auth data just in case we need to display an error page
-	adminData := getAdminDataFromContext(ctx, "Delete Manufacturer")
+	adminData := getAdminDataFromContext(ctx, "Delete Manufacturer", ctx.Request.URL.Path)
 
 	// Get the manufacturer ID from the URL
 	id, err := strconv.ParseUint(ctx.Param("id"), 10, 64)

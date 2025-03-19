@@ -12,13 +12,13 @@ import (
 templ Index(data *data.AdminData) {
 	@partials.Base(data.AuthData, templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
 		_, err := io.WriteString(w, `
-		<div class="container mx-auto px-4 py-8">
-			<div class="flex justify-between items-center mb-6">
-				<h1 class="text-3xl font-bold text-gunmetal-800">Calibers</h1>
-				<a href="/admin/calibers/new" class="bg-gunmetal-800 hover:bg-gunmetal-700 text-white font-bold py-2 px-4 rounded">
-					New Caliber
-				</a>
-			</div>
+				<div class="bg-white shadow-md rounded-lg p-6">
+					<div class="flex justify-between items-center mb-6">
+						<h1 class="text-2xl font-bold text-gunmetal-800">Calibers</h1>
+						<a href="/admin/calibers/new" class="bg-brass-500 hover:bg-brass-600 text-white font-bold py-2 px-4 rounded">
+							New Caliber
+						</a>
+					</div>
 		`)
 		if err != nil {
 			return err
@@ -49,28 +49,28 @@ templ Index(data *data.AdminData) {
 		_, err = io.WriteString(w, `
 		<div class="mb-4">
 			<input type="text" id="searchInput" placeholder="Search calibers..." 
-				class="w-full px-4 py-2 border rounded-lg text-gunmetal-800 focus:outline-none focus:ring-2 focus:ring-gunmetal-500"
+				class="w-full px-4 py-2 border rounded-lg text-gunmetal-800 focus:outline-none focus:ring-2 focus:ring-brass-500"
 				onkeyup="searchTable()">
 		</div>
 		<div class="overflow-x-auto bg-white rounded-lg shadow overflow-y-auto">
-			<table class="min-w-full bg-white" id="calibersTable">
-				<thead class="bg-gunmetal-800 text-white">
+			<table class="min-w-full bg-white border border-gunmetal-200 rounded-lg overflow-hidden" id="calibersTable">
+				<thead class="bg-gunmetal-200">
 					<tr>
-						<th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer" onclick="sortTable(0)">
+						<th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer text-gunmetal-800" onclick="sortTable(0)">
 							Caliber <span class="ml-1">↕</span>
 						</th>
-						<th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer" onclick="sortTable(1)">
+						<th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer text-gunmetal-800" onclick="sortTable(1)">
 							Nickname <span class="ml-1">↕</span>
 						</th>
-						<th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer" onclick="sortTable(2)">
+						<th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer text-gunmetal-800" onclick="sortTable(2)">
 							Popularity <span class="ml-1">↕</span>
 						</th>
-						<th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
+						<th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gunmetal-800">
 							Actions
 						</th>
 					</tr>
 				</thead>
-				<tbody class="divide-y divide-gray-200 text-gunmetal-800">
+				<tbody class="divide-y divide-gunmetal-200 text-gunmetal-800">
 		`)
 		if err != nil {
 			return err
@@ -88,15 +88,15 @@ templ Index(data *data.AdminData) {
 		} else {
 			for _, c := range data.Calibers {
 				_, err = io.WriteString(w, `
-				<tr class="hover:bg-gray-100">
+				<tr class="hover:bg-gunmetal-50">
 					<td class="px-6 py-4 whitespace-nowrap">`+c.Caliber+`</td>
 					<td class="px-6 py-4 whitespace-nowrap">`+c.Nickname+`</td>
 					<td class="px-6 py-4 whitespace-nowrap">`+strconv.Itoa(int(c.Popularity))+`</td>
 					<td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-						<a href="/admin/calibers/`+strconv.Itoa(int(c.ID))+`" class="text-blue-600 hover:text-blue-900 mr-3">View</a>
-						<a href="/admin/calibers/`+strconv.Itoa(int(c.ID))+`/edit" class="text-amber-600 hover:text-amber-900 mr-3">Edit</a>
+						<a href="/admin/calibers/`+strconv.Itoa(int(c.ID))+`" class="text-brass-600 hover:text-brass-700 mr-3">View</a>
+						<a href="/admin/calibers/`+strconv.Itoa(int(c.ID))+`/edit" class="text-brass-600 hover:text-brass-700 mr-3">Edit</a>
 						<form action="/admin/calibers/`+strconv.Itoa(int(c.ID))+`/delete" method="post" class="inline">
-							<button type="submit" class="text-red-600 hover:text-red-900" onclick="return confirm('Are you sure?')">Delete</button>
+							<button type="submit" class="text-red-600 hover:text-red-700" onclick="return confirm('Are you sure?')">Delete</button>
 						</form>
 					</td>
 				</tr>

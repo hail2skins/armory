@@ -17,6 +17,7 @@ func (s *Server) RegisterAdminRoutes(r *gin.Engine, authController *controller.A
 	adminManufacturerController := controller.NewAdminManufacturerController(s.db)
 	adminCaliberController := controller.NewAdminCaliberController(s.db)
 	adminWeaponTypeController := controller.NewAdminWeaponTypeController(s.db)
+	adminDashboardController := controller.NewAdminDashboardController(s.db)
 
 	// Use the shared Casbin auth instance from the server
 	casbinAuth := s.casbinAuth
@@ -88,6 +89,17 @@ func (s *Server) RegisterAdminRoutes(r *gin.Engine, authController *controller.A
 		// If Casbin auth is available, also apply role-based access control for admin
 		if casbinAuth != nil {
 			adminGroup.Use(casbinAuth.Authorize("admin"))
+		}
+
+		// Dashboard routes
+		if casbinAuth != nil {
+			adminGroup.GET("/dashboard", casbinAuth.Authorize("dashboard", "read"), adminDashboardController.Dashboard)
+			adminGroup.GET("/detailed-health", casbinAuth.Authorize("dashboard", "read"), adminDashboardController.DetailedHealth)
+			adminGroup.GET("/error-metrics", casbinAuth.Authorize("dashboard", "read"), adminDashboardController.ErrorMetrics)
+		} else {
+			adminGroup.GET("/dashboard", adminDashboardController.Dashboard)
+			adminGroup.GET("/detailed-health", adminDashboardController.DetailedHealth)
+			adminGroup.GET("/error-metrics", adminDashboardController.ErrorMetrics)
 		}
 
 		// Manufacturer routes

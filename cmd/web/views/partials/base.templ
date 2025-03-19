@@ -1,8 +1,15 @@
 package partials
 
 import (
+	"strings"
+	
 	"github.com/hail2skins/armory/cmd/web/views/data"
 )
+
+// Helper function to check if a path is an admin path
+func isAdminPath(path string) bool {
+	return strings.HasPrefix(path, "/admin")
+}
 
 templ Base(data data.AuthData, children templ.Component) {
 	<!DOCTYPE html>
@@ -58,9 +65,22 @@ templ Base(data data.AuthData, children templ.Component) {
 		<body class="leading-normal tracking-normal text-white bg-gunmetal-100 font-sans">
 			@Nav(data)
 			<main class="flex-grow">
-				<div class="container px-3 mx-auto">
-					@children
-				</div>
+				if data.IsCasbinAdmin && isAdminPath(data.CurrentPath) {
+					<div class="flex">
+						<!-- Admin Sidebar -->
+						@AdminSidebar(data.CurrentPath)
+						
+						<!-- Main Content with Sidebar -->
+						<div class="ml-64 min-h-[calc(100vh-4rem)] p-6 flex-grow bg-white">
+							@children
+						</div>
+					</div>
+				} else {
+					<!-- Regular Content -->
+					<div class="container px-3 mx-auto">
+						@children
+					</div>
+				}
 			</main>
 			@Footer()
 			
