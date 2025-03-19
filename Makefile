@@ -25,7 +25,7 @@ build: tailwind-install templ-install
 	@echo "Building..."
 	@templ generate
 	@./tailwindcss -i cmd/web/styles/input.css -o cmd/web/assets/css/output.css
-	@go build -tags netgo -ldflags '-s -w' -o main cmd/api/main.go
+	@go build -tags netgo -ldflags '-s -w' -o main main.go
 
 # Run the application
 run:
