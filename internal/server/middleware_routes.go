@@ -62,7 +62,7 @@ func getCorsOrigins() []string {
 	}
 
 	// Environment-specific defaults
-	env := os.Getenv("GO_ENV")
+	env := os.Getenv("APP_ENV")
 	if env == "production" {
 		// Default for production - should be overridden with CORS_ORIGINS in actual production
 		logger.Warn("CORS_ORIGINS not set in production environment. Using default configuration.", nil)
