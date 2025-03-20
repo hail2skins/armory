@@ -162,7 +162,7 @@ func (u UserWrapper) GetCreatedAt() time.Time {
 
 // GetLastLogin implements the User interface
 func (u UserWrapper) GetLastLogin() time.Time {
-	return u.User.LastLoginAttempt
+	return u.User.LastLogin
 }
 
 // GetSubscriptionTier implements the User interface
@@ -174,6 +174,24 @@ func (u UserWrapper) GetSubscriptionTier() string {
 func (u UserWrapper) IsDeleted() bool {
 	// Check if DeletedAt is not nil
 	return u.User.DeletedAt != nil
+}
+
+// IsVerified implements the User interface
+func (u UserWrapper) IsVerified() bool {
+	return u.User.Verified
+}
+
+// GetSubscriptionStatus implements the User interface
+func (u UserWrapper) GetSubscriptionStatus() string {
+	if u.User.SubscriptionStatus == "" {
+		return "N/A"
+	}
+	return u.User.SubscriptionStatus
+}
+
+// GetSubscriptionEndDate implements the User interface
+func (u UserWrapper) GetSubscriptionEndDate() time.Time {
+	return u.User.SubscriptionEndDate
 }
 
 // DetailedHealth renders the detailed health page

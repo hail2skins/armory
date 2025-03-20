@@ -19,6 +19,7 @@ func (s *Server) RegisterAdminRoutes(r *gin.Engine, authController *controller.A
 	adminWeaponTypeController := controller.NewAdminWeaponTypeController(s.db)
 	adminDashboardController := controller.NewAdminDashboardController(s.db)
 	adminPromotionController := controller.NewAdminPromotionController(s.db)
+	adminUserController := controller.NewAdminUserController(s.db)
 
 	// Use the shared Casbin auth instance from the server
 	casbinAuth := s.casbinAuth
@@ -196,6 +197,28 @@ func (s *Server) RegisterAdminRoutes(r *gin.Engine, authController *controller.A
 				promotionGroup.GET("/:id/edit", adminPromotionController.Edit)
 				promotionGroup.POST("/:id", adminPromotionController.Update)
 				promotionGroup.POST("/:id/delete", adminPromotionController.Delete)
+			}
+		}
+
+		// ===== User Management Routes =====
+		userGroup := adminGroup.Group("/users")
+		{
+			if casbinAuth != nil {
+				// Define routes with fine-grained Casbin authorization
+				userGroup.GET("", casbinAuth.Authorize("admin", "read"), adminUserController.Index)
+				userGroup.GET("/:id", casbinAuth.Authorize("admin", "read"), adminUserController.Show)
+				userGroup.GET("/:id/edit", casbinAuth.Authorize("admin", "update"), adminUserController.Edit)
+				userGroup.POST("/:id", casbinAuth.Authorize("admin", "update"), adminUserController.Update)
+				userGroup.POST("/:id/delete", casbinAuth.Authorize("admin", "delete"), adminUserController.Delete)
+				userGroup.POST("/:id/restore", casbinAuth.Authorize("admin", "update"), adminUserController.Restore)
+			} else {
+				// Without Casbin, register routes with just authentication middleware
+				userGroup.GET("", adminUserController.Index)
+				userGroup.GET("/:id", adminUserController.Show)
+				userGroup.GET("/:id/edit", adminUserController.Edit)
+				userGroup.POST("/:id", adminUserController.Update)
+				userGroup.POST("/:id/delete", adminUserController.Delete)
+				userGroup.POST("/:id/restore", adminUserController.Restore)
 			}
 		}
 

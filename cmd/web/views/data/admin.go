@@ -62,6 +62,9 @@ type User interface {
 	GetLastLogin() time.Time
 	GetSubscriptionTier() string
 	IsDeleted() bool
+	IsVerified() bool
+	GetSubscriptionStatus() string
+	GetSubscriptionEndDate() time.Time
 }
 
 // NewAdminData creates a new AdminData with default values

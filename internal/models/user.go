@@ -21,4 +21,13 @@ type User interface {
 
 	// IsDeleted returns whether the user is deleted
 	IsDeleted() bool
+
+	// IsVerified returns whether the user's email is verified
+	IsVerified() bool
+
+	// GetSubscriptionStatus returns the user's subscription status
+	GetSubscriptionStatus() string
+
+	// GetSubscriptionEndDate returns when the user's subscription ends
+	GetSubscriptionEndDate() time.Time
 }
