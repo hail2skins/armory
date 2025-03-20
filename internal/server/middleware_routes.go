@@ -6,7 +6,6 @@ import (
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-	"github.com/hail2skins/armory/cmd/web/views/data"
 	"github.com/hail2skins/armory/internal/controller"
 	"github.com/hail2skins/armory/internal/logger"
 	"github.com/hail2skins/armory/internal/middleware"
@@ -137,34 +136,28 @@ func (s *Server) RegisterMiddleware(r *gin.Engine, authController *controller.Au
 	// Store the casbin auth in the server for admin routes to use
 	s.casbinAuth = casbinAuth
 
-	// Set up auth data middleware
+	// Initialize promotion service
+	logger.Info("Initializing promotion service", nil)
+	promotionService := s.createPromotionService()
+
+	// Set promotion service on auth controller
+	logger.Info("Setting promotion service on auth controller", nil)
+	authController.SetPromotionService(promotionService)
+
+	// Initialize auth data middleware first (without active promotion yet)
+	authMiddleware := middleware.AuthMiddleware(authController)
+
+	// Add the promotion banner middleware
+	logger.Info("Adding promotion banner middleware", nil)
+	r.Use(middleware.PromotionBanner(promotionService))
+
+	// Now apply the auth middleware after the promotion middleware has run
+	r.Use(authMiddleware)
+
+	// Set up auth compatibility middleware (controller in context)
 	r.Use(func(c *gin.Context) {
 		// Make casbinAuth available in the context
 		c.Set("casbinAuth", casbinAuth)
-
-		// Get the current user's authentication status and email
-		userInfo, authenticated := authController.GetCurrentUser(c)
-
-		// Create AuthData with authentication status and email
-		authData := data.NewAuthData()
-		authData.Authenticated = authenticated
-
-		// Set email if authenticated
-		if authenticated {
-			authData.Email = userInfo.GetUserName()
-
-			// Get user roles from Casbin if available
-			if s.casbinAuth != nil {
-				roles := s.casbinAuth.GetUserRoles(userInfo.GetUserName())
-				authData = authData.WithRoles(roles)
-			}
-		}
-
-		// Include the current path
-		authData = authData.WithCurrentPath(c.Request.URL.Path)
-
-		// Add authData to context
-		c.Set("authData", authData)
 
 		// Set both auth keys for compatibility - the new pattern uses "auth"
 		// while some existing code might still use "authController"

@@ -31,55 +31,77 @@ templ Base(data data.AuthData, children templ.Component) {
 						extend: {
 							colors: {
 								gunmetal: {
-									100: '#f5f5f5',
-									200: '#e5e5e5',
-									300: '#d4d4d4',
-									400: '#a3a3a3',
-									500: '#737373',
-									600: '#525252',
-									700: '#404040',
-									800: '#262626',
-									900: '#171717',
+									50: '#f7f7f8',
+									100: '#eeeef0',
+									200: '#d5d6da',
+									300: '#b3b5bc',
+									400: '#898c99',
+									500: '#6b6e7c',
+									600: '#5e616e',
+									700: '#4d4f59',
+									800: '#43444c',
+									900: '#3a3b41',
+									950: '#232428',
 								},
 								brass: {
-									100: '#fff7e6',
-									200: '#ffeacc',
-									300: '#ffd699',
-									400: '#ffc266',
-									500: '#ffad33',
-									600: '#e69500',
-									700: '#b37400',
-									800: '#805300',
-									900: '#4d3200',
-								}
-							}
-						}
-					}
-				}
+									50: '#fbf8ed',
+									100: '#f3eccc',
+									200: '#e8d494',
+									300: '#ddb962',
+									400: '#d3a142',
+									500: '#c48e35',
+									600: '#a86f2c',
+									700: '#8e5628',
+									800: '#744427',
+									900: '#633a25',
+									950: '#391e13',
+								},
+							},
+						},
+					},
+				};
 			</script>
-			<!-- Local CSS -->
-			<link href="assets/css/output.css" rel="stylesheet"/>
-			<script src="assets/js/htmx.min.js"></script>
+			
+			<!-- HTMX -->
+			<script src="https://unpkg.com/htmx.org@1.9.2" integrity="sha384-L6OqL9pRWyyFU3+/bjdSri+iIphTN/bvYyM37tICVyOJkWZLpP2vGn6VUEXgzg6h" crossorigin="anonymous"></script>
+			
+			<!-- Internal styles -->
+			<style>
+				body {
+					background-color: rgb(243, 244, 245);
+				}
+				.bg-hero {
+					background-image: linear-gradient(rgba(0, 0, 0, 0.65), rgba(0, 0, 0, 0.55)), url('/assets/images/background.jpg');
+					background-size: cover;
+					background-position: center;
+				}
+			</style>
 		</head>
-		
-		<body class="leading-normal tracking-normal text-gunmetal-800 bg-gunmetal-100 font-sans">
+		<body class="flex flex-col h-screen">
+			<!-- Navigation -->
+			@Nav(data)
+			
+			<!-- Promotion Banner -->
+			if data.ActivePromotion != nil && !data.Authenticated {
+				@PromotionBanner(data)
+			}
+			
 			<!-- Flash Messages -->
-			<div class="container px-3 mx-auto pt-4">
+			<div class="container px-3 mx-auto">
 				if data.Error != "" {
-					<div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 text-center" role="alert">
+					<div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 mt-4 text-center" role="alert">
 						<span class="block sm:inline text-center">{ data.Error }</span>
 					</div>
 				}
 				
 				if data.Success != "" {
-					<div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4 text-center" role="alert">
+					<div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4 mt-4 text-center" role="alert">
 						<span class="block sm:inline text-center">{ data.Success }</span>
 					</div>
 				}
 			</div>
 			
-			@Nav(data)
-			<main class="flex-grow">
+			<main class="flex-grow mt-16"> <!-- Add margin top to account for fixed navbar -->
 				if data.IsCasbinAdmin && isAdminPath(data.CurrentPath) {
 					<div class="flex">
 						<!-- Admin Sidebar -->

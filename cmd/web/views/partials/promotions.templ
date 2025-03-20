@@ -1,0 +1,34 @@
+package partials
+
+import (
+	"strconv"
+	
+	"github.com/hail2skins/armory/cmd/web/views/data"
+	"github.com/hail2skins/armory/internal/models"
+)
+
+// PromotionBanner displays an active promotion banner
+templ PromotionBanner(data data.AuthData) {
+	<div class="bg-amber-500 text-white py-3 text-center shadow-md">
+		<div class="w-full container mx-auto">
+			<div class="flex justify-between items-center">
+				if promo, ok := data.ActivePromotion.(*models.Promotion); ok {
+					<div class="pl-4 flex items-center">
+						<span class="font-bold text-lg">{ promo.Name }</span>
+					</div>
+					<div class="flex-1 text-center">
+						<p class="text-md">Register now and get <span class="font-bold">{ strconv.Itoa(promo.BenefitDays) } days free!</span></p>
+					</div>
+					<div class="pr-4 flex items-center justify-end">
+						<a href="/register" class="bg-white text-amber-600 px-4 py-2 rounded font-bold hover:bg-gray-100 transition-colors duration-200">Sign Up</a>
+					</div>
+				} else {
+					<!-- Fallback if type assertion fails -->
+					<div class="flex-1 text-center">
+						<p>Special promotion active! <a href="/register" class="underline font-bold">Register now</a> to get the benefits.</p>
+					</div>
+				}
+			</div>
+		</div>
+	</div>
+} 

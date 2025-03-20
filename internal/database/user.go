@@ -39,6 +39,10 @@ type User struct {
 	SubscriptionTier     string `gorm:"default:'free'"`
 	SubscriptionStatus   string
 	SubscriptionEndDate  time.Time
+	PromotionID          uint
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
+	DeletedAt            *time.Time
 }
 
 // GetUserName returns the user's email

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
 	"os/signal"
 	"syscall"
 	"time"
@@ -38,25 +39,30 @@ func gracefulShutdown(apiServer *http.Server, done chan bool) {
 
 func main() {
 	// Initialize the server (which also sets up logging)
-	server := server.NewServer()
+	s := server.New()
 
 	// Ensure logger is reset when the application exits
 	defer logger.ResetLogging()
 
-	// Create a done channel to signal when the shutdown is complete
-	done := make(chan bool, 1)
-
-	// Run graceful shutdown in a separate goroutine
-	go gracefulShutdown(server, done)
-
+	// Start the server in a separate goroutine
 	logger.Info("Starting server", nil)
-	err := server.ListenAndServe()
-	if err != nil && err != http.ErrServerClosed {
-		logger.Error("HTTP server error", err, nil)
-		panic(fmt.Sprintf("http server error: %s", err))
+	err := s.Start()
+	if err != nil {
+		logger.Error("Server error", err, nil)
+		panic(fmt.Sprintf("server error: %s", err))
 	}
 
-	// Wait for the graceful shutdown to complete
-	<-done
+	// Create a channel to listen for OS signals
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
+
+	// Wait for interrupt signal
+	<-stop
+
+	logger.Info("Shutting down gracefully", nil)
+
+	// Perform any cleanup needed
+	// (e.g., database connections, etc.)
+
 	logger.Info("Graceful shutdown complete", nil)
 }

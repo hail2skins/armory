@@ -627,3 +627,12 @@ func (m *MockDBWithContext) DeletePromotion(id uint) error {
 	args := m.Called(id)
 	return args.Error(0)
 }
+
+// FindActivePromotions mocks the database method to fetch active promotions
+func (m *MockDBWithContext) FindActivePromotions() ([]models.Promotion, error) {
+	args := m.Called()
+	if args.Get(0) == nil {
+		return []models.Promotion{}, args.Error(1)
+	}
+	return args.Get(0).([]models.Promotion), args.Error(1)
+}

@@ -179,6 +179,24 @@ func (s *TestService) DeletePromotion(id uint) error {
 	return s.db.Delete(&models.Promotion{}, id).Error
 }
 
+// FindActivePromotions finds all active promotions for the current time period
+func (s *TestService) FindActivePromotions() ([]models.Promotion, error) {
+	var promotions []models.Promotion
+	now := time.Now()
+
+	// Find promotions that are:
+	// 1. Marked as active
+	// 2. Current date is between start date and end date
+	err := s.db.Where("active = ? AND ? BETWEEN start_date AND end_date", true, now).
+		Find(&promotions).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	return promotions, nil
+}
+
 // CreateUser creates a new user
 func (s *TestService) CreateUser(ctx context.Context, email, password string) (*database.User, error) {
 	user := &database.User{

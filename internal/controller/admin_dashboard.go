@@ -172,8 +172,8 @@ func (u UserWrapper) GetSubscriptionTier() string {
 
 // IsDeleted implements the User interface
 func (u UserWrapper) IsDeleted() bool {
-	// Check if DeletedAt is not nil and not zero
-	return !u.User.DeletedAt.Time.IsZero()
+	// Check if DeletedAt is not nil
+	return u.User.DeletedAt != nil
 }
 
 // DetailedHealth renders the detailed health page

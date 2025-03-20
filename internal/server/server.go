@@ -5,13 +5,13 @@ import (
 	"net/http"
 	"os"
 	"strconv"
-	"time"
 
 	_ "github.com/joho/godotenv/autoload"
 
 	"github.com/hail2skins/armory/internal/database"
 	"github.com/hail2skins/armory/internal/logger"
 	"github.com/hail2skins/armory/internal/middleware"
+	"github.com/hail2skins/armory/internal/services"
 )
 
 type Server struct {
@@ -21,29 +21,53 @@ type Server struct {
 	casbinAuth *middleware.CasbinAuth
 }
 
-func NewServer() *http.Server {
-	// Initialize logger
-	logger.Info("Initializing server", nil)
+// New creates a new server
+func New() *Server {
+	// Parse the port from environment variables
+	portStr := os.Getenv("PORT")
+	if portStr == "" {
+		portStr = "8080" // Default port
+	}
 
-	port, _ := strconv.Atoi(os.Getenv("PORT"))
+	port, err := strconv.Atoi(portStr)
+	if err != nil {
+		logger.Warn("Invalid PORT env var, using default 8080", map[string]interface{}{
+			"error": err.Error(),
+		})
+		port = 8080
+	}
+
+	// Create the server
 	NewServer := &Server{
 		port: port,
-
-		db: database.New(),
+		db:   database.New(),
 	}
 
-	// Declare Server config
-	server := &http.Server{
-		Addr:         fmt.Sprintf(":%d", NewServer.port),
-		Handler:      NewServer.RegisterRoutes(),
-		IdleTimeout:  time.Minute,
-		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 30 * time.Second,
+	return NewServer
+}
+
+// Start initializes and starts the server
+func (s *Server) Start() error {
+	logger.Info("Server Start method called", nil)
+
+	if s.db == nil {
+		logger.Info("No database service provided, creating a new one...", nil)
+		s.db = database.New()
 	}
 
-	logger.Info("Server initialized", map[string]interface{}{
-		"port": port,
-	})
+	// Set up routes
+	logger.Info("Setting up routes", nil)
+	handler := s.RegisterRoutes()
 
-	return server
+	// Start the server
+	addr := fmt.Sprintf(":%d", s.port)
+	logger.Info("Starting server on "+addr, nil)
+
+	// Use the handler from RegisterRoutes
+	return http.ListenAndServe(addr, handler)
+}
+
+// createPromotionService creates a new promotion service
+func (s *Server) createPromotionService() *services.PromotionService {
+	return services.NewPromotionService(s.db)
 }

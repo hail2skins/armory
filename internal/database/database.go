@@ -46,6 +46,7 @@ type Service interface {
 	CreatePromotion(promotion *models.Promotion) error
 	UpdatePromotion(promotion *models.Promotion) error
 	DeletePromotion(id uint) error
+	FindActivePromotions() ([]models.Promotion, error)
 
 	// Additional user methods
 	GetUserByID(id uint) (*User, error)
@@ -300,4 +301,22 @@ func (s *service) UpdatePromotion(promotion *models.Promotion) error {
 // DeletePromotion deletes a promotion from the database
 func (s *service) DeletePromotion(id uint) error {
 	return s.db.Delete(&models.Promotion{}, id).Error
+}
+
+// FindActivePromotions finds all active promotions for the current time period
+func (s *service) FindActivePromotions() ([]models.Promotion, error) {
+	var promotions []models.Promotion
+	now := time.Now()
+
+	// Find promotions that are:
+	// 1. Marked as active
+	// 2. Current date is between start date and end date
+	err := s.db.Where("active = ? AND ? BETWEEN start_date AND end_date", true, now).
+		Find(&promotions).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	return promotions, nil
 }

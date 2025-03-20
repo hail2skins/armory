@@ -19,24 +19,6 @@ templ Owner(data *data.OwnerData) {
 				<h1 class="text-2xl font-bold text-gunmetal-800 mb-4">Welcome to Your Virtual Armory</h1>
 				<p class="text-gunmetal-700 mb-4">Manage your firearms collection, track maintenance, and more.</p>
 				
-				` + func() string {
-					if data.Auth.Success != "" {
-						return `<div class="mb-4 bg-green-100 border-l-4 border-green-500 p-4 text-center">
-							<p class="text-green-700">` + data.Auth.Success + `</p>
-						</div>`
-					}
-					return ""
-				}() + `
-				
-				` + func() string {
-					if data.Auth.Error != "" {
-						return `<div class="mb-4 bg-yellow-100 border-l-4 border-yellow-500 p-4 text-center">
-							<p class="text-yellow-700">` + data.Auth.Error + ` <a href="/pricing" class="text-blue-600 hover:text-blue-800 underline">Click here to view pricing options</a></p>
-						</div>`
-					}
-					return ""
-				}() + `
-				
 				<!-- Quick Stats -->
 				<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
 					<div class="bg-gunmetal-100 p-4 rounded-lg shadow">
@@ -91,6 +73,9 @@ templ Owner(data *data.OwnerData) {
 								tier = "Supporter"
 							case "premium_lifetime":
 								tier = "Big Baller"
+							case "promotion":
+								// Special handling for promotion tier with link to subscribe
+								return `PROMOTION <a href="/pricing" class="text-blue-600 hover:text-blue-800 font-bold">(SUB NOW!)</a>`
 							default:
 								tier = data.SubscriptionTier
 							}

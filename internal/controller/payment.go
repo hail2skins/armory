@@ -9,6 +9,7 @@ import (
 	"github.com/hail2skins/armory/cmd/web/views/data"
 	"github.com/hail2skins/armory/cmd/web/views/payment"
 	"github.com/hail2skins/armory/internal/database"
+	"github.com/hail2skins/armory/internal/logger"
 	"github.com/hail2skins/armory/internal/models"
 	"github.com/hail2skins/armory/internal/services/stripe"
 )
@@ -87,6 +88,21 @@ func (p *PaymentController) PricingHandler(c *gin.Context) {
 	// Set email if authenticated
 	if authenticated {
 		authData.Email = userInfo.GetUserName()
+
+		// Get Casbin from context
+		if casbinAuth, exists := c.Get("casbinAuth"); exists && casbinAuth != nil {
+			if ca, ok := casbinAuth.(interface{ GetUserRoles(string) []string }); ok {
+				roles := ca.GetUserRoles(userInfo.GetUserName())
+				authData = authData.WithRoles(roles)
+
+				// Log roles for debugging
+				logger.Info("Pricing page - Casbin roles for user", map[string]interface{}{
+					"email":   userInfo.GetUserName(),
+					"roles":   roles,
+					"isAdmin": authData.IsCasbinAdmin,
+				})
+			}
+		}
 	}
 
 	// Check for authData from context to preserve roles
@@ -94,6 +110,24 @@ func (p *PaymentController) PricingHandler(c *gin.Context) {
 		if contextAuthData, ok := authDataInterface.(data.AuthData); ok {
 			// Use the auth data that already has roles, maintaining our title
 			authData = contextAuthData.WithTitle("Pricing")
+
+			// Re-fetch roles from Casbin to ensure they're fresh
+			if authenticated && authData.Email != "" {
+				// Get Casbin from context
+				if casbinAuth, exists := c.Get("casbinAuth"); exists && casbinAuth != nil {
+					if ca, ok := casbinAuth.(interface{ GetUserRoles(string) []string }); ok {
+						roles := ca.GetUserRoles(authData.Email)
+						authData = authData.WithRoles(roles)
+
+						// Log roles for debugging
+						logger.Info("Pricing page - Casbin roles from context", map[string]interface{}{
+							"email":   authData.Email,
+							"roles":   roles,
+							"isAdmin": authData.IsCasbinAdmin,
+						})
+					}
+				}
+			}
 		}
 	}
 
@@ -293,6 +327,18 @@ func (p *PaymentController) ShowPaymentHistory(c *gin.Context) {
 		if contextAuthData, ok := authDataInterface.(data.AuthData); ok {
 			// Use the auth data that already has roles, maintaining our title
 			authData = contextAuthData.WithTitle("Payment History")
+
+			// Re-fetch roles from Casbin to ensure they're up to date
+			if casbinAuth, exists := c.Get("casbinAuth"); exists && casbinAuth != nil {
+				if ca, ok := casbinAuth.(interface{ GetUserRoles(string) []string }); ok {
+					roles := ca.GetUserRoles(userInfo.GetUserName())
+					logger.Info("Casbin roles for user in payment history page", map[string]interface{}{
+						"email": userInfo.GetUserName(),
+						"roles": roles,
+					})
+					authData = authData.WithRoles(roles)
+				}
+			}
 		}
 	}
 
@@ -345,6 +391,18 @@ func (p *PaymentController) ShowCancelConfirmation(c *gin.Context) {
 		if contextAuthData, ok := authDataInterface.(data.AuthData); ok {
 			// Use the auth data that already has roles, maintaining our title
 			authData = contextAuthData.WithTitle("Cancel Subscription")
+
+			// Re-fetch roles from Casbin to ensure they're up to date
+			if casbinAuth, exists := c.Get("casbinAuth"); exists && casbinAuth != nil {
+				if ca, ok := casbinAuth.(interface{ GetUserRoles(string) []string }); ok {
+					roles := ca.GetUserRoles(userInfo.GetUserName())
+					logger.Info("Casbin roles for user in cancel subscription page", map[string]interface{}{
+						"email": userInfo.GetUserName(),
+						"roles": roles,
+					})
+					authData = authData.WithRoles(roles)
+				}
+			}
 		}
 	}
 

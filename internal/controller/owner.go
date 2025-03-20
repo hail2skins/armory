@@ -17,6 +17,7 @@ import (
 	"github.com/hail2skins/armory/cmd/web/views/owner"
 	gunView "github.com/hail2skins/armory/cmd/web/views/owner/gun"
 	"github.com/hail2skins/armory/internal/database"
+	"github.com/hail2skins/armory/internal/logger"
 	"github.com/hail2skins/armory/internal/models"
 	"github.com/hail2skins/armory/internal/services/email"
 	"github.com/shaj13/go-guardian/v2/auth"
@@ -198,6 +199,18 @@ func (o *OwnerController) LandingPage(c *gin.Context) {
 		if authData, ok := authDataInterface.(data.AuthData); ok {
 			// Use the auth data that already has roles, maintaining our title and other changes
 			ownerData.Auth = authData.WithTitle("Owner Dashboard")
+
+			// Re-fetch roles from Casbin to ensure they're up to date
+			if casbinAuth, exists := c.Get("casbinAuth"); exists && casbinAuth != nil {
+				if ca, ok := casbinAuth.(interface{ GetUserRoles(string) []string }); ok {
+					roles := ca.GetUserRoles(userInfo.GetUserName())
+					logger.Info("Casbin roles for user in owner page", map[string]interface{}{
+						"email": userInfo.GetUserName(),
+						"roles": roles,
+					})
+					ownerData.Auth = ownerData.Auth.WithRoles(roles)
+				}
+			}
 		}
 	}
 
@@ -347,6 +360,18 @@ func (o *OwnerController) New(c *gin.Context) {
 		if authData, ok := authDataInterface.(data.AuthData); ok {
 			// Use the auth data that already has roles, maintaining our title and other changes
 			ownerData.Auth = authData.WithTitle("Add New Firearm")
+
+			// Re-fetch roles from Casbin to ensure they're up to date
+			if casbinAuth, exists := c.Get("casbinAuth"); exists && casbinAuth != nil {
+				if ca, ok := casbinAuth.(interface{ GetUserRoles(string) []string }); ok {
+					roles := ca.GetUserRoles(userInfo.GetUserName())
+					logger.Info("Casbin roles for user in new gun page", map[string]interface{}{
+						"email": userInfo.GetUserName(),
+						"roles": roles,
+					})
+					ownerData.Auth = ownerData.Auth.WithRoles(roles)
+				}
+			}
 		}
 	}
 
@@ -604,6 +629,18 @@ func (o *OwnerController) Create(c *gin.Context) {
 		if authData, ok := authDataInterface.(data.AuthData); ok {
 			// Use the auth data that already has roles, maintaining our title and other changes
 			ownerData.Auth = authData.WithTitle("Add New Firearm")
+
+			// Re-fetch roles from Casbin to ensure they're up to date
+			if casbinAuth, exists := c.Get("casbinAuth"); exists && casbinAuth != nil {
+				if ca, ok := casbinAuth.(interface{ GetUserRoles(string) []string }); ok {
+					roles := ca.GetUserRoles(userInfo.GetUserName())
+					logger.Info("Casbin roles for user in new gun page", map[string]interface{}{
+						"email": userInfo.GetUserName(),
+						"roles": roles,
+					})
+					ownerData.Auth = ownerData.Auth.WithRoles(roles)
+				}
+			}
 		}
 	}
 
@@ -678,6 +715,18 @@ func (o *OwnerController) Show(c *gin.Context) {
 			if authData, ok := authDataInterface.(data.AuthData); ok {
 				// Use the auth data that already has roles, maintaining our title and other changes
 				ownerData.Auth = authData.WithTitle(fmt.Sprintf("Gun: %s", gun.Name))
+
+				// Re-fetch roles from Casbin to ensure they're up to date
+				if casbinAuth, exists := c.Get("casbinAuth"); exists && casbinAuth != nil {
+					if ca, ok := casbinAuth.(interface{ GetUserRoles(string) []string }); ok {
+						roles := ca.GetUserRoles(userInfo.GetUserName())
+						logger.Info("Casbin roles for user in gun show page", map[string]interface{}{
+							"email": userInfo.GetUserName(),
+							"roles": roles,
+						})
+						ownerData.Auth = ownerData.Auth.WithRoles(roles)
+					}
+				}
 			}
 		}
 
@@ -741,6 +790,18 @@ func (o *OwnerController) Show(c *gin.Context) {
 		if authData, ok := authDataInterface.(data.AuthData); ok {
 			// Use the auth data that already has roles, maintaining our title and other changes
 			ownerData.Auth = authData.WithTitle(fmt.Sprintf("Gun: %s", gun.Name))
+
+			// Re-fetch roles from Casbin to ensure they're up to date
+			if casbinAuth, exists := c.Get("casbinAuth"); exists && casbinAuth != nil {
+				if ca, ok := casbinAuth.(interface{ GetUserRoles(string) []string }); ok {
+					roles := ca.GetUserRoles(userInfo.GetUserName())
+					logger.Info("Casbin roles for user in gun show page", map[string]interface{}{
+						"email": userInfo.GetUserName(),
+						"roles": roles,
+					})
+					ownerData.Auth = ownerData.Auth.WithRoles(roles)
+				}
+			}
 		}
 	}
 
@@ -926,6 +987,18 @@ func (o *OwnerController) Edit(c *gin.Context) {
 		if authData, ok := authDataInterface.(data.AuthData); ok {
 			// Use the auth data that already has roles, maintaining our title and other changes
 			viewData.Auth = authData.WithTitle(fmt.Sprintf("Edit Gun: %s", gun.Name))
+
+			// Re-fetch roles from Casbin to ensure they're up to date
+			if casbinAuth, exists := c.Get("casbinAuth"); exists && casbinAuth != nil {
+				if ca, ok := casbinAuth.(interface{ GetUserRoles(string) []string }); ok {
+					roles := ca.GetUserRoles(userInfo.GetUserName())
+					logger.Info("Casbin roles for user in edit gun page", map[string]interface{}{
+						"email": userInfo.GetUserName(),
+						"roles": roles,
+					})
+					viewData.Auth = viewData.Auth.WithRoles(roles)
+				}
+			}
 		}
 	}
 
@@ -1569,6 +1642,18 @@ func (o *OwnerController) Arsenal(c *gin.Context) {
 			if authData, ok := authDataInterface.(data.AuthData); ok {
 				// Use the auth data that already has roles, maintaining our title and other changes
 				ownerData.Auth = authData.WithTitle("Your Arsenal")
+
+				// Re-fetch roles from Casbin to ensure they're up to date
+				if casbinAuth, exists := c.Get("casbinAuth"); exists && casbinAuth != nil {
+					if ca, ok := casbinAuth.(interface{ GetUserRoles(string) []string }); ok {
+						roles := ca.GetUserRoles(userInfo.GetUserName())
+						logger.Info("Casbin roles for user in arsenal page", map[string]interface{}{
+							"email": userInfo.GetUserName(),
+							"roles": roles,
+						})
+						ownerData.Auth = ownerData.Auth.WithRoles(roles)
+					}
+				}
 			}
 		}
 
@@ -1721,6 +1806,18 @@ func (o *OwnerController) Arsenal(c *gin.Context) {
 		if authData, ok := authDataInterface.(data.AuthData); ok {
 			// Use the auth data that already has roles, maintaining our title and other changes
 			ownerData.Auth = authData.WithTitle("Your Arsenal")
+
+			// Re-fetch roles from Casbin to ensure they're up to date
+			if casbinAuth, exists := c.Get("casbinAuth"); exists && casbinAuth != nil {
+				if ca, ok := casbinAuth.(interface{ GetUserRoles(string) []string }); ok {
+					roles := ca.GetUserRoles(userInfo.GetUserName())
+					logger.Info("Casbin roles for user in arsenal page", map[string]interface{}{
+						"email": userInfo.GetUserName(),
+						"roles": roles,
+					})
+					ownerData.Auth = ownerData.Auth.WithRoles(roles)
+				}
+			}
 		}
 	}
 
@@ -1791,6 +1888,18 @@ func (o *OwnerController) Profile(c *gin.Context) {
 			if authData, ok := authDataInterface.(data.AuthData); ok {
 				// Use the auth data that already has roles, maintaining our title and other changes
 				ownerData.Auth = authData.WithTitle("Profile")
+
+				// Re-fetch roles from Casbin to ensure they're up to date
+				if casbinAuth, exists := c.Get("casbinAuth"); exists && casbinAuth != nil {
+					if ca, ok := casbinAuth.(interface{ GetUserRoles(string) []string }); ok {
+						roles := ca.GetUserRoles(userInfo.GetUserName())
+						logger.Info("Casbin roles for user in profile page", map[string]interface{}{
+							"email": userInfo.GetUserName(),
+							"roles": roles,
+						})
+						ownerData.Auth = ownerData.Auth.WithRoles(roles)
+					}
+				}
 			}
 		}
 
@@ -1847,6 +1956,18 @@ func (o *OwnerController) Profile(c *gin.Context) {
 		if authData, ok := authDataInterface.(data.AuthData); ok {
 			// Use the auth data that already has roles, maintaining our title and other changes
 			ownerData.Auth = authData.WithTitle("Profile")
+
+			// Re-fetch roles from Casbin to ensure they're up to date
+			if casbinAuth, exists := c.Get("casbinAuth"); exists && casbinAuth != nil {
+				if ca, ok := casbinAuth.(interface{ GetUserRoles(string) []string }); ok {
+					roles := ca.GetUserRoles(userInfo.GetUserName())
+					logger.Info("Casbin roles for user in profile page", map[string]interface{}{
+						"email": userInfo.GetUserName(),
+						"roles": roles,
+					})
+					ownerData.Auth = ownerData.Auth.WithRoles(roles)
+				}
+			}
 		}
 	}
 
@@ -2314,6 +2435,18 @@ func (o *OwnerController) Subscription(c *gin.Context) {
 			if authData, ok := authDataInterface.(data.AuthData); ok {
 				// Use the auth data that already has roles, maintaining our title and other changes
 				ownerData.Auth = authData.WithTitle("Subscription Management")
+
+				// Re-fetch roles from Casbin to ensure they're up to date
+				if casbinAuth, exists := c.Get("casbinAuth"); exists && casbinAuth != nil {
+					if ca, ok := casbinAuth.(interface{ GetUserRoles(string) []string }); ok {
+						roles := ca.GetUserRoles(userInfo.GetUserName())
+						logger.Info("Casbin roles for user in subscription page", map[string]interface{}{
+							"email": userInfo.GetUserName(),
+							"roles": roles,
+						})
+						ownerData.Auth = ownerData.Auth.WithRoles(roles)
+					}
+				}
 			}
 		}
 
@@ -2377,6 +2510,18 @@ func (o *OwnerController) Subscription(c *gin.Context) {
 		if authData, ok := authDataInterface.(data.AuthData); ok {
 			// Use the auth data that already has roles, maintaining our title and other changes
 			ownerData.Auth = authData.WithTitle("Subscription Management")
+
+			// Re-fetch roles from Casbin to ensure they're up to date
+			if casbinAuth, exists := c.Get("casbinAuth"); exists && casbinAuth != nil {
+				if ca, ok := casbinAuth.(interface{ GetUserRoles(string) []string }); ok {
+					roles := ca.GetUserRoles(userInfo.GetUserName())
+					logger.Info("Casbin roles for user in subscription page", map[string]interface{}{
+						"email": userInfo.GetUserName(),
+						"roles": roles,
+					})
+					ownerData.Auth = ownerData.Auth.WithRoles(roles)
+				}
+			}
 		}
 	}
 

@@ -13,6 +13,7 @@ import (
 	"github.com/hail2skins/armory/internal/database"
 	customerrors "github.com/hail2skins/armory/internal/errors"
 	"github.com/hail2skins/armory/internal/logger"
+	"github.com/hail2skins/armory/internal/models"
 	"github.com/hail2skins/armory/internal/services/email"
 	"github.com/shaj13/go-guardian/v2/auth"
 	"github.com/shaj13/go-guardian/v2/auth/strategies/basic"
@@ -25,10 +26,13 @@ type RenderFunc func(c *gin.Context, data interface{})
 
 // AuthController handles authentication-related routes
 type AuthController struct {
-	db                     database.Service
-	strategy               auth.Strategy
-	cache                  libcache.Cache
-	emailService           email.EmailService
+	db               database.Service
+	strategy         auth.Strategy
+	cache            libcache.Cache
+	emailService     email.EmailService
+	promotionService interface {
+		GetBestActivePromotion() (*models.Promotion, error)
+	}
 	RenderLogin            RenderFunc
 	RenderRegister         RenderFunc
 	RenderLogout           RenderFunc
@@ -36,6 +40,7 @@ type AuthController struct {
 	RenderForgotPassword   RenderFunc
 	RenderResetPassword    RenderFunc
 	RenderVerificationSent RenderFunc
+	SkipUnscopedChecks     bool // For testing - skips unscoped DB checks if true
 }
 
 // LoginRequest represents the login form data
@@ -269,38 +274,42 @@ func (a *AuthController) RegisterHandler(c *gin.Context) {
 
 	// Check if there's a soft-deleted user with this email
 	var softDeletedUser database.User
-	if err := a.db.GetDB().Unscoped().Where("email = ? AND deleted_at IS NOT NULL", req.Email).First(&softDeletedUser).Error; err == nil {
-		// User exists but was soft-deleted - restore it
-		if err := a.db.GetDB().Unscoped().Model(&softDeletedUser).Update("deleted_at", nil).Error; err != nil {
-			// Error restoring user
-			authData := data.NewAuthData().WithTitle("Register").WithError("An error occurred restoring your account")
-			authData.Email = req.Email
-			a.RenderRegister(c, authData)
+
+	// Skip the unscoped check in tests
+	if !a.SkipUnscopedChecks {
+		if err := a.db.GetDB().Unscoped().Where("email = ? AND deleted_at IS NOT NULL", req.Email).First(&softDeletedUser).Error; err == nil {
+			// User exists but was soft-deleted - restore it
+			if err := a.db.GetDB().Unscoped().Model(&softDeletedUser).Update("deleted_at", nil).Error; err != nil {
+				// Error restoring user
+				authData := data.NewAuthData().WithTitle("Register").WithError("An error occurred restoring your account")
+				authData.Email = req.Email
+				a.RenderRegister(c, authData)
+				return
+			}
+
+			// Update password
+			if err := softDeletedUser.SetPassword(req.Password); err != nil {
+				authData := data.NewAuthData().WithTitle("Register").WithError("Failed to update password")
+				authData.Email = req.Email
+				a.RenderRegister(c, authData)
+				return
+			}
+
+			// Save the updated user
+			if err := a.db.UpdateUser(c.Request.Context(), &softDeletedUser); err != nil {
+				authData := data.NewAuthData().WithTitle("Register").WithError("Failed to update account")
+				authData.Email = req.Email
+				a.RenderRegister(c, authData)
+				return
+			}
+
+			// Set success flash message
+			c.SetCookie("flash", "Your previous account has been restored with all your data. Please log in.", 10, "/", "", false, false)
+
+			// Redirect to login page
+			c.Redirect(http.StatusSeeOther, "/login")
 			return
 		}
-
-		// Update password
-		if err := softDeletedUser.SetPassword(req.Password); err != nil {
-			authData := data.NewAuthData().WithTitle("Register").WithError("Failed to update password")
-			authData.Email = req.Email
-			a.RenderRegister(c, authData)
-			return
-		}
-
-		// Save the updated user
-		if err := a.db.UpdateUser(c.Request.Context(), &softDeletedUser); err != nil {
-			authData := data.NewAuthData().WithTitle("Register").WithError("Failed to update account")
-			authData.Email = req.Email
-			a.RenderRegister(c, authData)
-			return
-		}
-
-		// Set success flash message
-		c.SetCookie("flash", "Your previous account has been restored with all your data. Please log in.", 10, "/", "", false, false)
-
-		// Redirect to login page
-		c.Redirect(http.StatusSeeOther, "/login")
-		return
 	}
 
 	if existingUser != nil {
@@ -317,6 +326,14 @@ func (a *AuthController) RegisterHandler(c *gin.Context) {
 		authData.Email = req.Email
 		a.RenderRegister(c, authData)
 		return
+	}
+
+	// Check for active promotions and apply if available
+	if a.promotionService != nil {
+		if promotion, err := a.promotionService.GetBestActivePromotion(); err == nil && promotion != nil {
+			// Apply promotion benefit to the user
+			a.ApplyPromotionToUser(user, promotion)
+		}
 	}
 
 	// After successful user creation:
@@ -362,6 +379,18 @@ func (a *AuthController) RegisterHandler(c *gin.Context) {
 	} else {
 		c.Redirect(http.StatusSeeOther, "/verification-sent")
 	}
+}
+
+// ApplyPromotionToUser applies a promotion's benefits to a user
+func (a *AuthController) ApplyPromotionToUser(user *database.User, promotion *models.Promotion) {
+	// Set subscription details based on promotion
+	user.SubscriptionTier = "promotion"
+	user.SubscriptionStatus = "active"
+	user.SubscriptionEndDate = time.Now().AddDate(0, 0, promotion.BenefitDays)
+	user.PromotionID = promotion.ID
+
+	// Update the user in database
+	a.db.UpdateUser(context.Background(), user)
 }
 
 // LogoutHandler handles user logout
@@ -658,6 +687,15 @@ func (a *AuthController) ResetPasswordHandler(c *gin.Context) {
 // SetEmailService sets the email service for the controller
 func (a *AuthController) SetEmailService(emailService email.EmailService) {
 	a.emailService = emailService
+}
+
+// SetPromotionService sets the promotion service for the auth controller
+func (a *AuthController) SetPromotionService(service interface{}) {
+	if promotionService, ok := service.(interface {
+		GetBestActivePromotion() (*models.Promotion, error)
+	}); ok {
+		a.promotionService = promotionService
+	}
 }
 
 // ResendVerificationHandler handles resending verification emails

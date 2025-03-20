@@ -1,11 +1,14 @@
 package controller
 
 import (
+	"fmt"
+
 	"github.com/gin-gonic/gin"
 	"github.com/hail2skins/armory/cmd/web/views/data"
 	"github.com/hail2skins/armory/cmd/web/views/home"
 	"github.com/hail2skins/armory/internal/database"
 	"github.com/hail2skins/armory/internal/logger"
+	"github.com/hail2skins/armory/internal/models"
 	"github.com/hail2skins/armory/internal/services/email"
 )
 
@@ -29,16 +32,44 @@ func (h *HomeController) HomeHandler(c *gin.Context) {
 	// Get the authData from context that already contains roles
 	var homeData home.HomeData
 
+	// Print debug info about active promotion
+	if promotion, exists := c.Get("active_promotion"); exists {
+		if promo, ok := promotion.(*models.Promotion); ok {
+			logger.Info("Found active promotion in HomeHandler", map[string]interface{}{
+				"name":        promo.Name,
+				"benefitDays": promo.BenefitDays,
+				"type":        promo.Type,
+				"active":      promo.Active,
+			})
+		} else {
+			logger.Warn("Active promotion is not a *models.Promotion", map[string]interface{}{
+				"type": fmt.Sprintf("%T", promotion),
+			})
+		}
+	} else {
+		logger.Warn("No active promotion in context in HomeHandler", nil)
+	}
+
 	// Try to get auth data from context first
 	if authDataInterface, exists := c.Get("authData"); exists {
-		if authData, ok := authDataInterface.(data.AuthData); ok {
+		if data, ok := authDataInterface.(data.AuthData); ok {
 			// Use the auth data that already has roles
-			authData = authData.WithTitle("Home")
+			homeData.AuthData = data.WithTitle("Home")
+
+			// Log authData for debugging
+			logger.Info("HomeHandler authData", map[string]interface{}{
+				"email":              homeData.AuthData.Email,
+				"authenticated":      homeData.AuthData.Authenticated,
+				"roles":              homeData.AuthData.Roles,
+				"isCasbinAdmin":      homeData.AuthData.IsCasbinAdmin,
+				"hasAdminRole":       homeData.AuthData.HasRole("admin"),
+				"hasActivePromotion": homeData.AuthData.ActivePromotion != nil,
+			})
 
 			// Check for flash messages
 			if flashCookie, err := c.Cookie("flash"); err == nil && flashCookie != "" {
 				// Add flash message to success messages
-				authData = authData.WithSuccess(flashCookie)
+				homeData.AuthData = homeData.AuthData.WithSuccess(flashCookie)
 				// Clear the flash cookie
 				c.SetCookie("flash", "", -1, "/", "", false, false)
 			}
@@ -54,13 +85,9 @@ func (h *HomeController) HomeHandler(c *gin.Context) {
 					if ok {
 						roles := casbinAuth.GetUserRoles(userInfo.GetUserName())
 						// Apply roles directly to authData
-						authData = authData.WithRoles(roles)
+						homeData.AuthData = homeData.AuthData.WithRoles(roles)
 					}
 				}
-			}
-
-			homeData = home.HomeData{
-				AuthData: authData,
 			}
 		}
 	}
@@ -117,18 +144,36 @@ func (h *HomeController) HomeHandler(c *gin.Context) {
 // AboutHandler handles the about page route
 func (h *HomeController) AboutHandler(c *gin.Context) {
 	// Get the authData from context that already contains roles
-	var authData data.AuthData
+	var aboutData home.AboutData
 
 	// Try to get auth data from context first
 	if authDataInterface, exists := c.Get("authData"); exists {
 		if data, ok := authDataInterface.(data.AuthData); ok {
 			// Use the auth data that already has roles
-			authData = data.WithTitle("About")
+			aboutData.AuthData = data.WithTitle("About")
+
+			// Re-fetch roles from Casbin to ensure they're fresh
+			if data.Authenticated && data.Email != "" {
+				// Get Casbin from context
+				if casbinAuth, exists := c.Get("casbinAuth"); exists && casbinAuth != nil {
+					if ca, ok := casbinAuth.(interface{ GetUserRoles(string) []string }); ok {
+						roles := ca.GetUserRoles(data.Email)
+						aboutData.AuthData = aboutData.AuthData.WithRoles(roles)
+
+						// Log roles for debugging
+						logger.Info("About page - Casbin roles for user", map[string]interface{}{
+							"email":   data.Email,
+							"roles":   roles,
+							"isAdmin": aboutData.AuthData.IsCasbinAdmin,
+						})
+					}
+				}
+			}
 
 			// Check for flash messages
 			if flashCookie, err := c.Cookie("flash"); err == nil && flashCookie != "" {
 				// Add flash message to success messages
-				authData = authData.WithSuccess(flashCookie)
+				aboutData.AuthData = aboutData.AuthData.WithSuccess(flashCookie)
 				// Clear the flash cookie
 				c.SetCookie("flash", "", -1, "/", "", false, false)
 			}
@@ -136,12 +181,12 @@ func (h *HomeController) AboutHandler(c *gin.Context) {
 	}
 
 	// If we couldn't get auth data from context, create a new one (fallback)
-	if authData.Title == "" {
+	if aboutData.AuthData.Title == "" {
 		// Get the current user's authentication status and email
 		userInfo, authenticated := c.MustGet("auth").(AuthService).GetCurrentUser(c)
 
 		// Create auth data
-		authData = data.NewAuthData()
+		authData := data.NewAuthData()
 		authData.Title = "About"
 		authData.Authenticated = authenticated
 
@@ -154,33 +199,57 @@ func (h *HomeController) AboutHandler(c *gin.Context) {
 				if ca, ok := casbinAuth.(interface{ GetUserRoles(string) []string }); ok {
 					roles := ca.GetUserRoles(userInfo.GetUserName())
 					authData = authData.WithRoles(roles)
+
+					// Log roles for debugging
+					logger.Info("About page - Casbin roles for user (fallback)", map[string]interface{}{
+						"email":   userInfo.GetUserName(),
+						"roles":   roles,
+						"isAdmin": authData.IsCasbinAdmin,
+					})
 				}
 			}
 		}
+
+		aboutData.AuthData = authData
 	}
 
 	// Render the about page with the data
-	aboutData := home.AboutData{
-		AuthData: authData,
-	}
 	home.About(aboutData).Render(c.Request.Context(), c.Writer)
 }
 
 // ContactHandler handles the contact page route
 func (h *HomeController) ContactHandler(c *gin.Context) {
 	// Get the authData from context that already contains roles
-	var authData data.AuthData
+	var contactData home.ContactData
 
 	// Try to get auth data from context first
 	if authDataInterface, exists := c.Get("authData"); exists {
 		if data, ok := authDataInterface.(data.AuthData); ok {
 			// Use the auth data that already has roles
-			authData = data.WithTitle("Contact")
+			contactData.AuthData = data.WithTitle("Contact")
+
+			// Re-fetch roles from Casbin to ensure they're fresh
+			if data.Authenticated && data.Email != "" {
+				// Get Casbin from context
+				if casbinAuth, exists := c.Get("casbinAuth"); exists && casbinAuth != nil {
+					if ca, ok := casbinAuth.(interface{ GetUserRoles(string) []string }); ok {
+						roles := ca.GetUserRoles(data.Email)
+						contactData.AuthData = contactData.AuthData.WithRoles(roles)
+
+						// Log roles for debugging
+						logger.Info("Contact page - Casbin roles for user", map[string]interface{}{
+							"email":   data.Email,
+							"roles":   roles,
+							"isAdmin": contactData.AuthData.IsCasbinAdmin,
+						})
+					}
+				}
+			}
 
 			// Check for flash messages
 			if flashCookie, err := c.Cookie("flash"); err == nil && flashCookie != "" {
 				// Add flash message to success messages
-				authData = authData.WithSuccess(flashCookie)
+				contactData.AuthData = contactData.AuthData.WithSuccess(flashCookie)
 				// Clear the flash cookie
 				c.SetCookie("flash", "", -1, "/", "", false, false)
 			}
@@ -188,12 +257,12 @@ func (h *HomeController) ContactHandler(c *gin.Context) {
 	}
 
 	// If we couldn't get auth data from context, create a new one (fallback)
-	if authData.Title == "" {
+	if contactData.AuthData.Title == "" {
 		// Get the current user's authentication status and email
 		userInfo, authenticated := c.MustGet("auth").(AuthService).GetCurrentUser(c)
 
 		// Create auth data
-		authData = data.NewAuthData()
+		authData := data.NewAuthData()
 		authData.Title = "Contact"
 		authData.Authenticated = authenticated
 
@@ -206,14 +275,18 @@ func (h *HomeController) ContactHandler(c *gin.Context) {
 				if ca, ok := casbinAuth.(interface{ GetUserRoles(string) []string }); ok {
 					roles := ca.GetUserRoles(userInfo.GetUserName())
 					authData = authData.WithRoles(roles)
+
+					// Log roles for debugging
+					logger.Info("Contact page - Casbin roles for user (fallback)", map[string]interface{}{
+						"email":   userInfo.GetUserName(),
+						"roles":   roles,
+						"isAdmin": authData.IsCasbinAdmin,
+					})
 				}
 			}
 		}
-	}
 
-	// Create contact data with auth data
-	contactData := home.ContactData{
-		AuthData: authData,
+		contactData.AuthData = authData
 	}
 
 	// Check if this is a form submission

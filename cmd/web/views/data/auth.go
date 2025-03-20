@@ -1,17 +1,18 @@
 package data
 
 type AuthData struct {
-	Authenticated bool
-	Email         string
-	Error         string
-	Success       string
-	Title         string
-	SiteName      string
-	Token         string   // For verification and reset tokens
-	Roles         []string // User roles from Casbin
-	IsCasbinAdmin bool     // Quick check if user is an admin (renamed from IsAdmin)
-	AlwaysTrue    bool     // Test property that is always true
-	CurrentPath   string   // Current route path for navigation highlighting
+	Authenticated   bool
+	Email           string
+	Error           string
+	Success         string
+	Title           string
+	SiteName        string
+	Token           string      // For verification and reset tokens
+	Roles           []string    // User roles from Casbin
+	IsCasbinAdmin   bool        // Quick check if user is an admin (renamed from IsAdmin)
+	AlwaysTrue      bool        // Test property that is always true
+	CurrentPath     string      // Current route path for navigation highlighting
+	ActivePromotion interface{} // Active promotion data
 }
 
 // NewAuthData creates a new AuthData with default values
@@ -83,4 +84,10 @@ func (a AuthData) HasRole(role string) bool {
 		}
 	}
 	return false
+}
+
+// WithActivePromotion returns a copy of the AuthData with an active promotion
+func (a AuthData) WithActivePromotion(promotion interface{}) AuthData {
+	a.ActivePromotion = promotion
+	return a
 }
