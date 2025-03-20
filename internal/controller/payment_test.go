@@ -13,6 +13,7 @@ import (
 	"github.com/hail2skins/armory/internal/database"
 	"github.com/hail2skins/armory/internal/models"
 	"github.com/hail2skins/armory/internal/testutils"
+	"github.com/hail2skins/armory/internal/testutils/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stripe/stripe-go/v72"
@@ -20,9 +21,12 @@ import (
 )
 
 // MockDB is a mock implementation of the database.Service interface
+// that embeds the centralized MockDB from testutils/mocks
 type MockDB struct {
-	mock.Mock
+	mocks.MockDB // Embed the centralized MockDB
 }
+
+// Any specific methods needed only for payment tests can be added here
 
 // Health returns a mock health status
 func (m *MockDB) Health() map[string]string {

@@ -241,3 +241,33 @@ func (m *MockDB) FindRecentUsers(offset, limit int, sortBy, sortOrder string) ([
 	args := m.Called(offset, limit, sortBy, sortOrder)
 	return args.Get(0).([]database.User), args.Error(1)
 }
+
+// FindAllPromotions mocks the database method to fetch all promotions
+func (m *MockDB) FindAllPromotions() ([]models.Promotion, error) {
+	args := m.Called()
+	return args.Get(0).([]models.Promotion), args.Error(1)
+}
+
+// FindPromotionByID mocks the database method to find a promotion by ID
+func (m *MockDB) FindPromotionByID(id uint) (*models.Promotion, error) {
+	args := m.Called(id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*models.Promotion), args.Error(1)
+}
+
+// CreatePromotion mocks the database method to create a promotion
+func (m *MockDB) CreatePromotion(promotion *models.Promotion) error {
+	return m.Called(promotion).Error(0)
+}
+
+// UpdatePromotion mocks the database method to update a promotion
+func (m *MockDB) UpdatePromotion(promotion *models.Promotion) error {
+	return m.Called(promotion).Error(0)
+}
+
+// DeletePromotion mocks the database method to delete a promotion
+func (m *MockDB) DeletePromotion(id uint) error {
+	return m.Called(id).Error(0)
+}

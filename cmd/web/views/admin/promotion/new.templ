@@ -1,0 +1,134 @@
+package promotion
+
+import (
+	"context"
+	"io"
+
+	"github.com/hail2skins/armory/cmd/web/views/data"
+	"github.com/hail2skins/armory/cmd/web/views/partials"
+)
+
+templ New(data *data.AdminData) {
+	@partials.Base(data.AuthData, templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+		_, err := io.WriteString(w, `
+		<div class="container mx-auto px-4 py-8">
+			<div class="flex justify-between items-center mb-6">
+				<h1 class="text-3xl font-bold text-gunmetal-800">New Promotion</h1>
+				<a href="/admin/promotions" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded">
+					Back to List
+				</a>
+			</div>
+		`)
+		if err != nil {
+			return err
+		}
+
+		if data.Error != "" {
+			_, err = io.WriteString(w, `
+			<div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+				<span class="block sm:inline">`+data.Error+`</span>
+			</div>
+			`)
+			if err != nil {
+				return err
+			}
+		}
+
+		_, err = io.WriteString(w, `
+		<div class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
+			<form action="/admin/promotions" method="post">
+				<div class="mb-4">
+					<label class="block text-gray-700 text-sm font-bold mb-2" for="name">
+						Name
+					</label>
+					<input class="shadow appearance-none border rounded w-full py-2 px-3 text-gunmetal-800 leading-tight focus:outline-none focus:shadow-outline" 
+						id="name" type="text" name="name" required>
+				</div>
+				<div class="mb-4">
+					<label class="block text-gray-700 text-sm font-bold mb-2" for="type">
+						Type
+					</label>
+					<select class="shadow appearance-none border rounded w-full py-2 px-3 text-gunmetal-800 leading-tight focus:outline-none focus:shadow-outline" 
+						id="type" name="type" required>
+						<option value="free_trial">Free Trial</option>
+						<option value="discount">Discount</option>
+						<option value="special_offer">Special Offer</option>
+					</select>
+				</div>
+				<div class="mb-4">
+					<label class="block text-gray-700 text-sm font-bold mb-2" for="active">
+						Active
+					</label>
+					<input class="mr-2 leading-tight" type="checkbox" id="active" name="active" value="true" checked>
+					<span class="text-sm">Is this promotion currently active?</span>
+				</div>
+				<div class="mb-4">
+					<label class="block text-gray-700 text-sm font-bold mb-2" for="startDate">
+						Start Date
+					</label>
+					<input class="shadow appearance-none border rounded w-full py-2 px-3 text-gunmetal-800 leading-tight focus:outline-none focus:shadow-outline" 
+						id="startDate" type="date" name="startDate" required>
+				</div>
+				<div class="mb-4">
+					<label class="block text-gray-700 text-sm font-bold mb-2" for="endDate">
+						End Date
+					</label>
+					<input class="shadow appearance-none border rounded w-full py-2 px-3 text-gunmetal-800 leading-tight focus:outline-none focus:shadow-outline" 
+						id="endDate" type="date" name="endDate" required>
+				</div>
+				<div class="mb-4">
+					<label class="block text-gray-700 text-sm font-bold mb-2" for="benefitDays">
+						Benefit Days
+					</label>
+					<input class="shadow appearance-none border rounded w-full py-2 px-3 text-gunmetal-800 leading-tight focus:outline-none focus:shadow-outline" 
+						id="benefitDays" type="number" name="benefitDays" value="30">
+					<p class="text-gray-600 text-xs italic">Duration of the benefit in days</p>
+				</div>
+				<div class="mb-4">
+					<label class="block text-gray-700 text-sm font-bold mb-2" for="benefitTier">
+						Benefit Tier
+					</label>
+					<select class="shadow appearance-none border rounded w-full py-2 px-3 text-gunmetal-800 leading-tight focus:outline-none focus:shadow-outline" 
+						id="benefitTier" name="benefitTier" required>
+						<option value="monthly">Monthly</option>
+						<option value="yearly">Yearly</option>
+						<option value="lifetime">Lifetime</option>
+						<option value="premium_lifetime">Premium Lifetime</option>
+					</select>
+				</div>
+				<div class="mb-4">
+					<label class="block text-gray-700 text-sm font-bold mb-2" for="displayOnHome">
+						Display on Home Page
+					</label>
+					<input class="mr-2 leading-tight" type="checkbox" id="displayOnHome" name="displayOnHome" value="true">
+					<span class="text-sm">Show this promotion on the home page?</span>
+				</div>
+				<div class="mb-4">
+					<label class="block text-gray-700 text-sm font-bold mb-2" for="description">
+						Description
+					</label>
+					<textarea class="shadow appearance-none border rounded w-full py-2 px-3 text-gunmetal-800 leading-tight focus:outline-none focus:shadow-outline" 
+						id="description" name="description" rows="4" required></textarea>
+					<p class="text-gray-600 text-xs italic">Marketing copy for the promotion</p>
+				</div>
+				<div class="mb-4">
+					<label class="block text-gray-700 text-sm font-bold mb-2" for="banner">
+						Banner Image Path
+					</label>
+					<input class="shadow appearance-none border rounded w-full py-2 px-3 text-gunmetal-800 leading-tight focus:outline-none focus:shadow-outline" 
+						id="banner" type="text" name="banner" placeholder="/images/banners/promotion.jpg">
+					<p class="text-gray-600 text-xs italic">Optional path to banner image</p>
+				</div>
+				<div class="flex items-center justify-between">
+					<button class="bg-gunmetal-800 hover:bg-gunmetal-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline" 
+						type="submit">
+						Create Promotion
+					</button>
+				</div>
+			</form>
+		</div>
+		</div>
+		`)
+		return err
+	}))
+} 

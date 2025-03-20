@@ -144,6 +144,41 @@ func (s *TestService) Close() error {
 	return sqlDB.Close()
 }
 
+// Promotion-related methods implementation
+
+// FindAllPromotions retrieves all promotions
+func (s *TestService) FindAllPromotions() ([]models.Promotion, error) {
+	var promotions []models.Promotion
+	if err := s.db.Find(&promotions).Error; err != nil {
+		return nil, err
+	}
+	return promotions, nil
+}
+
+// FindPromotionByID retrieves a promotion by its ID
+func (s *TestService) FindPromotionByID(id uint) (*models.Promotion, error) {
+	var promotion models.Promotion
+	if err := s.db.First(&promotion, id).Error; err != nil {
+		return nil, err
+	}
+	return &promotion, nil
+}
+
+// CreatePromotion creates a new promotion
+func (s *TestService) CreatePromotion(promotion *models.Promotion) error {
+	return s.db.Create(promotion).Error
+}
+
+// UpdatePromotion updates an existing promotion
+func (s *TestService) UpdatePromotion(promotion *models.Promotion) error {
+	return s.db.Save(promotion).Error
+}
+
+// DeletePromotion deletes a promotion
+func (s *TestService) DeletePromotion(id uint) error {
+	return s.db.Delete(&models.Promotion{}, id).Error
+}
+
 // CreateUser creates a new user
 func (s *TestService) CreateUser(ctx context.Context, email, password string) (*database.User, error) {
 	user := &database.User{

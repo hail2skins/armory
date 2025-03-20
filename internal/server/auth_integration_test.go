@@ -597,3 +597,33 @@ func TestSimplifiedAuthFlow(t *testing.T) {
 		})
 	})
 }
+
+// Promotion-related methods
+
+func (m *MockDBWithContext) FindAllPromotions() ([]models.Promotion, error) {
+	args := m.Called()
+	return args.Get(0).([]models.Promotion), args.Error(1)
+}
+
+func (m *MockDBWithContext) FindPromotionByID(id uint) (*models.Promotion, error) {
+	args := m.Called(id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*models.Promotion), args.Error(1)
+}
+
+func (m *MockDBWithContext) CreatePromotion(promotion *models.Promotion) error {
+	args := m.Called(promotion)
+	return args.Error(0)
+}
+
+func (m *MockDBWithContext) UpdatePromotion(promotion *models.Promotion) error {
+	args := m.Called(promotion)
+	return args.Error(0)
+}
+
+func (m *MockDBWithContext) DeletePromotion(id uint) error {
+	args := m.Called(id)
+	return args.Error(0)
+}

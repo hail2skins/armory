@@ -40,6 +40,13 @@ type Service interface {
 	FindPaymentByID(id uint) (*models.Payment, error)
 	UpdatePayment(payment *models.Payment) error
 
+	// Promotion-related methods
+	FindAllPromotions() ([]models.Promotion, error)
+	FindPromotionByID(id uint) (*models.Promotion, error)
+	CreatePromotion(promotion *models.Promotion) error
+	UpdatePromotion(promotion *models.Promotion) error
+	DeletePromotion(id uint) error
+
 	// Additional user methods
 	GetUserByID(id uint) (*User, error)
 	GetUserByStripeCustomerID(customerID string) (*User, error)
@@ -259,4 +266,38 @@ func (s *service) FindPaymentByID(id uint) (*models.Payment, error) {
 // UpdatePayment updates an existing payment in the database
 func (s *service) UpdatePayment(payment *models.Payment) error {
 	return s.db.Save(payment).Error
+}
+
+// Promotion-related methods implementation
+// FindAllPromotions retrieves all promotions
+func (s *service) FindAllPromotions() ([]models.Promotion, error) {
+	var promotions []models.Promotion
+	if err := s.db.Find(&promotions).Error; err != nil {
+		return nil, err
+	}
+	return promotions, nil
+}
+
+// FindPromotionByID retrieves a promotion by its ID
+func (s *service) FindPromotionByID(id uint) (*models.Promotion, error) {
+	var promotion models.Promotion
+	if err := s.db.First(&promotion, id).Error; err != nil {
+		return nil, err
+	}
+	return &promotion, nil
+}
+
+// CreatePromotion creates a new promotion
+func (s *service) CreatePromotion(promotion *models.Promotion) error {
+	return s.db.Create(promotion).Error
+}
+
+// UpdatePromotion updates an existing promotion in the database
+func (s *service) UpdatePromotion(promotion *models.Promotion) error {
+	return s.db.Save(promotion).Error
+}
+
+// DeletePromotion deletes a promotion from the database
+func (s *service) DeletePromotion(id uint) error {
+	return s.db.Delete(&models.Promotion{}, id).Error
 }

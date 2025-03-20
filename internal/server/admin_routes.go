@@ -18,6 +18,7 @@ func (s *Server) RegisterAdminRoutes(r *gin.Engine, authController *controller.A
 	adminCaliberController := controller.NewAdminCaliberController(s.db)
 	adminWeaponTypeController := controller.NewAdminWeaponTypeController(s.db)
 	adminDashboardController := controller.NewAdminDashboardController(s.db)
+	adminPromotionController := controller.NewAdminPromotionController(s.db)
 
 	// Use the shared Casbin auth instance from the server
 	casbinAuth := s.casbinAuth
@@ -171,5 +172,11 @@ func (s *Server) RegisterAdminRoutes(r *gin.Engine, authController *controller.A
 				weaponTypeGroup.POST("/:id/delete", adminWeaponTypeController.Delete)
 			}
 		}
+
+		// ===== Promotion Routes =====
+		adminGroup.GET("/promotions/new", adminPromotionController.New)
+
+		// ===== Dashboard Routes =====
+		adminGroup.GET("", adminDashboardController.Dashboard)
 	}
 }
