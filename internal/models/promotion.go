@@ -15,7 +15,6 @@ type Promotion struct {
 	StartDate     time.Time // When the promotion starts
 	EndDate       time.Time // When the promotion ends
 	BenefitDays   int       // Duration of benefit (e.g., 30 days)
-	BenefitTier   string    // Subscription tier for the benefit (e.g., "monthly", "yearly")
 	DisplayOnHome bool      // Whether to display on the home page
 	Description   string    // Marketing copy
 	Banner        string    // Optional banner image path

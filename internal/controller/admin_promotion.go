@@ -49,7 +49,6 @@ func (c *AdminPromotionController) Create(ctx *gin.Context) {
 	promotionType := ctx.PostForm("type")
 	description := ctx.PostForm("description")
 	banner := ctx.PostForm("banner")
-	benefitTier := ctx.PostForm("benefitTier")
 
 	// Parse active and displayOnHome checkboxes
 	active := ctx.PostForm("active") == "true"
@@ -101,12 +100,6 @@ func (c *AdminPromotionController) Create(ctx *gin.Context) {
 		return
 	}
 
-	if benefitTier == "" {
-		adminData.WithError("Benefit tier is required")
-		promotion.New(adminData).Render(ctx.Request.Context(), ctx.Writer)
-		return
-	}
-
 	if endDate.Before(startDate) {
 		adminData.WithError("End date cannot be before start date")
 		promotion.New(adminData).Render(ctx.Request.Context(), ctx.Writer)
@@ -121,7 +114,6 @@ func (c *AdminPromotionController) Create(ctx *gin.Context) {
 		StartDate:     startDate,
 		EndDate:       endDate,
 		BenefitDays:   benefitDays,
-		BenefitTier:   benefitTier,
 		DisplayOnHome: displayOnHome,
 		Description:   description,
 		Banner:        banner,

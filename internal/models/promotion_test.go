@@ -27,7 +27,6 @@ func TestPromotionModel(t *testing.T) {
 		StartDate:     startDate,
 		EndDate:       endDate,
 		BenefitDays:   30,
-		BenefitTier:   "monthly",
 		DisplayOnHome: true,
 		Description:   "Test promotion description",
 		Banner:        "/images/banners/test-promotion.jpg",
@@ -48,7 +47,6 @@ func TestPromotionModel(t *testing.T) {
 	assert.Equal(t, startDate.UTC().Truncate(time.Second), retrievedPromotion.StartDate.UTC().Truncate(time.Second))
 	assert.Equal(t, endDate.UTC().Truncate(time.Second), retrievedPromotion.EndDate.UTC().Truncate(time.Second))
 	assert.Equal(t, 30, retrievedPromotion.BenefitDays)
-	assert.Equal(t, "monthly", retrievedPromotion.BenefitTier)
 	assert.True(t, retrievedPromotion.DisplayOnHome)
 	assert.Equal(t, "Test promotion description", retrievedPromotion.Description)
 	assert.Equal(t, "/images/banners/test-promotion.jpg", retrievedPromotion.Banner)
@@ -58,7 +56,6 @@ func TestPromotionModel(t *testing.T) {
 	retrievedPromotion.Type = "discount"
 	retrievedPromotion.Active = false
 	retrievedPromotion.BenefitDays = 60
-	retrievedPromotion.BenefitTier = "yearly"
 	retrievedPromotion.DisplayOnHome = false
 	retrievedPromotion.Description = "Updated description"
 
@@ -73,7 +70,6 @@ func TestPromotionModel(t *testing.T) {
 	assert.Equal(t, "discount", updatedPromotion.Type)
 	assert.False(t, updatedPromotion.Active)
 	assert.Equal(t, 60, updatedPromotion.BenefitDays)
-	assert.Equal(t, "yearly", updatedPromotion.BenefitTier)
 	assert.False(t, updatedPromotion.DisplayOnHome)
 	assert.Equal(t, "Updated description", updatedPromotion.Description)
 
@@ -85,7 +81,6 @@ func TestPromotionModel(t *testing.T) {
 		StartDate:     startDate,
 		EndDate:       endDate,
 		BenefitDays:   14,
-		BenefitTier:   "monthly",
 		DisplayOnHome: true,
 		Description:   "Active promotion",
 	}
