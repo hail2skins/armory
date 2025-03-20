@@ -63,6 +63,21 @@ templ Base(data data.AuthData, children templ.Component) {
 		</head>
 		
 		<body class="leading-normal tracking-normal text-gunmetal-800 bg-gunmetal-100 font-sans">
+			<!-- Flash Messages -->
+			<div class="container px-3 mx-auto pt-4">
+				if data.Error != "" {
+					<div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 text-center" role="alert">
+						<span class="block sm:inline text-center">{ data.Error }</span>
+					</div>
+				}
+				
+				if data.Success != "" {
+					<div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4 text-center" role="alert">
+						<span class="block sm:inline text-center">{ data.Success }</span>
+					</div>
+				}
+			</div>
+			
 			@Nav(data)
 			<main class="flex-grow">
 				if data.IsCasbinAdmin && isAdminPath(data.CurrentPath) {
@@ -98,7 +113,7 @@ templ Base(data data.AuthData, children templ.Component) {
 					}
 					
 					// Auto-dismiss flash messages after 5 seconds
-					const flashMessages = document.querySelectorAll('.mb-4.bg-green-100, .mb-4.bg-yellow-100');
+					const flashMessages = document.querySelectorAll('.mb-4.bg-green-100, .mb-4.bg-yellow-100, .mb-4.bg-red-100');
 					if (flashMessages.length > 0) {
 						setTimeout(() => {
 							flashMessages.forEach(flash => {

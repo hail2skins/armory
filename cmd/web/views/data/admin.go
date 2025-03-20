@@ -26,6 +26,9 @@ type AdminData struct {
 	Promotions []models.Promotion
 	Promotion  *models.Promotion
 
+	// For forms
+	FormData map[string]interface{}
+
 	// For dashboard
 	TotalUsers                 int64
 	UserGrowthRate             float64
@@ -196,5 +199,11 @@ func (a *AdminData) WithPromotions(promotions []models.Promotion) *AdminData {
 // WithPromotion returns a copy of the AdminData with a promotion
 func (a *AdminData) WithPromotion(promotion *models.Promotion) *AdminData {
 	a.Promotion = promotion
+	return a
+}
+
+// WithFormData returns a copy of the AdminData with the specified form data
+func (a *AdminData) WithFormData(formData map[string]interface{}) *AdminData {
+	a.FormData = formData
 	return a
 }

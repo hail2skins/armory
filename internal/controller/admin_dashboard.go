@@ -52,6 +52,11 @@ func (c *AdminDashboardController) Dashboard(ctx *gin.Context) {
 	authData := getAuthData(ctx)
 	authData = authData.WithTitle("Admin Dashboard").WithCurrentPath(ctx.Request.URL.Path)
 
+	// Check for success message in query params
+	if success := ctx.Query("success"); success != "" {
+		authData = authData.WithSuccess(success)
+	}
+
 	// Get pagination parameters
 	page, _ := strconv.Atoi(ctx.DefaultQuery("page", "1"))
 	if page < 1 {

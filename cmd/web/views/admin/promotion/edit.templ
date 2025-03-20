@@ -3,20 +3,26 @@ package promotion
 import (
 	"context"
 	"io"
+	"strconv"
 
 	"github.com/hail2skins/armory/cmd/web/views/data"
 	"github.com/hail2skins/armory/cmd/web/views/partials"
 )
 
-templ New(data *data.AdminData) {
+templ Edit(data *data.AdminData) {
 	@partials.Base(data.AuthData, templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
 		_, err := io.WriteString(w, `
 		<div class="container mx-auto px-4 py-8">
 			<div class="flex justify-between items-center mb-6">
-				<h1 class="text-3xl font-bold text-gunmetal-800">New Promotion</h1>
-				<a href="/admin/promotions" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded">
-					Back to List
-				</a>
+				<h1 class="text-3xl font-bold text-gunmetal-800">Edit Promotion</h1>
+				<div class="flex space-x-2">
+					<a href="/admin/promotions" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded">
+						Back to List
+					</a>
+					<a href="/admin/promotions/`+strconv.Itoa(int(data.Promotion.ID))+`" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">
+						View Details
+					</a>
+				</div>
 			</div>
 		`)
 		if err != nil {
@@ -62,13 +68,13 @@ templ New(data *data.AdminData) {
 
 		_, err = io.WriteString(w, `
 		<div class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
-			<form action="/admin/promotions" method="post">
+			<form action="/admin/promotions/`+strconv.Itoa(int(data.Promotion.ID))+`" method="post">
 				<div class="mb-4">
 					<label class="block text-gray-700 text-sm font-bold mb-2" for="name">
 						Name
 					</label>
 					<input class="shadow appearance-none border rounded w-full py-2 px-3 text-gunmetal-800 leading-tight focus:outline-none focus:shadow-outline" 
-						id="name" type="text" name="name" required>
+						id="name" type="text" name="name" value="`+data.Promotion.Name+`" required>
 				</div>
 				<div class="mb-4">
 					<label class="block text-gray-700 text-sm font-bold mb-2" for="type">
@@ -105,7 +111,7 @@ templ New(data *data.AdminData) {
 						Benefit Days
 					</label>
 					<input class="shadow appearance-none border rounded w-full py-2 px-3 text-gunmetal-800 leading-tight focus:outline-none focus:shadow-outline" 
-						id="benefitDays" type="number" name="benefitDays" value="30">
+						id="benefitDays" type="number" name="benefitDays" value="`+strconv.Itoa(data.Promotion.BenefitDays)+`">
 					<p class="text-gray-600 text-xs italic">Duration of the benefit in days</p>
 				</div>
 				<div class="mb-4">
@@ -120,7 +126,7 @@ templ New(data *data.AdminData) {
 						Description
 					</label>
 					<textarea class="shadow appearance-none border rounded w-full py-2 px-3 text-gunmetal-800 leading-tight focus:outline-none focus:shadow-outline" 
-						id="description" name="description" rows="4" required></textarea>
+						id="description" name="description" rows="4" required>`+data.Promotion.Description+`</textarea>
 					<p class="text-gray-600 text-xs italic">Marketing copy for the promotion</p>
 				</div>
 				<div class="mb-4">
@@ -128,13 +134,13 @@ templ New(data *data.AdminData) {
 						Banner Image Path
 					</label>
 					<input class="shadow appearance-none border rounded w-full py-2 px-3 text-gunmetal-800 leading-tight focus:outline-none focus:shadow-outline" 
-						id="banner" type="text" name="banner" placeholder="/images/banners/promotion.jpg">
+						id="banner" type="text" name="banner" value="`+data.Promotion.Banner+`" placeholder="/images/banners/promotion.jpg">
 					<p class="text-gray-600 text-xs italic">Optional path to banner image</p>
 				</div>
 				<div class="flex items-center justify-between">
-					<button class="bg-gunmetal-800 hover:bg-gunmetal-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline" 
+					<button class="bg-amber-500 hover:bg-amber-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline" 
 						type="submit">
-						Create Promotion
+						Update Promotion
 					</button>
 				</div>
 			</form>

@@ -113,7 +113,7 @@ func (s *AdminPromotionControllerTestSuite) TestCreatePromotion() {
 
 	// Assert redirect response (assuming successful creation redirects)
 	s.Equal(http.StatusSeeOther, resp.Code)
-	s.Equal("/admin/dashboard?success=Promotion created successfully", resp.Header().Get("Location"))
+	s.Equal("/admin/dashboard?success=Promotion+created+successfully", resp.Header().Get("Location"))
 
 	// Assert that CreatePromotion was called
 	s.MockDB.AssertExpectations(s.T())
@@ -240,6 +240,126 @@ func (s *AdminPromotionControllerTestSuite) TestShowRouteWithNotFoundID() {
 	// Assert response - should return not found
 	s.Equal(http.StatusNotFound, resp.Code)
 	s.MockDB.AssertExpectations(s.T())
+}
+
+// TestEditRoute tests the edit route for promotions
+func (s *AdminPromotionControllerTestSuite) TestEditRoute() {
+	// Create the controller
+	adminController := s.CreateAdminPromotionController()
+
+	// Mock DB behavior to return a specific promotion
+	s.MockDB.On("FindPromotionByID", uint(1)).Return(s.mockPromotion, nil).Once()
+
+	// Register routes
+	s.Router.GET("/admin/promotions/:id/edit", adminController.Edit)
+
+	// Create a test request
+	req, _ := http.NewRequest("GET", "/admin/promotions/1/edit", nil)
+	resp := httptest.NewRecorder()
+
+	// Serve the request
+	s.Router.ServeHTTP(resp, req)
+
+	// Assert response
+	s.Equal(http.StatusOK, resp.Code)
+	s.Contains(resp.Body.String(), "Edit Promotion")
+	s.Contains(resp.Body.String(), "Test Free Trial") // Should contain our mock promotion name
+	s.MockDB.AssertExpectations(s.T())
+}
+
+// TestEditRouteWithInvalidID tests the edit route with an invalid promotion ID
+func (s *AdminPromotionControllerTestSuite) TestEditRouteWithInvalidID() {
+	// Create the controller
+	adminController := s.CreateAdminPromotionController()
+
+	// Register routes
+	s.Router.GET("/admin/promotions/:id/edit", adminController.Edit)
+
+	// Create a test request with invalid ID
+	req, _ := http.NewRequest("GET", "/admin/promotions/invalid/edit", nil)
+	resp := httptest.NewRecorder()
+
+	// Serve the request
+	s.Router.ServeHTTP(resp, req)
+
+	// Assert response - should return a bad request
+	s.Equal(http.StatusBadRequest, resp.Code)
+}
+
+// TestUpdatePromotion tests the update action for promotions
+func (s *AdminPromotionControllerTestSuite) TestUpdatePromotion() {
+	// Create the controller
+	adminController := s.CreateAdminPromotionController()
+
+	// Mock DB behavior
+	s.MockDB.On("FindPromotionByID", uint(1)).Return(s.mockPromotion, nil).Once()
+	s.MockDB.On("UpdatePromotion", mock.AnythingOfType("*models.Promotion")).Return(nil).Once()
+
+	// Register routes
+	s.Router.POST("/admin/promotions/:id", adminController.Update)
+
+	// Create form data for the update
+	startDate := time.Now().Format("2006-01-02")
+	endDate := time.Now().AddDate(0, 1, 0).Format("2006-01-02")
+
+	formData := url.Values{
+		"name":          {"Updated Free Trial"},
+		"type":          {"free_trial"},
+		"active":        {"true"},
+		"startDate":     {startDate},
+		"endDate":       {endDate},
+		"benefitDays":   {"45"}, // Changed from 30 to 45
+		"displayOnHome": {"true"},
+		"description":   {"Updated promotion description"},
+		"banner":        {"/images/banners/updated-promotion.jpg"},
+	}
+
+	// Create a test request
+	req, _ := http.NewRequest("POST", "/admin/promotions/1", strings.NewReader(formData.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	resp := httptest.NewRecorder()
+
+	// Serve the request
+	s.Router.ServeHTTP(resp, req)
+
+	// Assert redirect response (assuming successful update redirects)
+	s.Equal(http.StatusSeeOther, resp.Code)
+	s.Equal("/admin/dashboard?success=Promotion+has+been+updated+successfully", resp.Header().Get("Location"))
+
+	// Assert that our methods were called
+	s.MockDB.AssertExpectations(s.T())
+}
+
+// TestUpdatePromotionValidationErrors tests validation errors during promotion update
+func (s *AdminPromotionControllerTestSuite) TestUpdatePromotionValidationErrors() {
+	// Create the controller
+	adminController := s.CreateAdminPromotionController()
+
+	// Mock DB behavior to return our mock promotion
+	s.MockDB.On("FindPromotionByID", uint(1)).Return(s.mockPromotion, nil).Once()
+
+	// Register routes
+	s.Router.POST("/admin/promotions/:id", adminController.Update)
+
+	// Create form data with missing required fields
+	formData := url.Values{
+		"type":   {"free_trial"},
+		"active": {"true"},
+		// Missing name and dates
+	}
+
+	// Create a test request
+	req, _ := http.NewRequest("POST", "/admin/promotions/1", strings.NewReader(formData.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	resp := httptest.NewRecorder()
+
+	// Serve the request
+	s.Router.ServeHTTP(resp, req)
+
+	// Assert that we're shown the form again with errors
+	s.Equal(http.StatusOK, resp.Code)
+	s.Contains(resp.Body.String(), "Edit Promotion")
+	s.Contains(resp.Body.String(), "bg-red-100") // Check for error styling class
 }
 
 // Run the tests
