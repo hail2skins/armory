@@ -389,201 +389,38 @@ func (o *OwnerController) New(c *gin.Context) {
 
 // Create handles the create gun route
 func (o *OwnerController) Create(c *gin.Context) {
-	// Get the current user's authentication status and email
-	authController, ok := c.MustGet("authController").(AuthControllerInterface)
+	logger.Info("Create method called - IMPROVED VERSION", nil)
+
+	// Get all form values
+	name := c.PostForm("name")
+	serialNumber := c.PostForm("serial_number")
+	acquiredDateStr := c.PostForm("acquired")
+	weaponTypeIDStr := c.PostForm("weapon_type_id")
+	caliberIDStr := c.PostForm("caliber_id")
+	manufacturerIDStr := c.PostForm("manufacturer_id")
+	paidStr := c.PostForm("paid")
+
+	logger.Info("Form data received", map[string]interface{}{
+		"name":            name,
+		"serial_number":   serialNumber,
+		"acquired":        acquiredDateStr,
+		"weapon_type_id":  weaponTypeIDStr,
+		"caliber_id":      caliberIDStr,
+		"manufacturer_id": manufacturerIDStr,
+		"paid":            paidStr,
+	})
+
+	// Get current user
+	authController, ok := c.MustGet("authController").(*AuthController)
 	if !ok {
-		// Try to cast to the concrete type as a fallback
-		concreteAuthController, ok := c.MustGet("authController").(*AuthController)
-		if !ok {
-			c.Redirect(http.StatusSeeOther, "/login")
-			return
-		}
-		userInfo, authenticated := concreteAuthController.GetCurrentUser(c)
-		if !authenticated {
-			// Set flash message
-			if setFlash, exists := c.Get("setFlash"); exists {
-				setFlash.(func(string))("You must be logged in to access this page")
-			}
-			c.Redirect(http.StatusSeeOther, "/login")
-			return
-		}
-
-		// Get the user from the database
-		ctx := context.Background()
-		dbUser, err := o.db.GetUserByEmail(ctx, userInfo.GetUserName())
-		if err != nil {
-			c.Redirect(http.StatusSeeOther, "/login")
-			return
-		}
-
-		// Check if the user is on the free tier and already has 2 guns
-		if dbUser.SubscriptionTier == "free" {
-			var count int64
-			db := o.db.GetDB()
-			db.Model(&models.Gun{}).Where("owner_id = ?", dbUser.ID).Count(&count)
-
-			// If the user already has 2 guns, redirect to the pricing page
-			if count >= 2 {
-				if setFlash, exists := c.Get("setFlash"); exists {
-					setFlash.(func(string))("You must be subscribed to add more to your arsenal")
-				}
-				c.Redirect(http.StatusSeeOther, "/pricing")
-				return
-			}
-		}
-
-		// Create a new gun
-		name := c.PostForm("name")
-		serialNumber := c.PostForm("serial_number")
-		acquiredDateStr := c.PostForm("acquired")
-		weaponTypeIDStr := c.PostForm("weapon_type_id")
-		caliberIDStr := c.PostForm("caliber_id")
-		manufacturerIDStr := c.PostForm("manufacturer_id")
-		paidStr := c.PostForm("paid")
-
-		// Validate fields
-		errors := make(map[string]string)
-		if name == "" {
-			errors["name"] = "Name is required"
-		}
-
-		if serialNumber == "" {
-			errors["serial_number"] = "Serial number is required"
-		}
-
-		// Parse acquired date if provided
-		var acquiredDate *time.Time
-		if acquiredDateStr != "" {
-			parsedDate, err := time.Parse("2006-01-02", acquiredDateStr)
-			if err != nil {
-				errors["acquired"] = "Invalid date format, use YYYY-MM-DD"
-			} else {
-				acquiredDate = &parsedDate
-			}
-		}
-
-		// Parse weapon type ID
-		weaponTypeID, err := strconv.Atoi(weaponTypeIDStr)
-		if err != nil || weaponTypeID <= 0 {
-			errors["weapon_type_id"] = "Invalid weapon type"
-		}
-
-		// Parse caliber ID
-		caliberID, err := strconv.Atoi(caliberIDStr)
-		if err != nil || caliberID <= 0 {
-			errors["caliber_id"] = "Invalid caliber"
-		}
-
-		// Parse manufacturer ID
-		manufacturerID, err := strconv.Atoi(manufacturerIDStr)
-		if err != nil || manufacturerID <= 0 {
-			errors["manufacturer_id"] = "Invalid manufacturer"
-		}
-
-		// Parse paid amount if provided
-		var paidAmount *float64
-		if paidStr != "" {
-			paid, err := strconv.ParseFloat(paidStr, 64)
-			if err != nil {
-				errors["paid"] = "Invalid amount format, use numbers only (e.g. 1500.50)"
-			} else {
-				paidAmount = &paid
-			}
-		}
-
-		// If there are any errors, re-render the form with error messages
-		if len(errors) > 0 {
-			// Get all weapon types, calibers, and manufacturers for the form
-			weaponTypes, err := o.db.FindAllWeaponTypes()
-			if err != nil {
-				weaponTypes = []models.WeaponType{}
-			}
-
-			calibers, err := o.db.FindAllCalibers()
-			if err != nil {
-				calibers = []models.Caliber{}
-			}
-
-			manufacturers, err := o.db.FindAllManufacturers()
-			if err != nil {
-				manufacturers = []models.Manufacturer{}
-			}
-
-			// Create owner data with errors
-			ownerData := data.NewOwnerData().
-				WithTitle("Add New Firearm").
-				WithAuthenticated(authenticated).
-				WithUser(dbUser).
-				WithWeaponTypes(weaponTypes).
-				WithCalibers(calibers).
-				WithManufacturers(manufacturers).
-				WithFormErrors(errors)
-
-			// Render the new gun form with the data and errors
-			gunView.New(ownerData).Render(c.Request.Context(), c.Writer)
-			return
-		}
-
-		// Create the gun
-		newGun := &models.Gun{
-			Name:           name,
-			SerialNumber:   serialNumber,
-			Acquired:       acquiredDate,
-			WeaponTypeID:   uint(weaponTypeID),
-			CaliberID:      uint(caliberID),
-			ManufacturerID: uint(manufacturerID),
-			OwnerID:        dbUser.ID,
-			Paid:           paidAmount,
-		}
-
-		// Save the gun to the database
-		db := o.db.GetDB()
-		if err := models.CreateGun(db, newGun); err != nil {
-			// If there's an error, re-render the form with an error message
-			// Get all weapon types, calibers, and manufacturers for the form
-			weaponTypes, err := o.db.FindAllWeaponTypes()
-			if err != nil {
-				weaponTypes = []models.WeaponType{}
-			}
-
-			calibers, err := o.db.FindAllCalibers()
-			if err != nil {
-				calibers = []models.Caliber{}
-			}
-
-			manufacturers, err := o.db.FindAllManufacturers()
-			if err != nil {
-				manufacturers = []models.Manufacturer{}
-			}
-
-			// Create owner data with errors
-			ownerData := data.NewOwnerData().
-				WithTitle("Add New Firearm").
-				WithAuthenticated(authenticated).
-				WithUser(dbUser).
-				WithWeaponTypes(weaponTypes).
-				WithCalibers(calibers).
-				WithManufacturers(manufacturers).
-				WithError("Failed to create gun: " + err.Error())
-
-			// Render the new gun form with the data and errors
-			gunView.New(ownerData).Render(c.Request.Context(), c.Writer)
-			return
-		}
-
-		// Set flash message
-		if setFlash, exists := c.Get("setFlash"); exists {
-			setFlash.(func(string))("Weapon added to your arsenal")
-		}
-
-		// Redirect to the owner dashboard
-		c.Redirect(http.StatusSeeOther, "/owner")
+		logger.Error("Invalid auth controller type", nil, nil)
+		c.Redirect(http.StatusSeeOther, "/login")
 		return
 	}
 
 	userInfo, authenticated := authController.GetCurrentUser(c)
 	if !authenticated {
-		// Set flash message
+		logger.Error("User not authenticated", nil, nil)
 		if setFlash, exists := c.Get("setFlash"); exists {
 			setFlash.(func(string))("You must be logged in to access this page")
 		}
@@ -591,69 +428,178 @@ func (o *OwnerController) Create(c *gin.Context) {
 		return
 	}
 
-	// Get the user from the database
+	// Get user from database
 	ctx := context.Background()
 	dbUser, err := o.db.GetUserByEmail(ctx, userInfo.GetUserName())
 	if err != nil {
+		logger.Error("Failed to get user", err, nil)
 		c.Redirect(http.StatusSeeOther, "/login")
 		return
 	}
 
-	// Get all weapon types, calibers, and manufacturers for the form
-	weaponTypes, err := o.db.FindAllWeaponTypes()
-	if err != nil {
-		weaponTypes = []models.WeaponType{}
-	}
+	// Check if user is on free tier and already has 2 guns
+	if dbUser.SubscriptionTier == "free" {
+		var count int64
+		db := o.db.GetDB()
+		db.Model(&models.Gun{}).Where("owner_id = ?", dbUser.ID).Count(&count)
 
-	calibers, err := o.db.FindAllCalibers()
-	if err != nil {
-		calibers = []models.Caliber{}
-	}
-
-	manufacturers, err := o.db.FindAllManufacturers()
-	if err != nil {
-		manufacturers = []models.Manufacturer{}
-	}
-
-	// Create owner data
-	ownerData := data.NewOwnerData().
-		WithTitle("Add New Firearm").
-		WithAuthenticated(authenticated).
-		WithUser(dbUser).
-		WithWeaponTypes(weaponTypes).
-		WithCalibers(calibers).
-		WithManufacturers(manufacturers)
-
-	// Get authData from context to preserve roles
-	if authDataInterface, exists := c.Get("authData"); exists {
-		if authData, ok := authDataInterface.(data.AuthData); ok {
-			// Use the auth data that already has roles, maintaining our title and other changes
-			ownerData.Auth = authData.WithTitle("Add New Firearm")
-
-			// Re-fetch roles from Casbin to ensure they're up to date
-			if casbinAuth, exists := c.Get("casbinAuth"); exists && casbinAuth != nil {
-				if ca, ok := casbinAuth.(interface{ GetUserRoles(string) []string }); ok {
-					roles := ca.GetUserRoles(userInfo.GetUserName())
-					logger.Info("Casbin roles for user in new gun page", map[string]interface{}{
-						"email": userInfo.GetUserName(),
-						"roles": roles,
-					})
-					ownerData.Auth = ownerData.Auth.WithRoles(roles)
-				}
+		if count >= 2 {
+			if setFlash, exists := c.Get("setFlash"); exists {
+				setFlash.(func(string))("You must be subscribed to add more to your arsenal")
 			}
+			c.Redirect(http.StatusSeeOther, "/pricing")
+			return
 		}
 	}
 
-	// Check for flash message from cookie
-	if flashCookie, err := c.Cookie("flash"); err == nil && flashCookie != "" {
-		// Add flash message to success messages
-		ownerData.WithSuccess(flashCookie)
-		// Clear the flash cookie
-		c.SetCookie("flash", "", -1, "/", "", false, false)
+	// Validate form data
+	errors := make(map[string]string)
+
+	// Name is required
+	if name == "" {
+		errors["name"] = "Name is required"
 	}
 
-	// Render the new gun form with the data
-	gunView.New(ownerData).Render(c.Request.Context(), c.Writer)
+	// Parse date if provided
+	var acquiredDate *time.Time
+	if acquiredDateStr != "" {
+		parsedDate, err := time.Parse("2006-01-02", acquiredDateStr)
+		if err != nil {
+			errors["acquired"] = "Invalid date format, use YYYY-MM-DD"
+		} else {
+			acquiredDate = &parsedDate
+		}
+	}
+
+	// Parse IDs
+	weaponTypeID, err := strconv.Atoi(weaponTypeIDStr)
+	if err != nil || weaponTypeID <= 0 {
+		errors["weapon_type_id"] = "Valid weapon type is required"
+	}
+
+	caliberID, err := strconv.Atoi(caliberIDStr)
+	if err != nil || caliberID <= 0 {
+		errors["caliber_id"] = "Valid caliber is required"
+	}
+
+	manufacturerID, err := strconv.Atoi(manufacturerIDStr)
+	if err != nil || manufacturerID <= 0 {
+		errors["manufacturer_id"] = "Valid manufacturer is required"
+	}
+
+	// Parse paid amount if provided
+	var paidAmount *float64
+	if paidStr != "" {
+		paid, err := strconv.ParseFloat(paidStr, 64)
+		if err != nil {
+			errors["paid"] = "Invalid amount format, use numbers only (e.g. 1500.50)"
+		} else {
+			paidAmount = &paid
+		}
+	}
+
+	// If there are validation errors, re-render the form
+	if len(errors) > 0 {
+		logger.Info("Validation errors found", map[string]interface{}{"errors": errors})
+
+		// Get reference data for the form
+		weaponTypes, _ := o.db.FindAllWeaponTypes()
+		calibers, _ := o.db.FindAllCalibers()
+		manufacturers, _ := o.db.FindAllManufacturers()
+
+		// Create owner data with errors
+		ownerData := data.NewOwnerData().
+			WithTitle("Add New Firearm").
+			WithAuthenticated(true).
+			WithUser(dbUser).
+			WithWeaponTypes(weaponTypes).
+			WithCalibers(calibers).
+			WithManufacturers(manufacturers).
+			WithFormErrors(errors)
+
+		// Add auth data if available
+		if authDataInterface, exists := c.Get("authData"); exists {
+			if authData, ok := authDataInterface.(data.AuthData); ok {
+				ownerData.Auth = authData.WithTitle("Add New Firearm")
+			}
+		}
+
+		// Render the form with errors
+		gunView.New(ownerData).Render(c.Request.Context(), c.Writer)
+		return
+	}
+
+	// Create a new gun
+	newGun := &models.Gun{
+		Name:           name,
+		SerialNumber:   serialNumber,
+		Acquired:       acquiredDate,
+		WeaponTypeID:   uint(weaponTypeID),
+		CaliberID:      uint(caliberID),
+		ManufacturerID: uint(manufacturerID),
+		OwnerID:        dbUser.ID,
+		Paid:           paidAmount,
+	}
+
+	logger.Info("About to create gun in DB", map[string]interface{}{
+		"gun": map[string]interface{}{
+			"name":            newGun.Name,
+			"owner_id":        newGun.OwnerID,
+			"weapon_type_id":  newGun.WeaponTypeID,
+			"caliber_id":      newGun.CaliberID,
+			"manufacturer_id": newGun.ManufacturerID,
+		},
+	})
+
+	// Use direct database insert (this is what works)
+	db := o.db.GetDB()
+	result := db.Create(newGun)
+
+	if result.Error != nil {
+		logger.Error("Gun creation failed", result.Error, map[string]interface{}{
+			"error_details": result.Error.Error(),
+		})
+
+		// Get reference data for the form
+		weaponTypes, _ := o.db.FindAllWeaponTypes()
+		calibers, _ := o.db.FindAllCalibers()
+		manufacturers, _ := o.db.FindAllManufacturers()
+
+		// Create owner data with error
+		ownerData := data.NewOwnerData().
+			WithTitle("Add New Firearm").
+			WithAuthenticated(true).
+			WithUser(dbUser).
+			WithWeaponTypes(weaponTypes).
+			WithCalibers(calibers).
+			WithManufacturers(manufacturers).
+			WithError("Failed to create gun: " + result.Error.Error())
+
+		// Add auth data if available
+		if authDataInterface, exists := c.Get("authData"); exists {
+			if authData, ok := authDataInterface.(data.AuthData); ok {
+				ownerData.Auth = authData.WithTitle("Add New Firearm")
+			}
+		}
+
+		// Render the form with the error
+		gunView.New(ownerData).Render(c.Request.Context(), c.Writer)
+		return
+	}
+
+	// Success path
+	logger.Info("Gun created successfully", map[string]interface{}{
+		"gun_id":   newGun.ID,
+		"gun_name": newGun.Name,
+	})
+
+	// Set flash message
+	if setFlash, exists := c.Get("setFlash"); exists {
+		setFlash.(func(string))("Weapon added to your arsenal")
+	}
+
+	// Redirect to the owner dashboard
+	c.Redirect(http.StatusSeeOther, "/owner")
 }
 
 // Show handles the show gun route
@@ -996,6 +942,7 @@ func (o *OwnerController) Edit(c *gin.Context) {
 						"email": userInfo.GetUserName(),
 						"roles": roles,
 					})
+
 					viewData.Auth = viewData.Auth.WithRoles(roles)
 				}
 			}
