@@ -33,6 +33,7 @@ type User struct {
 	RecoverySentAt          time.Time
 	LoginAttempts           int `gorm:"default:0"`
 	LastLoginAttempt        time.Time
+	LastLogin               time.Time // Tracks the last successful login
 	// Stripe-related fields
 	StripeCustomerID     string
 	StripeSubscriptionID string
@@ -120,7 +121,8 @@ func (u *User) GenerateRecoveryToken() string {
 		return ""
 	}
 	u.RecoveryToken = base64.URLEncoding.EncodeToString(token)
-	u.RecoveryTokenExpiry = time.Now().Add(1 * time.Hour)
+	u.RecoverySentAt = time.Now()
+	u.RecoveryTokenExpiry = u.RecoverySentAt.Add(1 * time.Hour)
 	return u.RecoveryToken
 }
 

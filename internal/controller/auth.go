@@ -135,6 +135,11 @@ func (a *AuthController) LoginHandler(c *gin.Context) {
 		// Get the auth data
 		authData := data.NewAuthData().WithTitle("Login")
 
+		// Check for success or error query parameters
+		if successMsg := c.Query("success"); successMsg != "" {
+			authData.Success = successMsg
+		}
+
 		// Check for flash message from cookie
 		if flashCookie, err := c.Cookie("flash"); err == nil && flashCookie != "" {
 			// Add flash message to success messages
@@ -551,7 +556,7 @@ func (a *AuthController) ForgotPasswordHandler(c *gin.Context) {
 			return
 		}
 
-		authData := data.NewAuthData().WithTitle("Reset Password").WithSuccess("If your email is registered, you will receive a password reset link shortly")
+		authData := data.NewAuthData().WithTitle("Reset Password").WithSuccess("If your email is registered, you will receive a password reset link valid for 60 minutes")
 		authData.Email = req.Email
 		a.RenderForgotPassword(c, authData)
 		return
@@ -591,7 +596,7 @@ func (a *AuthController) ForgotPasswordHandler(c *gin.Context) {
 	}
 
 	// Show success message
-	authData := data.NewAuthData().WithTitle("Reset Password").WithSuccess("If your email is registered, you will receive a password reset link shortly")
+	authData := data.NewAuthData().WithTitle("Reset Password").WithSuccess("If your email is registered, you will receive a password reset link valid for 60 minutes")
 	authData.Email = req.Email
 	a.RenderForgotPassword(c, authData)
 }

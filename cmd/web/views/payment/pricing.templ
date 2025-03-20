@@ -28,6 +28,9 @@ func canSubscribeToTier(currentTier string, targetTier string) bool {
 	case "premium_lifetime":
 		// Premium lifetime users cannot subscribe to any other tier
 		return false
+	case "promotion":
+		// Promotion users can upgrade to any paid tier
+		return targetTier != "free" && targetTier != "promotion"
 	default:
 		return true
 	}

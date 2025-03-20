@@ -105,14 +105,23 @@ func (s *service) AuthenticateUser(ctx context.Context, email, password string) 
 	if !CheckPassword(password, user.Password) {
 		// On failed login attempts, increment the counter
 		user.IncrementLoginAttempts()
-		if err := s.UpdateUser(ctx, user); err != nil {
+
+		// Only update the specific fields related to login attempts
+		// This avoids resetting the LastLogin field
+		if err := s.db.WithContext(ctx).Model(user).
+			Updates(map[string]interface{}{
+				"login_attempts":     user.LoginAttempts,
+				"last_login_attempt": user.LastLoginAttempt,
+			}).Error; err != nil {
 			return nil, err
 		}
+
 		return nil, nil // Password doesn't match
 	}
 
-	// On successful login, reset the login attempts counter
+	// On successful login, reset the login attempts counter and update last login time
 	user.ResetLoginAttempts()
+	user.LastLogin = time.Now()
 	if err := s.UpdateUser(ctx, user); err != nil {
 		return nil, err
 	}

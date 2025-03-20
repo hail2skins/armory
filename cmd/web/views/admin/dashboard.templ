@@ -285,6 +285,8 @@ templ Dashboard(data *data.AdminData) {
 					_, err = io.WriteString(w, `<span class="px-2 py-1 bg-purple-200 text-purple-800 rounded-full text-xs font-medium">Lifetime</span>`)
 				case "premium":
 					_, err = io.WriteString(w, `<span class="px-2 py-1 bg-yellow-200 text-yellow-800 rounded-full text-xs font-medium">Premium</span>`)
+				case "promotion":
+					_, err = io.WriteString(w, `<span class="px-2 py-1 bg-pink-200 text-pink-800 rounded-full text-xs font-medium">Promotion</span>`)
 				}
 				if err != nil {
 					return err

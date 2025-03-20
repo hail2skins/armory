@@ -153,11 +153,12 @@ func (s *MailjetService) SendPasswordResetEmail(email, token, baseURL string) er
 			},
 		},
 		Subject:  "Reset your Virtual Armory password",
-		TextPart: fmt.Sprintf("Reset your password by clicking this link: %s/reset-password?token=%s", baseURL, token),
+		TextPart: fmt.Sprintf("Reset your password by clicking this link: %s/reset-password?token=%s. This password reset link will expire in 60 minutes.", baseURL, token),
 		HTMLPart: fmt.Sprintf(`
 			<h3>Password Reset Request</h3>
 			<p>You have requested to reset your password. Click the link below to proceed:</p>
 			<p><a href="%s/reset-password?token=%s">Reset Password</a></p>
+			<p><strong>Note:</strong> This password reset link will expire in 60 minutes.</p>
 			<p>If you did not request this password reset, please ignore this email.</p>
 		`, baseURL, token),
 	}

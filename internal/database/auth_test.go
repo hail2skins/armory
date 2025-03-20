@@ -137,16 +137,12 @@ func (s *AuthenticationTestSuite) TestResetLoginAttemptsOnSuccessfulLogin() {
 
 // TestTrackLastLoginTimeOnSuccessfulLogin tests that last login time is updated on successful login
 func (s *AuthenticationTestSuite) TestTrackLastLoginTimeOnSuccessfulLogin() {
-	// This test expects a LastLogin field to be added to the User model
-	// It will fail until we implement that field in a later step
-	s.T().Skip("LastLogin field not yet implemented - this test will be enabled later")
-
 	// Ensure the user has a zero last login time initially
 	err := s.service.db.Model(s.testUser).Update("last_login", time.Time{}).Error
 	require.NoError(s.T(), err)
 
 	// Store the time before authentication
-	// beforeAuth := time.Now()
+	beforeAuth := time.Now()
 
 	// Perform successful authentication
 	user, err := s.service.AuthenticateUser(context.Background(), "test@example.com", "password123")
@@ -154,21 +150,18 @@ func (s *AuthenticationTestSuite) TestTrackLastLoginTimeOnSuccessfulLogin() {
 	require.NotNil(s.T(), user)
 
 	// Verify last login time was updated to a recent timestamp
-	// These assertions will be uncommented once the LastLogin field is added
-	/*
-		assert.False(s.T(), user.LastLogin.IsZero(), "LastLogin should not be zero after successful login")
-		assert.True(s.T(), user.LastLogin.After(beforeAuth) || user.LastLogin.Equal(beforeAuth),
-			"LastLogin should be set to the current time or after authentication time")
+	assert.False(s.T(), user.LastLogin.IsZero(), "LastLogin should not be zero after successful login")
+	assert.True(s.T(), user.LastLogin.After(beforeAuth) || user.LastLogin.Equal(beforeAuth),
+		"LastLogin should be set to the current time or after authentication time")
 
-		// Verify changes were saved to the database
-		var updatedUser User
-		err = s.service.db.First(&updatedUser, s.testUser.ID).Error
-		require.NoError(s.T(), err)
+	// Verify changes were saved to the database
+	var updatedUser User
+	err = s.service.db.First(&updatedUser, s.testUser.ID).Error
+	require.NoError(s.T(), err)
 
-		assert.False(s.T(), updatedUser.LastLogin.IsZero(), "LastLogin should be persisted as current time in the database")
-		assert.True(s.T(), updatedUser.LastLogin.After(beforeAuth) || updatedUser.LastLogin.Equal(beforeAuth),
-			"LastLogin should be persisted as the current time or after authentication time")
-	*/
+	assert.False(s.T(), updatedUser.LastLogin.IsZero(), "LastLogin should be persisted as current time in the database")
+	assert.True(s.T(), updatedUser.LastLogin.After(beforeAuth) || updatedUser.LastLogin.Equal(beforeAuth),
+		"LastLogin should be persisted as the current time or after authentication time")
 }
 
 // TestGenerateVerificationToken tests that verification tokens are generated properly
@@ -196,6 +189,105 @@ func (s *AuthenticationTestSuite) TestGenerateVerificationToken() {
 	// Allow for a small time difference (less than 1 second) due to processing time
 	assert.True(s.T(), timeDiff < time.Second && timeDiff > -time.Second,
 		"VerificationTokenExpiry should be set to 1 hour after VerificationSentAt")
+}
+
+// TestIncrementLoginAttemptsOnFailedLogin tests that login attempts are incremented on failed login
+func (s *AuthenticationTestSuite) TestIncrementLoginAttemptsOnFailedLogin() {
+	// Reset the login attempts to 0 initially
+	s.testUser.LoginAttempts = 0
+	s.testUser.LastLoginAttempt = time.Time{}
+	err := s.service.db.Save(s.testUser).Error
+	require.NoError(s.T(), err)
+
+	// Store the time before authentication attempt
+	beforeAuth := time.Now()
+
+	// Perform failed authentication with wrong password
+	user, err := s.service.AuthenticateUser(context.Background(), "test@example.com", "wrong_password")
+	require.NoError(s.T(), err)
+	assert.Nil(s.T(), user, "User should be nil after failed authentication")
+
+	// Get the updated user from the database
+	var updatedUser User
+	err = s.service.db.First(&updatedUser, s.testUser.ID).Error
+	require.NoError(s.T(), err)
+
+	// Verify login attempts were incremented
+	assert.Equal(s.T(), 1, updatedUser.LoginAttempts, "Login attempts should be incremented to 1 after failed login")
+
+	// Verify LastLoginAttempt was updated to a recent time
+	assert.False(s.T(), updatedUser.LastLoginAttempt.IsZero(), "LastLoginAttempt should be updated, not remain zero time")
+	assert.True(s.T(), updatedUser.LastLoginAttempt.After(beforeAuth) || updatedUser.LastLoginAttempt.Equal(beforeAuth),
+		"LastLoginAttempt should be updated to the current time or after")
+
+	// Perform another failed authentication attempt
+	user, err = s.service.AuthenticateUser(context.Background(), "test@example.com", "another_wrong_password")
+	require.NoError(s.T(), err)
+	assert.Nil(s.T(), user, "User should be nil after failed authentication")
+
+	// Get the updated user again
+	err = s.service.db.First(&updatedUser, s.testUser.ID).Error
+	require.NoError(s.T(), err)
+
+	// Verify login attempts were incremented again
+	assert.Equal(s.T(), 2, updatedUser.LoginAttempts, "Login attempts should be incremented to 2 after second failed login")
+}
+
+// TestPreserveLastLoginOnFailedAttempt tests that LastLogin is preserved during failed login attempts
+func (s *AuthenticationTestSuite) TestPreserveLastLoginOnFailedAttempt() {
+	// Set initial LastLogin to a known non-zero time
+	initialLastLogin := time.Now().Add(-24 * time.Hour) // 1 day ago
+	err := s.service.db.Model(s.testUser).Update("last_login", initialLastLogin).Error
+	require.NoError(s.T(), err)
+
+	// Verify the initial state
+	var initialUser User
+	err = s.service.db.First(&initialUser, s.testUser.ID).Error
+	require.NoError(s.T(), err)
+	assert.False(s.T(), initialUser.LastLogin.IsZero(), "LastLogin should be non-zero initially")
+	assert.Equal(s.T(), initialLastLogin.Unix(), initialUser.LastLogin.Unix(), "LastLogin should be set to our initial time")
+
+	// Perform failed authentication with wrong password
+	user, err := s.service.AuthenticateUser(context.Background(), "test@example.com", "wrong_password")
+	require.NoError(s.T(), err)
+	assert.Nil(s.T(), user, "User should be nil after failed authentication")
+
+	// Get the updated user from the database
+	var updatedUser User
+	err = s.service.db.First(&updatedUser, s.testUser.ID).Error
+	require.NoError(s.T(), err)
+
+	// Verify LastLogin is preserved after a failed login attempt
+	assert.False(s.T(), updatedUser.LastLogin.IsZero(), "LastLogin should not be reset to zero time after failed login")
+	assert.Equal(s.T(), initialLastLogin.Unix(), updatedUser.LastLogin.Unix(),
+		"LastLogin should remain unchanged after failed login attempt")
+}
+
+// TestGenerateRecoveryToken tests that recovery tokens are generated properly
+func (s *AuthenticationTestSuite) TestGenerateRecoveryToken() {
+	// Store the time before generating the token
+	beforeGeneration := time.Now()
+
+	// Generate a recovery token
+	token := s.testUser.GenerateRecoveryToken()
+
+	// Assert that the token is not empty
+	assert.NotEmpty(s.T(), token, "Recovery token should not be empty")
+	assert.Equal(s.T(), token, s.testUser.RecoveryToken, "Token should be stored in user.RecoveryToken")
+
+	// Verify that RecoverySentAt is set to the current time
+	assert.False(s.T(), s.testUser.RecoverySentAt.IsZero(), "RecoverySentAt should be set")
+	assert.True(s.T(), s.testUser.RecoverySentAt.After(beforeGeneration) ||
+		s.testUser.RecoverySentAt.Equal(beforeGeneration),
+		"RecoverySentAt should be set to the current time or after token generation")
+
+	// Verify that the token expiry is set to 1 hour in the future
+	expectedExpiry := s.testUser.RecoverySentAt.Add(1 * time.Hour)
+	timeDiff := s.testUser.RecoveryTokenExpiry.Sub(expectedExpiry)
+
+	// Allow for a small time difference (less than 1 second) due to processing time
+	assert.True(s.T(), timeDiff < time.Second && timeDiff > -time.Second,
+		"RecoveryTokenExpiry should be set to 1 hour after RecoverySentAt")
 }
 
 // Run the test suite
