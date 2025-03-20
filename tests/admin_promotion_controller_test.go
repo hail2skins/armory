@@ -3,11 +3,14 @@ package tests
 import (
 	"net/http"
 	"net/http/httptest"
+	"net/url"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/hail2skins/armory/internal/controller"
 	"github.com/hail2skins/armory/internal/models"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 	"gorm.io/gorm"
 )
@@ -72,6 +75,79 @@ func (s *AdminPromotionControllerTestSuite) TestNewRoute() {
 	// Assert response
 	s.Equal(http.StatusOK, resp.Code)
 	s.Contains(resp.Body.String(), "New Promotion")
+}
+
+// TestCreatePromotion tests the create action for promotions
+func (s *AdminPromotionControllerTestSuite) TestCreatePromotion() {
+	// Create the controller
+	adminController := s.CreateAdminPromotionController()
+
+	// Mock DB save behavior
+	s.MockDB.On("CreatePromotion", mock.AnythingOfType("*models.Promotion")).Return(nil).Once()
+
+	// Register routes
+	s.Router.POST("/admin/promotions", adminController.Create)
+
+	// Create form data
+	startDate := time.Now().Format("2006-01-02")
+	endDate := time.Now().AddDate(0, 1, 0).Format("2006-01-02")
+
+	formData := url.Values{
+		"name":          {"Test Free Trial"},
+		"type":          {"free_trial"},
+		"active":        {"true"},
+		"startDate":     {startDate},
+		"endDate":       {endDate},
+		"benefitDays":   {"30"},
+		"benefitTier":   {"monthly"},
+		"displayOnHome": {"true"},
+		"description":   {"Test promotion description"},
+		"banner":        {"/images/banners/test-promotion.jpg"},
+	}
+
+	// Create a test request
+	req, _ := http.NewRequest("POST", "/admin/promotions", strings.NewReader(formData.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	resp := httptest.NewRecorder()
+
+	// Serve the request
+	s.Router.ServeHTTP(resp, req)
+
+	// Assert redirect response (assuming successful creation redirects)
+	s.Equal(http.StatusSeeOther, resp.Code)
+	s.Equal("/admin/promotions?success=Promotion created successfully", resp.Header().Get("Location"))
+
+	// Assert that CreatePromotion was called
+	s.MockDB.AssertExpectations(s.T())
+}
+
+// TestCreatePromotionValidationErrors tests validation errors during promotion creation
+func (s *AdminPromotionControllerTestSuite) TestCreatePromotionValidationErrors() {
+	// Create the controller
+	adminController := s.CreateAdminPromotionController()
+
+	// Register routes
+	s.Router.POST("/admin/promotions", adminController.Create)
+
+	// Create form data with missing required fields
+	formData := url.Values{
+		"type":   {"free_trial"},
+		"active": {"true"},
+		// Missing name and dates
+	}
+
+	// Create a test request
+	req, _ := http.NewRequest("POST", "/admin/promotions", strings.NewReader(formData.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	resp := httptest.NewRecorder()
+
+	// Serve the request
+	s.Router.ServeHTTP(resp, req)
+
+	// Assert that we're shown the form again with errors
+	s.Equal(http.StatusOK, resp.Code)
+	s.Contains(resp.Body.String(), "New Promotion")
+	s.Contains(resp.Body.String(), "bg-red-100") // Check for error styling class
 }
 
 // Run the tests

@@ -22,6 +22,10 @@ type AdminData struct {
 	WeaponTypes []models.WeaponType
 	WeaponType  *models.WeaponType
 
+	// For promotions
+	Promotions []models.Promotion
+	Promotion  *models.Promotion
+
 	// For dashboard
 	TotalUsers                 int64
 	UserGrowthRate             float64
@@ -180,5 +184,17 @@ func (a *AdminData) WithPagination(currentPage, perPage, totalPages int) *AdminD
 func (a *AdminData) WithSorting(sortBy, sortOrder string) *AdminData {
 	a.SortBy = sortBy
 	a.SortOrder = sortOrder
+	return a
+}
+
+// WithPromotions returns a copy of the AdminData with promotions
+func (a *AdminData) WithPromotions(promotions []models.Promotion) *AdminData {
+	a.Promotions = promotions
+	return a
+}
+
+// WithPromotion returns a copy of the AdminData with a promotion
+func (a *AdminData) WithPromotion(promotion *models.Promotion) *AdminData {
+	a.Promotion = promotion
 	return a
 }

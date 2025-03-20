@@ -174,7 +174,17 @@ func (s *Server) RegisterAdminRoutes(r *gin.Engine, authController *controller.A
 		}
 
 		// ===== Promotion Routes =====
-		adminGroup.GET("/promotions/new", adminPromotionController.New)
+		promotionGroup := adminGroup.Group("/promotions")
+		{
+			if casbinAuth != nil {
+				// Define routes with fine-grained Casbin authorization
+				promotionGroup.GET("/new", casbinAuth.Authorize("admin", "write"), adminPromotionController.New)
+				promotionGroup.POST("", casbinAuth.Authorize("admin", "write"), adminPromotionController.Create)
+			} else {
+				promotionGroup.GET("/new", adminPromotionController.New)
+				promotionGroup.POST("", adminPromotionController.Create)
+			}
+		}
 
 		// ===== Dashboard Routes =====
 		adminGroup.GET("", adminDashboardController.Dashboard)
