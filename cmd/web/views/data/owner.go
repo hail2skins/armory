@@ -1,6 +1,7 @@
 package data
 
 import (
+	"strconv"
 	"time"
 
 	"github.com/hail2skins/armory/internal/database"
@@ -40,6 +41,29 @@ type OwnerData struct {
 
 	// For payment history
 	Payments []models.Payment
+
+	// Pagination
+	CurrentPage     int
+	TotalPages      int
+	PerPage         int
+	TotalItems      int
+	ShowingFrom     int
+	ShowingTo       int
+	HasNextPage     bool
+	HasPreviousPage bool
+	StartPage       int
+	EndPage         int
+
+	// Sorting and filtering
+	SortBy     string
+	SortOrder  string
+	SearchTerm string
+
+	// For display options
+	HasFiltersApplied bool
+
+	// For gun costs
+	TotalPaid float64
 }
 
 // NewOwnerData creates a new OwnerData with default values
@@ -133,5 +157,105 @@ func (o *OwnerData) WithSubscriptionInfo(hasActiveSubscription bool, tier string
 // WithPayments returns a copy of the OwnerData with payment history
 func (o *OwnerData) WithPayments(payments []models.Payment) *OwnerData {
 	o.Payments = payments
+	return o
+}
+
+// WithPagination returns a copy of the OwnerData with pagination information
+func (o *OwnerData) WithPagination(currentPage, totalPages, perPage, totalItems int) *OwnerData {
+	o.CurrentPage = currentPage
+	o.TotalPages = totalPages
+	o.PerPage = perPage
+	o.TotalItems = totalItems
+
+	// Calculate derived pagination values
+	o.HasPreviousPage = currentPage > 1
+	o.HasNextPage = currentPage < totalPages
+
+	// Calculate showing from/to values
+	o.ShowingFrom = (currentPage-1)*perPage + 1
+	if totalItems == 0 {
+		o.ShowingFrom = 0
+	}
+
+	o.ShowingTo = currentPage * perPage
+	if o.ShowingTo > totalItems {
+		o.ShowingTo = totalItems
+	}
+
+	// Calculate page range for pagination links
+	o.StartPage = 1
+	o.EndPage = totalPages
+
+	// Limit to maximum of 5 pages shown
+	if totalPages > 5 {
+		// Center around current page
+		o.StartPage = currentPage - 2
+		o.EndPage = currentPage + 2
+
+		// Adjust if we're near the beginning
+		if o.StartPage < 1 {
+			o.StartPage = 1
+			o.EndPage = 5
+		}
+
+		// Adjust if we're near the end
+		if o.EndPage > totalPages {
+			o.EndPage = totalPages
+			o.StartPage = totalPages - 4
+			if o.StartPage < 1 {
+				o.StartPage = 1
+			}
+		}
+	}
+
+	return o
+}
+
+// WithSorting returns a copy of the OwnerData with sorting information
+func (o *OwnerData) WithSorting(sortBy, sortOrder string) *OwnerData {
+	o.SortBy = sortBy
+	o.SortOrder = sortOrder
+	return o
+}
+
+// WithSearchTerm returns a copy of the OwnerData with search term
+func (o *OwnerData) WithSearchTerm(searchTerm string) *OwnerData {
+	o.SearchTerm = searchTerm
+	return o
+}
+
+// WithFiltersApplied returns a copy of the OwnerData indicating if non-default filters are applied
+func (o *OwnerData) WithFiltersApplied(sortBy, sortOrder string, perPage int, searchTerm string) *OwnerData {
+	// Check if any non-default filters are applied
+	o.HasFiltersApplied = (sortBy != "created_at" || sortOrder != "desc" || perPage != 10 || searchTerm != "")
+	return o
+}
+
+// GetPaginationURL returns a formatted URL with pagination parameters
+func (o *OwnerData) GetPaginationURL(page int, path string) string {
+	url := path + "?page=" + strconv.Itoa(page) +
+		"&perPage=" + strconv.Itoa(o.PerPage) +
+		"&sortBy=" + o.SortBy +
+		"&sortOrder=" + o.SortOrder
+
+	if o.SearchTerm != "" {
+		url += "&search=" + o.SearchTerm
+	}
+
+	return url
+}
+
+// GetGunURL returns a formatted URL for a gun
+func (o *OwnerData) GetGunURL(gun models.Gun, action string) string {
+	baseURL := "/owner/guns/" + strconv.FormatUint(uint64(gun.ID), 10)
+	if action != "" {
+		baseURL += "/" + action
+	}
+	return baseURL
+}
+
+// WithTotalPaid returns a copy of the OwnerData with the total paid amount
+func (o *OwnerData) WithTotalPaid(totalPaid float64) *OwnerData {
+	o.TotalPaid = totalPaid
 	return o
 }

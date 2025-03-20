@@ -42,6 +42,9 @@ func NewOwnerController(db database.Service) *OwnerController {
 // LandingPage handles the owner landing page route
 func (o *OwnerController) LandingPage(c *gin.Context) {
 	// Get the current user's authentication status and email
+	var userInfo auth.Info
+	var authenticated bool
+
 	authController, ok := c.MustGet("authController").(AuthControllerInterface)
 	if !ok {
 		// Try to cast to the concrete type as a fallback
@@ -50,89 +53,11 @@ func (o *OwnerController) LandingPage(c *gin.Context) {
 			c.Redirect(http.StatusSeeOther, "/login")
 			return
 		}
-		userInfo, authenticated := concreteAuthController.GetCurrentUser(c)
-		if !authenticated {
-			// Set flash message
-			if setFlash, exists := c.Get("setFlash"); exists {
-				setFlash.(func(string))("You must be logged in to access this page")
-			}
-			c.Redirect(http.StatusSeeOther, "/login")
-			return
-		}
-
-		// Get the user from the database
-		ctx := context.Background()
-		dbUser, err := o.db.GetUserByEmail(ctx, userInfo.GetUserName())
-		if err != nil {
-			c.Redirect(http.StatusSeeOther, "/login")
-			return
-		}
-
-		// Get the user's guns
-		var guns []models.Gun
-		// Use the database service's GetDB method to get the underlying gorm.DB
-		db := o.db.GetDB()
-		if err := db.Preload("WeaponType").Preload("Caliber").Preload("Manufacturer").Where("owner_id = ?", dbUser.ID).Find(&guns).Error; err != nil {
-			guns = []models.Gun{}
-		}
-
-		// Apply free tier limit if needed
-		var totalGuns int
-		if dbUser.SubscriptionTier == "free" && len(guns) > 2 {
-			totalGuns = len(guns)
-			if len(guns) > 0 {
-				guns[0].HasMoreGuns = true
-				guns[0].TotalGuns = totalGuns
-			}
-			guns = guns[:2]
-		}
-
-		// Format subscription end date if available
-		var subscriptionEndsAt string
-		if !dbUser.SubscriptionEndDate.IsZero() {
-			subscriptionEndsAt = dbUser.SubscriptionEndDate.Format("January 2, 2006")
-		}
-
-		// Create owner data
-		ownerData := data.NewOwnerData().
-			WithTitle("Owner Dashboard").
-			WithAuthenticated(authenticated).
-			WithUser(dbUser).
-			WithGuns(guns).
-			WithSubscriptionInfo(
-				dbUser.HasActiveSubscription(),
-				dbUser.SubscriptionTier,
-				subscriptionEndsAt,
-			)
-
-		// Get authData from context to preserve roles
-		if authDataInterface, exists := c.Get("authData"); exists {
-			if authData, ok := authDataInterface.(data.AuthData); ok {
-				// Use the auth data that already has roles, maintaining our title and other changes
-				ownerData.Auth = authData.WithTitle("Owner Dashboard")
-			}
-		}
-
-		// If the user has more guns than shown, add a message
-		if totalGuns > 2 && dbUser.SubscriptionTier == "free" {
-			ownerData.WithError("Please subscribe to see the rest of your collection")
-		}
-
-		// Check for flash message from cookie
-		if flashCookie, err := c.Cookie("flash"); err == nil && flashCookie != "" {
-			// Add flash message to success messages
-
-			ownerData.WithSuccess(flashCookie)
-			// Clear the flash cookie
-			c.SetCookie("flash", "", -1, "/", "", false, false)
-		}
-
-		// Render the owner landing page with the data
-		owner.Owner(ownerData).Render(c.Request.Context(), c.Writer)
-		return
+		userInfo, authenticated = concreteAuthController.GetCurrentUser(c)
+	} else {
+		userInfo, authenticated = authController.GetCurrentUser(c)
 	}
 
-	userInfo, authenticated := authController.GetCurrentUser(c)
 	if !authenticated {
 		// Set flash message
 		if setFlash, exists := c.Get("setFlash"); exists {
@@ -150,23 +75,96 @@ func (o *OwnerController) LandingPage(c *gin.Context) {
 		return
 	}
 
-	// Get the user's guns
+	// Parse pagination parameters
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	if page < 1 {
+		page = 1
+	}
+	perPage, _ := strconv.Atoi(c.DefaultQuery("perPage", "10"))
+	if perPage < 1 {
+		perPage = 10
+	}
+
+	// Parse sorting parameters
+	sortBy := c.DefaultQuery("sortBy", "created_at")
+	sortOrder := c.DefaultQuery("sortOrder", "desc")
+
+	// Validate sort parameters
+	validSortFields := map[string]bool{
+		"name":         true,
+		"created_at":   true,
+		"acquired":     true,
+		"manufacturer": true,
+		"caliber":      true,
+		"weapon_type":  true,
+	}
+	if !validSortFields[sortBy] {
+		sortBy = "created_at"
+	}
+	if sortOrder != "asc" && sortOrder != "desc" {
+		sortOrder = "desc"
+	}
+
+	// Get search term if available
+	searchTerm := c.Query("search")
+
+	// Get the user's guns with pagination
 	var guns []models.Gun
+	var totalGuns int64
+
 	// Use the database service's GetDB method to get the underlying gorm.DB
 	db := o.db.GetDB()
-	if err := db.Preload("WeaponType").Preload("Caliber").Preload("Manufacturer").Where("owner_id = ?", dbUser.ID).Find(&guns).Error; err != nil {
+	query := db.Model(&models.Gun{}).Where("owner_id = ?", dbUser.ID)
+
+	// Add search functionality if search term is provided
+	if searchTerm != "" {
+		query = query.Where("name LIKE ?", "%"+searchTerm+"%")
+	}
+
+	// Count total entries for pagination
+	query.Count(&totalGuns)
+
+	// Execute paginated query with sorting
+	gunQuery := db.Preload("WeaponType").Preload("Caliber").Preload("Manufacturer").
+		Where("owner_id = ?", dbUser.ID)
+
+	// Add search if provided
+	if searchTerm != "" {
+		gunQuery = gunQuery.Where("name LIKE ?", "%"+searchTerm+"%")
+	}
+
+	// Add sorting logic
+	if sortBy == "manufacturer" {
+		gunQuery = gunQuery.Joins("JOIN manufacturers ON guns.manufacturer_id = manufacturers.id").
+			Order("manufacturers.name " + sortOrder)
+	} else if sortBy == "caliber" {
+		gunQuery = gunQuery.Joins("JOIN calibers ON guns.caliber_id = calibers.id").
+			Order("calibers.caliber " + sortOrder)
+	} else if sortBy == "weapon_type" {
+		gunQuery = gunQuery.Joins("JOIN weapon_types ON guns.weapon_type_id = weapon_types.id").
+			Order("weapon_types.type " + sortOrder)
+	} else {
+		gunQuery = gunQuery.Order(sortBy + " " + sortOrder)
+	}
+
+	// Apply pagination
+	offset := (page - 1) * perPage
+	gunQuery = gunQuery.Offset(offset).Limit(perPage)
+
+	if err := gunQuery.Find(&guns).Error; err != nil {
 		guns = []models.Gun{}
 	}
 
-	// Apply free tier limit if needed
-	var totalGuns int
-	if dbUser.SubscriptionTier == "free" && len(guns) > 2 {
-		totalGuns = len(guns)
-		if len(guns) > 0 {
-			guns[0].HasMoreGuns = true
-			guns[0].TotalGuns = totalGuns
-		}
-		guns = guns[:2]
+	// Calculate total pages
+	totalPages := int((totalGuns + int64(perPage) - 1) / int64(perPage))
+
+	// Check if free tier limit applies (only for display, not actual limit)
+	var showingFreeLimit bool
+	var totalUserGuns int
+	if dbUser.SubscriptionTier == "free" && totalGuns > 2 {
+		showingFreeLimit = true
+		totalUserGuns = int(totalGuns)
+		// We don't actually limit the guns here anymore, we'll add a message
 	}
 
 	// Format subscription end date if available
@@ -174,6 +172,9 @@ func (o *OwnerController) LandingPage(c *gin.Context) {
 	if !dbUser.SubscriptionEndDate.IsZero() {
 		subscriptionEndsAt = dbUser.SubscriptionEndDate.Format("January 2, 2006")
 	}
+
+	// Calculate the total paid amount for all guns
+	totalPaid := calculateTotalPaid(guns)
 
 	// Create owner data
 	ownerData := data.NewOwnerData().
@@ -185,7 +186,12 @@ func (o *OwnerController) LandingPage(c *gin.Context) {
 			dbUser.HasActiveSubscription(),
 			dbUser.SubscriptionTier,
 			subscriptionEndsAt,
-		)
+		).
+		WithPagination(page, totalPages, perPage, int(totalGuns)).
+		WithSorting(sortBy, sortOrder).
+		WithSearchTerm(searchTerm).
+		WithFiltersApplied(sortBy, sortOrder, perPage, searchTerm).
+		WithTotalPaid(totalPaid)
 
 	// Get authData from context to preserve roles
 	if authDataInterface, exists := c.Get("authData"); exists {
@@ -196,8 +202,8 @@ func (o *OwnerController) LandingPage(c *gin.Context) {
 	}
 
 	// If the user has more guns than shown, add a message
-	if totalGuns > 2 && dbUser.SubscriptionTier == "free" {
-		ownerData.WithError("Please subscribe to see the rest of your collection")
+	if showingFreeLimit {
+		ownerData.WithError(fmt.Sprintf("Free Tier shows all %d guns in your collection, but only allows you to add up to 2 guns. Please subscribe to add more firearms.", totalUserGuns))
 	}
 
 	// Check for flash message from cookie
@@ -401,30 +407,66 @@ func (o *OwnerController) Create(c *gin.Context) {
 			}
 		}
 
-		// Parse form data
+		// Create a new gun
 		name := c.PostForm("name")
 		serialNumber := c.PostForm("serial_number")
+		acquiredDateStr := c.PostForm("acquired")
 		weaponTypeIDStr := c.PostForm("weapon_type_id")
 		caliberIDStr := c.PostForm("caliber_id")
 		manufacturerIDStr := c.PostForm("manufacturer_id")
-		acquiredDateStr := c.PostForm("acquired_date")
+		paidStr := c.PostForm("paid")
 
-		// Validate required fields
+		// Validate fields
 		errors := make(map[string]string)
 		if name == "" {
 			errors["name"] = "Name is required"
 		}
-		if weaponTypeIDStr == "" {
-			errors["weapon_type_id"] = "Weapon type is required"
-		}
-		if caliberIDStr == "" {
-			errors["caliber_id"] = "Caliber is required"
-		}
-		if manufacturerIDStr == "" {
-			errors["manufacturer_id"] = "Manufacturer is required"
+
+		if serialNumber == "" {
+			errors["serial_number"] = "Serial number is required"
 		}
 
-		// If there are validation errors, re-render the form with errors
+		// Parse acquired date if provided
+		var acquiredDate *time.Time
+		if acquiredDateStr != "" {
+			parsedDate, err := time.Parse("2006-01-02", acquiredDateStr)
+			if err != nil {
+				errors["acquired"] = "Invalid date format, use YYYY-MM-DD"
+			} else {
+				acquiredDate = &parsedDate
+			}
+		}
+
+		// Parse weapon type ID
+		weaponTypeID, err := strconv.Atoi(weaponTypeIDStr)
+		if err != nil || weaponTypeID <= 0 {
+			errors["weapon_type_id"] = "Invalid weapon type"
+		}
+
+		// Parse caliber ID
+		caliberID, err := strconv.Atoi(caliberIDStr)
+		if err != nil || caliberID <= 0 {
+			errors["caliber_id"] = "Invalid caliber"
+		}
+
+		// Parse manufacturer ID
+		manufacturerID, err := strconv.Atoi(manufacturerIDStr)
+		if err != nil || manufacturerID <= 0 {
+			errors["manufacturer_id"] = "Invalid manufacturer"
+		}
+
+		// Parse paid amount if provided
+		var paidAmount *float64
+		if paidStr != "" {
+			paid, err := strconv.ParseFloat(paidStr, 64)
+			if err != nil {
+				errors["paid"] = "Invalid amount format, use numbers only (e.g. 1500.50)"
+			} else {
+				paidAmount = &paid
+			}
+		}
+
+		// If there are any errors, re-render the form with error messages
 		if len(errors) > 0 {
 			// Get all weapon types, calibers, and manufacturers for the form
 			weaponTypes, err := o.db.FindAllWeaponTypes()
@@ -457,20 +499,6 @@ func (o *OwnerController) Create(c *gin.Context) {
 			return
 		}
 
-		// Convert IDs to uint
-		weaponTypeID, _ := strconv.ParseUint(weaponTypeIDStr, 10, 64)
-		caliberID, _ := strconv.ParseUint(caliberIDStr, 10, 64)
-		manufacturerID, _ := strconv.ParseUint(manufacturerIDStr, 10, 64)
-
-		// Parse acquired date if provided
-		var acquiredDate *time.Time
-		if acquiredDateStr != "" {
-			parsedDate, err := time.Parse("2006-01-02", acquiredDateStr)
-			if err == nil {
-				acquiredDate = &parsedDate
-			}
-		}
-
 		// Create the gun
 		newGun := &models.Gun{
 			Name:           name,
@@ -480,6 +508,7 @@ func (o *OwnerController) Create(c *gin.Context) {
 			CaliberID:      uint(caliberID),
 			ManufacturerID: uint(manufacturerID),
 			OwnerID:        dbUser.ID,
+			Paid:           paidAmount,
 		}
 
 		// Save the gun to the database
@@ -545,145 +574,49 @@ func (o *OwnerController) Create(c *gin.Context) {
 		return
 	}
 
-	// Check if the user is on the free tier and already has 2 guns
-	if dbUser.SubscriptionTier == "free" {
-		var count int64
-		db := o.db.GetDB()
-		db.Model(&models.Gun{}).Where("owner_id = ?", dbUser.ID).Count(&count)
+	// Get all weapon types, calibers, and manufacturers for the form
+	weaponTypes, err := o.db.FindAllWeaponTypes()
+	if err != nil {
+		weaponTypes = []models.WeaponType{}
+	}
 
-		// If the user already has 2 guns, redirect to the pricing page
-		if count >= 2 {
-			if setFlash, exists := c.Get("setFlash"); exists {
-				setFlash.(func(string))("You must be subscribed to add more to your arsenal")
-			}
-			c.Redirect(http.StatusSeeOther, "/pricing")
-			return
+	calibers, err := o.db.FindAllCalibers()
+	if err != nil {
+		calibers = []models.Caliber{}
+	}
+
+	manufacturers, err := o.db.FindAllManufacturers()
+	if err != nil {
+		manufacturers = []models.Manufacturer{}
+	}
+
+	// Create owner data
+	ownerData := data.NewOwnerData().
+		WithTitle("Add New Firearm").
+		WithAuthenticated(authenticated).
+		WithUser(dbUser).
+		WithWeaponTypes(weaponTypes).
+		WithCalibers(calibers).
+		WithManufacturers(manufacturers)
+
+	// Get authData from context to preserve roles
+	if authDataInterface, exists := c.Get("authData"); exists {
+		if authData, ok := authDataInterface.(data.AuthData); ok {
+			// Use the auth data that already has roles, maintaining our title and other changes
+			ownerData.Auth = authData.WithTitle("Add New Firearm")
 		}
 	}
 
-	// Parse form data
-	name := c.PostForm("name")
-	serialNumber := c.PostForm("serial_number")
-	weaponTypeIDStr := c.PostForm("weapon_type_id")
-	caliberIDStr := c.PostForm("caliber_id")
-	manufacturerIDStr := c.PostForm("manufacturer_id")
-	acquiredDateStr := c.PostForm("acquired_date")
-
-	// Validate required fields
-	errors := make(map[string]string)
-	if name == "" {
-		errors["name"] = "Name is required"
-	}
-	if weaponTypeIDStr == "" {
-		errors["weapon_type_id"] = "Weapon type is required"
-	}
-	if caliberIDStr == "" {
-		errors["caliber_id"] = "Caliber is required"
-	}
-	if manufacturerIDStr == "" {
-		errors["manufacturer_id"] = "Manufacturer is required"
+	// Check for flash message from cookie
+	if flashCookie, err := c.Cookie("flash"); err == nil && flashCookie != "" {
+		// Add flash message to success messages
+		ownerData.WithSuccess(flashCookie)
+		// Clear the flash cookie
+		c.SetCookie("flash", "", -1, "/", "", false, false)
 	}
 
-	// If there are validation errors, re-render the form with errors
-	if len(errors) > 0 {
-		// Get all weapon types, calibers, and manufacturers for the form
-		weaponTypes, err := o.db.FindAllWeaponTypes()
-		if err != nil {
-			weaponTypes = []models.WeaponType{}
-		}
-
-		calibers, err := o.db.FindAllCalibers()
-		if err != nil {
-			calibers = []models.Caliber{}
-		}
-
-		manufacturers, err := o.db.FindAllManufacturers()
-		if err != nil {
-			manufacturers = []models.Manufacturer{}
-		}
-
-		// Create owner data with errors
-		ownerData := data.NewOwnerData().
-			WithTitle("Add New Firearm").
-			WithAuthenticated(authenticated).
-			WithUser(dbUser).
-			WithWeaponTypes(weaponTypes).
-			WithCalibers(calibers).
-			WithManufacturers(manufacturers).
-			WithFormErrors(errors)
-
-		// Render the new gun form with the data and errors
-		gunView.New(ownerData).Render(c.Request.Context(), c.Writer)
-		return
-	}
-
-	// Convert IDs to uint
-	weaponTypeID, _ := strconv.ParseUint(weaponTypeIDStr, 10, 64)
-	caliberID, _ := strconv.ParseUint(caliberIDStr, 10, 64)
-	manufacturerID, _ := strconv.ParseUint(manufacturerIDStr, 10, 64)
-
-	// Parse acquired date if provided
-	var acquiredDate *time.Time
-	if acquiredDateStr != "" {
-		parsedDate, err := time.Parse("2006-01-02", acquiredDateStr)
-		if err == nil {
-			acquiredDate = &parsedDate
-		}
-	}
-
-	// Create the gun
-	newGun := &models.Gun{
-		Name:           name,
-		SerialNumber:   serialNumber,
-		Acquired:       acquiredDate,
-		WeaponTypeID:   uint(weaponTypeID),
-		CaliberID:      uint(caliberID),
-		ManufacturerID: uint(manufacturerID),
-		OwnerID:        dbUser.ID,
-	}
-
-	// Save the gun to the database
-	db := o.db.GetDB()
-	if err := models.CreateGun(db, newGun); err != nil {
-		// If there's an error, re-render the form with an error message
-		// Get all weapon types, calibers, and manufacturers for the form
-		weaponTypes, err := o.db.FindAllWeaponTypes()
-		if err != nil {
-			weaponTypes = []models.WeaponType{}
-		}
-
-		calibers, err := o.db.FindAllCalibers()
-		if err != nil {
-			calibers = []models.Caliber{}
-		}
-
-		manufacturers, err := o.db.FindAllManufacturers()
-		if err != nil {
-			manufacturers = []models.Manufacturer{}
-		}
-
-		// Create owner data with errors
-		ownerData := data.NewOwnerData().
-			WithTitle("Add New Firearm").
-			WithAuthenticated(authenticated).
-			WithUser(dbUser).
-			WithWeaponTypes(weaponTypes).
-			WithCalibers(calibers).
-			WithManufacturers(manufacturers).
-			WithError("Failed to create gun: " + err.Error())
-
-		// Render the new gun form with the data and errors
-		gunView.New(ownerData).Render(c.Request.Context(), c.Writer)
-		return
-	}
-
-	// Set flash message
-	if setFlash, exists := c.Get("setFlash"); exists {
-		setFlash.(func(string))("Weapon added to your arsenal")
-	}
-
-	// Redirect to the owner dashboard
-	c.Redirect(http.StatusSeeOther, "/owner")
+	// Render the new gun form with the data
+	gunView.New(ownerData).Render(c.Request.Context(), c.Writer)
 }
 
 // Show handles the show gun route
@@ -1053,6 +986,7 @@ func (o *OwnerController) Update(c *gin.Context) {
 		weaponTypeIDStr := c.PostForm("weapon_type_id")
 		caliberIDStr := c.PostForm("caliber_id")
 		manufacturerIDStr := c.PostForm("manufacturer_id")
+		paidStr := c.PostForm("paid")
 
 		// Validate the form
 		formErrors := make(map[string]string)
@@ -1130,33 +1064,53 @@ func (o *OwnerController) Update(c *gin.Context) {
 			return
 		}
 
-		// Update the gun
-		gun.Name = name
-		gun.SerialNumber = serialNumber
-		gun.WeaponTypeID = uint(weaponTypeID)
-		gun.CaliberID = uint(caliberID)
-		gun.ManufacturerID = uint(manufacturerID)
-
-		// Parse the acquired date if provided
+		// Parse acquired date if provided
+		var acquiredDate *time.Time
 		if acquiredDateStr != "" {
-			acquiredDate, err := time.Parse("2006-01-02", acquiredDateStr)
+			parsedDate, err := time.Parse("2006-01-02", acquiredDateStr)
 			if err != nil {
 				c.HTML(http.StatusBadRequest, "error.html", gin.H{"error": "Invalid acquired date"})
 				return
 			}
-			gun.Acquired = &acquiredDate
+			acquiredDate = &parsedDate
 		} else {
-			gun.Acquired = nil
+			acquiredDate = nil
 		}
 
+		// Parse paid amount if provided
+		var paidAmount *float64
+		if paidStr != "" {
+			paid, err := strconv.ParseFloat(paidStr, 64)
+			if err != nil {
+				c.HTML(http.StatusBadRequest, "error.html", gin.H{"error": "Invalid paid amount"})
+				return
+			}
+			paidAmount = &paid
+		} else {
+			paidAmount = nil
+		}
+
+		// Update the gun
+		updatedGun := &models.Gun{
+			Name:           name,
+			SerialNumber:   serialNumber,
+			Acquired:       acquiredDate,
+			WeaponTypeID:   uint(weaponTypeID),
+			CaliberID:      uint(caliberID),
+			ManufacturerID: uint(manufacturerID),
+			OwnerID:        user.ID,
+			Paid:           paidAmount,
+		}
+		updatedGun.ID = gun.ID
+
 		// Save the gun
-		if err := models.UpdateGun(db, &gun); err != nil {
+		if err := models.UpdateGun(db, updatedGun); err != nil {
 			c.HTML(http.StatusInternalServerError, "error.html", gin.H{"error": "Failed to update gun"})
 			return
 		}
 
 		// Reload the gun with its relationships to ensure they're updated
-		if err := db.Preload("WeaponType").Preload("Caliber").Preload("Manufacturer").First(&gun, gun.ID).Error; err != nil {
+		if err := db.Preload("WeaponType").Preload("Caliber").Preload("Manufacturer").First(&updatedGun, updatedGun.ID).Error; err != nil {
 			c.HTML(http.StatusInternalServerError, "error.html", gin.H{"error": "Failed to reload gun"})
 			return
 		}
@@ -1213,6 +1167,7 @@ func (o *OwnerController) Update(c *gin.Context) {
 	weaponTypeIDStr := c.PostForm("weapon_type_id")
 	caliberIDStr := c.PostForm("caliber_id")
 	manufacturerIDStr := c.PostForm("manufacturer_id")
+	paidStr := c.PostForm("paid")
 
 	// Validate the form
 	formErrors := make(map[string]string)
@@ -1290,33 +1245,53 @@ func (o *OwnerController) Update(c *gin.Context) {
 		return
 	}
 
-	// Update the gun
-	gun.Name = name
-	gun.SerialNumber = serialNumber
-	gun.WeaponTypeID = uint(weaponTypeID)
-	gun.CaliberID = uint(caliberID)
-	gun.ManufacturerID = uint(manufacturerID)
-
-	// Parse the acquired date if provided
+	// Parse acquired date if provided
+	var acquiredDate *time.Time
 	if acquiredDateStr != "" {
-		acquiredDate, err := time.Parse("2006-01-02", acquiredDateStr)
+		parsedDate, err := time.Parse("2006-01-02", acquiredDateStr)
 		if err != nil {
 			c.HTML(http.StatusBadRequest, "error.html", gin.H{"error": "Invalid acquired date"})
 			return
 		}
-		gun.Acquired = &acquiredDate
+		acquiredDate = &parsedDate
 	} else {
-		gun.Acquired = nil
+		acquiredDate = nil
 	}
 
+	// Parse paid amount if provided
+	var paidAmount *float64
+	if paidStr != "" {
+		paid, err := strconv.ParseFloat(paidStr, 64)
+		if err != nil {
+			c.HTML(http.StatusBadRequest, "error.html", gin.H{"error": "Invalid paid amount"})
+			return
+		}
+		paidAmount = &paid
+	} else {
+		paidAmount = nil
+	}
+
+	// Update the gun
+	updatedGun := &models.Gun{
+		Name:           name,
+		SerialNumber:   serialNumber,
+		Acquired:       acquiredDate,
+		WeaponTypeID:   uint(weaponTypeID),
+		CaliberID:      uint(caliberID),
+		ManufacturerID: uint(manufacturerID),
+		OwnerID:        user.ID,
+		Paid:           paidAmount,
+	}
+	updatedGun.ID = gun.ID
+
 	// Save the gun
-	if err := models.UpdateGun(db, &gun); err != nil {
+	if err := models.UpdateGun(db, updatedGun); err != nil {
 		c.HTML(http.StatusInternalServerError, "error.html", gin.H{"error": "Failed to update gun"})
 		return
 	}
 
 	// Reload the gun with its relationships to ensure they're updated
-	if err := db.Preload("WeaponType").Preload("Caliber").Preload("Manufacturer").First(&gun, gun.ID).Error; err != nil {
+	if err := db.Preload("WeaponType").Preload("Caliber").Preload("Manufacturer").First(&updatedGun, updatedGun.ID).Error; err != nil {
 		c.HTML(http.StatusInternalServerError, "error.html", gin.H{"error": "Failed to reload gun"})
 		return
 	}
@@ -1473,22 +1448,94 @@ func (o *OwnerController) Arsenal(c *gin.Context) {
 			return
 		}
 
-		// Get all guns for this owner
-		var guns []models.Gun
+		// Parse pagination parameters
+		page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+		if page < 1 {
+			page = 1
+		}
+		perPage, _ := strconv.Atoi(c.DefaultQuery("perPage", "50"))
+		if perPage < 1 {
+			perPage = 50
+		}
+
+		// Parse sorting parameters
+		sortBy := c.DefaultQuery("sortBy", "name")
+		sortOrder := c.DefaultQuery("sortOrder", "asc")
+
+		// Validate sort parameters
+		validSortFields := map[string]bool{
+			"name":         true,
+			"created_at":   true,
+			"acquired":     true,
+			"manufacturer": true,
+			"caliber":      true,
+			"weapon_type":  true,
+		}
+		if !validSortFields[sortBy] {
+			sortBy = "name"
+		}
+		if sortOrder != "asc" && sortOrder != "desc" {
+			sortOrder = "asc"
+		}
+
+		// Get search term if available
+		searchTerm := c.Query("search")
+
+		// Get the total count of guns for this owner
+		var totalGuns int64
 		db := o.db.GetDB()
-		if err := db.Preload("WeaponType").Preload("Caliber").Preload("Manufacturer").Where("owner_id = ?", dbUser.ID).Order("name ASC").Find(&guns).Error; err != nil {
+		query := db.Model(&models.Gun{}).Where("owner_id = ?", dbUser.ID)
+
+		// Add search if provided
+		if searchTerm != "" {
+			query = query.Where("name LIKE ?", "%"+searchTerm+"%")
+		}
+
+		// Count total guns
+		query.Count(&totalGuns)
+
+		// Apply pagination and get guns
+		var guns []models.Gun
+		gunQuery := db.Preload("WeaponType").Preload("Caliber").Preload("Manufacturer").
+			Where("owner_id = ?", dbUser.ID)
+
+		// Add search if provided
+		if searchTerm != "" {
+			gunQuery = gunQuery.Where("name LIKE ?", "%"+searchTerm+"%")
+		}
+
+		// Add sorting logic
+		if sortBy == "manufacturer" {
+			gunQuery = gunQuery.Joins("JOIN manufacturers ON guns.manufacturer_id = manufacturers.id").
+				Order("manufacturers.name " + sortOrder)
+		} else if sortBy == "caliber" {
+			gunQuery = gunQuery.Joins("JOIN calibers ON guns.caliber_id = calibers.id").
+				Order("calibers.caliber " + sortOrder)
+		} else if sortBy == "weapon_type" {
+			gunQuery = gunQuery.Joins("JOIN weapon_types ON guns.weapon_type_id = weapon_types.id").
+				Order("weapon_types.type " + sortOrder)
+		} else {
+			gunQuery = gunQuery.Order(sortBy + " " + sortOrder)
+		}
+
+		// Apply pagination
+		offset := (page - 1) * perPage
+		gunQuery = gunQuery.Offset(offset).Limit(perPage)
+
+		if err := gunQuery.Find(&guns).Error; err != nil {
 			guns = []models.Gun{}
 		}
 
-		// Apply free tier limit if needed
-		var totalGuns int
-		if dbUser.SubscriptionTier == "free" && len(guns) > 2 {
-			totalGuns = len(guns)
-			if len(guns) > 0 {
-				guns[0].HasMoreGuns = true
-				guns[0].TotalGuns = totalGuns
-			}
-			guns = guns[:2]
+		// Calculate total pages
+		totalPages := int((totalGuns + int64(perPage) - 1) / int64(perPage))
+
+		// Apply free tier limit if needed - this now applies to the display only
+		var showFreeLimit bool
+		var totalUserGuns int
+		if dbUser.SubscriptionTier == "free" && totalGuns > 2 {
+			showFreeLimit = true
+			totalUserGuns = int(totalGuns)
+			// We don't actually limit the guns anymore, just show a message
 		}
 
 		// Format subscription end date if available
@@ -1496,6 +1543,9 @@ func (o *OwnerController) Arsenal(c *gin.Context) {
 		if !dbUser.SubscriptionEndDate.IsZero() {
 			subscriptionEndsAt = dbUser.SubscriptionEndDate.Format("January 2, 2006")
 		}
+
+		// Calculate the total paid amount for all guns
+		totalPaid := calculateTotalPaid(guns)
 
 		// Create owner data
 		ownerData := data.NewOwnerData().
@@ -1507,7 +1557,12 @@ func (o *OwnerController) Arsenal(c *gin.Context) {
 				dbUser.HasActiveSubscription(),
 				dbUser.SubscriptionTier,
 				subscriptionEndsAt,
-			)
+			).
+			WithPagination(page, totalPages, perPage, int(totalGuns)).
+			WithSorting(sortBy, sortOrder).
+			WithSearchTerm(searchTerm).
+			WithFiltersApplied(sortBy, sortOrder, perPage, searchTerm).
+			WithTotalPaid(totalPaid)
 
 		// Get authData from context to preserve roles
 		if authDataInterface, exists := c.Get("authData"); exists {
@@ -1517,9 +1572,9 @@ func (o *OwnerController) Arsenal(c *gin.Context) {
 			}
 		}
 
-		// If the user has more guns than shown, add a message
-		if totalGuns > 2 && dbUser.SubscriptionTier == "free" {
-			ownerData.WithError("Please subscribe to see the rest of your collection")
+		// If the user is on free tier, add a message
+		if showFreeLimit {
+			ownerData.WithError(fmt.Sprintf("Free Tier shows all %d guns in your collection, but only allows you to add up to 2 guns. Please subscribe to add more firearms.", totalUserGuns))
 		}
 
 		// Check for flash message from cookie
@@ -1534,6 +1589,7 @@ func (o *OwnerController) Arsenal(c *gin.Context) {
 		return
 	}
 
+	// Get the second half of the method too
 	userInfo, authenticated := authController.GetCurrentUser(c)
 	if !authenticated {
 		c.Redirect(http.StatusSeeOther, "/login")
@@ -1548,22 +1604,94 @@ func (o *OwnerController) Arsenal(c *gin.Context) {
 		return
 	}
 
-	// Get all guns for this owner
-	var guns []models.Gun
+	// Parse pagination parameters
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	if page < 1 {
+		page = 1
+	}
+	perPage, _ := strconv.Atoi(c.DefaultQuery("perPage", "50"))
+	if perPage < 1 {
+		perPage = 50
+	}
+
+	// Parse sorting parameters
+	sortBy := c.DefaultQuery("sortBy", "name")
+	sortOrder := c.DefaultQuery("sortOrder", "asc")
+
+	// Validate sort parameters
+	validSortFields := map[string]bool{
+		"name":         true,
+		"created_at":   true,
+		"acquired":     true,
+		"manufacturer": true,
+		"caliber":      true,
+		"weapon_type":  true,
+	}
+	if !validSortFields[sortBy] {
+		sortBy = "name"
+	}
+	if sortOrder != "asc" && sortOrder != "desc" {
+		sortOrder = "asc"
+	}
+
+	// Get search term if available
+	searchTerm := c.Query("search")
+
+	// Get the total count of guns for this owner
+	var totalGuns int64
 	db := o.db.GetDB()
-	if err := db.Preload("WeaponType").Preload("Caliber").Preload("Manufacturer").Where("owner_id = ?", dbUser.ID).Order("name ASC").Find(&guns).Error; err != nil {
+	query := db.Model(&models.Gun{}).Where("owner_id = ?", dbUser.ID)
+
+	// Add search if provided
+	if searchTerm != "" {
+		query = query.Where("name LIKE ?", "%"+searchTerm+"%")
+	}
+
+	// Count total guns
+	query.Count(&totalGuns)
+
+	// Apply pagination and get guns
+	var guns []models.Gun
+	gunQuery := db.Preload("WeaponType").Preload("Caliber").Preload("Manufacturer").
+		Where("owner_id = ?", dbUser.ID)
+
+	// Add search if provided
+	if searchTerm != "" {
+		gunQuery = gunQuery.Where("name LIKE ?", "%"+searchTerm+"%")
+	}
+
+	// Add sorting logic
+	if sortBy == "manufacturer" {
+		gunQuery = gunQuery.Joins("JOIN manufacturers ON guns.manufacturer_id = manufacturers.id").
+			Order("manufacturers.name " + sortOrder)
+	} else if sortBy == "caliber" {
+		gunQuery = gunQuery.Joins("JOIN calibers ON guns.caliber_id = calibers.id").
+			Order("calibers.caliber " + sortOrder)
+	} else if sortBy == "weapon_type" {
+		gunQuery = gunQuery.Joins("JOIN weapon_types ON guns.weapon_type_id = weapon_types.id").
+			Order("weapon_types.type " + sortOrder)
+	} else {
+		gunQuery = gunQuery.Order(sortBy + " " + sortOrder)
+	}
+
+	// Apply pagination
+	offset := (page - 1) * perPage
+	gunQuery = gunQuery.Offset(offset).Limit(perPage)
+
+	if err := gunQuery.Find(&guns).Error; err != nil {
 		guns = []models.Gun{}
 	}
 
-	// Apply free tier limit if needed
-	var totalGuns int
-	if dbUser.SubscriptionTier == "free" && len(guns) > 2 {
-		totalGuns = len(guns)
-		if len(guns) > 0 {
-			guns[0].HasMoreGuns = true
-			guns[0].TotalGuns = totalGuns
-		}
-		guns = guns[:2]
+	// Calculate total pages
+	totalPages := int((totalGuns + int64(perPage) - 1) / int64(perPage))
+
+	// Apply free tier limit if needed - this now applies to the display only
+	var showFreeLimit bool
+	var totalUserGuns int
+	if dbUser.SubscriptionTier == "free" && totalGuns > 2 {
+		showFreeLimit = true
+		totalUserGuns = int(totalGuns)
+		// We don't actually limit the guns anymore, just show a message
 	}
 
 	// Format subscription end date if available
@@ -1582,7 +1710,11 @@ func (o *OwnerController) Arsenal(c *gin.Context) {
 			dbUser.HasActiveSubscription(),
 			dbUser.SubscriptionTier,
 			subscriptionEndsAt,
-		)
+		).
+		WithPagination(page, totalPages, perPage, int(totalGuns)).
+		WithSorting(sortBy, sortOrder).
+		WithSearchTerm(searchTerm).
+		WithFiltersApplied(sortBy, sortOrder, perPage, searchTerm)
 
 	// Get authData from context to preserve roles
 	if authDataInterface, exists := c.Get("authData"); exists {
@@ -1592,9 +1724,9 @@ func (o *OwnerController) Arsenal(c *gin.Context) {
 		}
 	}
 
-	// If the user has more guns than shown, add a message
-	if totalGuns > 2 && dbUser.SubscriptionTier == "free" {
-		ownerData.WithError("Please subscribe to see the rest of your collection")
+	// If the user is on free tier, add a message
+	if showFreeLimit {
+		ownerData.WithError(fmt.Sprintf("Free Tier shows all %d guns in your collection, but only allows you to add up to 2 guns. Please subscribe to add more firearms.", totalUserGuns))
 	}
 
 	// Check for flash message from cookie

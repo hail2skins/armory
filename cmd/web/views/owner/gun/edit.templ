@@ -2,6 +2,7 @@ package gun
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"strconv"
 
@@ -86,20 +87,37 @@ templ Edit(data *data.OwnerData) {
 					<label class="block text-gunmetal-700 text-sm font-bold mb-2" for="acquired_date">
 						Acquired Date
 					</label>
-					<input class="shadow appearance-none border rounded w-full py-2 px-3 text-gunmetal-800 leading-tight focus:outline-none focus:shadow-outline" 
-						id="acquired_date" type="date" name="acquired_date"`)
-		if err != nil {
-			return err
-		}
-
-		if data.Gun.Acquired != nil {
-			_, err = io.WriteString(w, ` value="`+data.Gun.Acquired.Format("2006-01-02")+`"`)
-			if err != nil {
-				return err
-			}
-		}
-
-		_, err = io.WriteString(w, `>
+					<input 
+						type="date" 
+						id="acquired_date" 
+						name="acquired_date"
+						value="`+ func() string {
+							if data.Gun.Acquired != nil {
+								return data.Gun.Acquired.Format("2006-01-02")
+							}
+							return ""
+						}() +`"
+						class="block w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-brass-500 focus:border-brass-500"
+					/>
+				</div>
+				<div class="mb-4">
+					<label for="paid" class="block text-gunmetal-700 font-medium mb-1">Paid (USD)</label>
+					<input 
+						type="number" 
+						step="0.01" 
+						min="0" 
+						id="paid" 
+						name="paid" 
+						placeholder="Enter amount paid (optional)"
+						value="`+ func() string {
+							if data.Gun.Paid != nil {
+								return fmt.Sprintf("%.2f", *data.Gun.Paid)
+							}
+							return ""
+						}() +`"
+						class="w-full px-3 py-2 border border-gunmetal-300 rounded-md focus:outline-none focus:ring-1 focus:ring-brass-400"
+					/>
+					<p class="text-sm text-gunmetal-500 mt-1">Please enter in USD</p>
 				</div>
 				<div class="mb-4">
 					<label class="block text-gunmetal-700 text-sm font-bold mb-2" for="weapon_type_id">

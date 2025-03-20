@@ -277,3 +277,71 @@ func TestDeleteGun(t *testing.T) {
 	// Clean up
 	db.Delete(&gun)
 }
+
+// TestGunWithPaidField tests that a gun can be created and updated with a Paid field
+func TestGunWithPaidField(t *testing.T) {
+	// Get a shared database instance for testing
+	db := GetTestDB()
+
+	// Get test data from seeded data
+	var weaponType WeaponType
+	err := db.Where("type = ?", "Test Rifle").First(&weaponType).Error
+	assert.NoError(t, err)
+
+	var caliber Caliber
+	err = db.Where("caliber = ?", "Test 5.56").First(&caliber).Error
+	assert.NoError(t, err)
+
+	var manufacturer Manufacturer
+	err = db.Where("name = ?", "Test Glock").First(&manufacturer).Error
+	assert.NoError(t, err)
+
+	// Test creating a gun with the Paid field
+	acquired := time.Now()
+	paidAmount := 1500.50 // $1500.50
+	gun := &Gun{
+		Name:           "Test Paid Gun",
+		SerialNumber:   "PAID-123456",
+		Acquired:       &acquired,
+		WeaponTypeID:   weaponType.ID,
+		CaliberID:      caliber.ID,
+		ManufacturerID: manufacturer.ID,
+		OwnerID:        1, // Test owner ID
+		Paid:           &paidAmount,
+	}
+
+	// Call the function being tested
+	err = CreateGun(db, gun)
+	assert.NoError(t, err)
+
+	// Verify the gun was created
+	var createdGun Gun
+	err = db.Preload("WeaponType").Preload("Caliber").Preload("Manufacturer").First(&createdGun, gun.ID).Error
+	assert.NoError(t, err)
+
+	// Verify the gun data
+	assert.Equal(t, "Test Paid Gun", createdGun.Name)
+	assert.Equal(t, "PAID-123456", createdGun.SerialNumber)
+	assert.Equal(t, weaponType.ID, createdGun.WeaponTypeID)
+	assert.Equal(t, caliber.ID, createdGun.CaliberID)
+	assert.Equal(t, manufacturer.ID, createdGun.ManufacturerID)
+	assert.Equal(t, uint(1), createdGun.OwnerID)
+	assert.NotNil(t, createdGun.Paid)
+	assert.Equal(t, 1500.50, *createdGun.Paid)
+
+	// Test updating the Paid field
+	newPaidAmount := 2000.75 // $2000.75
+	createdGun.Paid = &newPaidAmount
+	err = UpdateGun(db, &createdGun)
+	assert.NoError(t, err)
+
+	// Verify the update
+	var updatedGun Gun
+	err = db.First(&updatedGun, gun.ID).Error
+	assert.NoError(t, err)
+	assert.NotNil(t, updatedGun.Paid)
+	assert.Equal(t, 2000.75, *updatedGun.Paid)
+
+	// Clean up test data
+	db.Delete(&gun)
+}

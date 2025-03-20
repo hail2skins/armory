@@ -62,7 +62,7 @@ templ Base(data data.AuthData, children templ.Component) {
 			<script src="assets/js/htmx.min.js"></script>
 		</head>
 		
-		<body class="leading-normal tracking-normal text-white bg-gunmetal-100 font-sans">
+		<body class="leading-normal tracking-normal text-gunmetal-800 bg-gunmetal-100 font-sans">
 			@Nav(data)
 			<main class="flex-grow">
 				if data.IsCasbinAdmin && isAdminPath(data.CurrentPath) {
@@ -95,6 +95,20 @@ templ Base(data data.AuthData, children templ.Component) {
 						navToggle.addEventListener('click', function() {
 							navContent.classList.toggle('hidden');
 						});
+					}
+					
+					// Auto-dismiss flash messages after 5 seconds
+					const flashMessages = document.querySelectorAll('.mb-4.bg-green-100, .mb-4.bg-yellow-100');
+					if (flashMessages.length > 0) {
+						setTimeout(() => {
+							flashMessages.forEach(flash => {
+								flash.style.transition = 'opacity 1s ease-out';
+								flash.style.opacity = '0';
+								setTimeout(() => {
+									flash.style.display = 'none';
+								}, 1000);
+							});
+						}, 5000);
 					}
 				});
 			</script>

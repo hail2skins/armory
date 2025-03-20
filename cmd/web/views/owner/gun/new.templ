@@ -221,6 +221,19 @@ templ New(data *data.OwnerData) {
 
 		_, err = io.WriteString(w, `
 				</div>
+				<div class="mb-4">
+					<label for="paid" class="block text-gunmetal-700 font-medium mb-1">Paid (USD)</label>
+					<input 
+						type="number" 
+						step="0.01" 
+						min="0" 
+						id="paid" 
+						name="paid" 
+						placeholder="Enter amount paid (optional)"
+						class="w-full px-3 py-2 border border-gunmetal-300 rounded-md focus:outline-none focus:ring-1 focus:ring-brass-400"
+					/>
+					<p class="text-sm text-gunmetal-500 mt-1">Please enter in USD</p>
+				</div>
 				<div class="flex items-center justify-between">
 					<button class="bg-gunmetal-800 hover:bg-gunmetal-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline" 
 						type="submit">

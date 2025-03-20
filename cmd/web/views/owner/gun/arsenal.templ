@@ -2,16 +2,16 @@ package gun
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"strconv"
-	"strings"
 
 	"github.com/hail2skins/armory/cmd/web/views/data"
 	"github.com/hail2skins/armory/cmd/web/views/partials"
 )
 
 templ Arsenal(data *data.OwnerData) {
-	@partials.Base(data.Auth, templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+	@partials.Base(data.Auth, templ.ComponentFunc(func(ctx context.Context, w io.Writer) (error) {
 		_, err := io.WriteString(w, `
 		<div class="container mx-auto px-4 py-8">
 			<div class="bg-white shadow-md rounded-lg p-6">
@@ -21,230 +21,339 @@ templ Arsenal(data *data.OwnerData) {
 						<a href="/owner" class="bg-gunmetal-600 hover:bg-gunmetal-700 text-white font-bold py-2 px-4 rounded">
 							Back to Dashboard
 						</a>
-						<a href="/owner/guns/new" class="bg-gunmetal-700 hover:bg-gunmetal-800 text-white font-bold py-2 px-4 rounded">
+						<a href="/owner/guns/new" class="bg-brass-600 hover:bg-brass-700 text-white font-bold py-2 px-4 rounded">
 							Add New Firearm
 						</a>
 					</div>
 				</div>
-				
-				<!-- Search and Filter -->
+		`)
+		if err != nil {
+			return err
+		}
+		
+		// Search and Filter form
+		searchForm := `
 				<div class="mb-6">
 					<div class="flex flex-col md:flex-row md:items-center space-y-2 md:space-y-0 md:space-x-4">
 						<div class="flex-grow">
-							<input type="text" id="search" placeholder="Search firearms..." class="w-full px-4 py-2 border border-gunmetal-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gunmetal-500">
+							<form action="/owner/guns/arsenal" method="GET" class="flex flex-col md:flex-row gap-2">
+								<div class="flex-grow">
+									<input 
+										type="text" 
+										id="search" 
+										name="search" 
+										value="` + data.SearchTerm + `"
+										placeholder="Search firearms..." 
+										class="w-full px-4 py-2 text-gunmetal-800 border border-gunmetal-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brass-400"
+									>
+								</div>
+								<div class="md:w-48">
+									<select name="sortBy" class="w-full px-4 py-2 text-gunmetal-800 border border-gunmetal-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brass-400">`
+		
+		// Sort options
+		sortOptions := []struct{ value, label string }{
+			{"name", "Sort by Name"},
+			{"created_at", "Sort by Date Added"},
+			{"acquired", "Sort by Date Acquired"},
+			{"manufacturer", "Sort by Manufacturer"},
+			{"caliber", "Sort by Caliber"},
+			{"weapon_type", "Sort by Type"},
+		}
+		
+		for _, opt := range sortOptions {
+			selected := ""
+			if data.SortBy == opt.value {
+				selected = " selected"
+			}
+			searchForm += fmt.Sprintf(`
+										<option value="%s"%s>%s</option>`, opt.value, selected, opt.label)
+		}
+		
+		searchForm += `
+									</select>
+								</div>
+								<div class="md:w-40">
+									<select name="sortOrder" class="w-full px-4 py-2 text-gunmetal-800 border border-gunmetal-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brass-400">`
+		
+		// Sort order
+		if data.SortOrder == "asc" {
+			searchForm += `
+										<option value="asc" selected>Ascending</option>
+										<option value="desc">Descending</option>`
+		} else {
+			searchForm += `
+										<option value="asc">Ascending</option>
+										<option value="desc" selected>Descending</option>`
+		}
+		
+		searchForm += `
+									</select>
+								</div>
+								<button type="submit" class="px-4 py-2 bg-brass-400 hover:bg-brass-300 text-white font-medium rounded">
+									Apply
+								</button>`
+		
+		// Reset button if filters applied
+		if data.HasFiltersApplied {
+			searchForm += `
+								<a href="/owner/guns/arsenal" class="px-4 py-2 bg-gunmetal-500 hover:bg-gunmetal-400 text-white font-medium rounded">
+									Reset
+								</a>`
+		}
+		
+		searchForm += `
+							</form>
 						</div>
 					</div>
-				</div>
-				
-				<!-- Firearms Table -->
-				`)
+				</div>`
+		
+		_, err = io.WriteString(w, searchForm)
 		if err != nil {
 			return err
 		}
-
-		if len(data.Guns) > 0 {
-			_, err = io.WriteString(w, `
+		
+		// Table header
+		tableHeader := `
 				<div class="overflow-x-auto">
-					<table class="min-w-full bg-white" id="arsenal-table">
-						<thead class="bg-gunmetal-200">
+					<table class="min-w-full bg-white border border-gunmetal-200 rounded-lg overflow-hidden">
+						<thead class="bg-gunmetal-100">
 							<tr>
-								<th class="py-2 px-4 text-left text-gunmetal-800 cursor-pointer" data-sort="name">Name <span class="sort-icon">↕</span></th>
-								<th class="py-2 px-4 text-left text-gunmetal-800 cursor-pointer" data-sort="type">Type <span class="sort-icon">↕</span></th>
-								<th class="py-2 px-4 text-left text-gunmetal-800 cursor-pointer" data-sort="manufacturer">Manufacturer <span class="sort-icon">↕</span></th>
-								<th class="py-2 px-4 text-left text-gunmetal-800 cursor-pointer" data-sort="caliber">Caliber <span class="sort-icon">↕</span></th>
-								<th class="py-2 px-4 text-left text-gunmetal-800 cursor-pointer" data-sort="acquired">Acquired <span class="sort-icon">↕</span></th>
-								<th class="py-2 px-4 text-left text-gunmetal-800">Actions</th>
+								<th class="py-3 px-4 text-left text-gunmetal-800 font-semibold">Name</th>
+								<th class="py-3 px-4 text-left text-gunmetal-800 font-semibold">Serial</th>
+								<th class="py-3 px-4 text-left text-gunmetal-800 font-semibold">Manufacturer</th>
+								<th class="py-3 px-4 text-left text-gunmetal-800 font-semibold">Caliber</th>
+								<th class="py-3 px-4 text-left text-gunmetal-800 font-semibold">Type</th>
+								<th class="py-3 px-4 text-left text-gunmetal-800 font-semibold">Acquired</th>
+								<th class="py-3 px-4 text-left text-gunmetal-800 font-semibold">Paid</th>
+								<th class="py-3 px-4 text-center text-gunmetal-800 font-semibold">Actions</th>
 							</tr>
 						</thead>
-						<tbody>
-				`)
+						<tbody>`
+		
+		_, err = io.WriteString(w, tableHeader)
+		if err != nil {
+			return err
+		}
+		
+		// Table content
+		if len(data.Guns) == 0 {
+			_, err = io.WriteString(w, `
+								<tr>
+									<td colspan="7" class="py-4 px-4 text-center text-gunmetal-500">No firearms found.</td>
+								</tr>`)
+		} else {
+			for i, gun := range data.Guns {
+				var rowClass string
+				if i%2 == 1 {
+					rowClass = " bg-gunmetal-50"
+				}
+				
+				// Format the acquired date
+				acquiredDate := "<span class=\"text-gunmetal-500\">Unknown</span>"
+				if gun.Acquired != nil {
+					acquiredDate = gun.Acquired.Format("Jan 2, 2006")
+				}
+				
+				// Format the paid amount
+				paidAmount := "<span class=\"text-gunmetal-500\">Unknown</span>"
+				if gun.Paid != nil {
+					paidAmount = fmt.Sprintf("$%.2f", *gun.Paid)
+				}
+				
+				// Create gun URL
+				gunID := strconv.FormatUint(uint64(gun.ID), 10)
+				
+				row := fmt.Sprintf(`
+								<tr class="border-t hover:bg-gunmetal-100%s">
+									<td class="py-3 px-4 text-gunmetal-800">%s</td>
+									<td class="py-3 px-4 text-gunmetal-800">%s</td>
+									<td class="py-3 px-4 text-gunmetal-800">%s</td>
+									<td class="py-3 px-4 text-gunmetal-800">%s</td>
+									<td class="py-3 px-4 text-gunmetal-800">%s</td>
+									<td class="py-3 px-4 text-gunmetal-800">%s</td>
+									<td class="py-3 px-4 text-gunmetal-800">%s</td>
+									<td class="py-3 px-4 text-center">
+										<div class="flex justify-center space-x-2">
+											<a href="/owner/guns/%s" class="text-brass-700 hover:text-brass-500">
+												<span class="sr-only">View</span>
+												<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+													<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+													<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+												</svg>
+											</a>
+											<a href="/owner/guns/%s/edit" class="text-brass-700 hover:text-brass-500">
+												<span class="sr-only">Edit</span>
+												<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+													<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+												</svg>
+											</a>
+											<form method="POST" action="/owner/guns/%s/delete" onsubmit="return confirm('Are you sure you want to delete this firearm?')" class="inline">
+												<button type="submit" class="text-red-600 hover:text-red-800">
+													<span class="sr-only">Delete</span>
+													<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+														<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+													</svg>
+												</button>
+											</form>
+										</div>
+									</td>
+								</tr>`, 
+								rowClass,
+								gun.Name, 
+								gun.SerialNumber,
+								gun.Manufacturer.Name,
+								gun.Caliber.Caliber,
+								gun.WeaponType.Type,
+								acquiredDate,
+								paidAmount,
+								gunID,
+								gunID,
+								gunID)
+				
+				_, err = io.WriteString(w, row)
+				if err != nil {
+					return err
+				}
+			}
+		}
+		
+		// Table footer
+		_, err = io.WriteString(w, `
+						</tbody>
+					</table>
+				</div>`)
+		if err != nil {
+			return err
+		}
+		
+		// Pagination if needed
+		if data.TotalPages > 1 {
+			showingFrom := strconv.Itoa(data.ShowingFrom)
+			showingTo := strconv.Itoa(data.ShowingTo)
+			totalItems := strconv.Itoa(data.TotalItems)
+			
+			_, err = io.WriteString(w, `
+				<div class="mt-6 flex flex-col sm:flex-row justify-between items-center">
+					<div class="text-sm text-gunmetal-600 mb-4 sm:mb-0">
+						Showing `+showingFrom+` to `+showingTo+` of `+totalItems+` firearms
+					</div>
+					<div class="flex justify-center">
+						<nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">`)
+			
 			if err != nil {
 				return err
 			}
-
-			for _, gun := range data.Guns {
-				_, err = io.WriteString(w, `
-							<tr class="border-t hover:bg-gunmetal-50" data-name="`+strings.ToLower(gun.Name)+`" data-type="`+strings.ToLower(gun.WeaponType.Type)+`" data-manufacturer="`+strings.ToLower(gun.Manufacturer.Name)+`" data-caliber="`+strings.ToLower(gun.Caliber.Caliber)+`">
-								<td class="py-2 px-4">
-									<a href="/owner/guns/`+strconv.FormatUint(uint64(gun.ID), 10)+`" class="text-blue-600 hover:underline font-medium">
-										`+gun.Name+`
-									</a>
-								</td>
-								<td class="py-2 px-4 text-gunmetal-800">`+gun.WeaponType.Type+`</td>
-								<td class="py-2 px-4 text-gunmetal-800">`+gun.Manufacturer.Name+`</td>
-								<td class="py-2 px-4 text-gunmetal-800">`+gun.Caliber.Caliber+`</td>
-								<td class="py-2 px-4 text-gunmetal-800">`)
-				if err != nil {
-					return err
-				}
-
-				if gun.Acquired != nil {
-					_, err = io.WriteString(w, gun.Acquired.Format("Jan 2, 2006"))
-				} else {
-					_, err = io.WriteString(w, `<span class="text-gunmetal-500">Unknown</span>`)
-				}
-				if err != nil {
-					return err
-				}
-
-				_, err = io.WriteString(w, `</td>
-								<td class="py-2 px-4">
-									<div class="flex space-x-2">
-										<a href="/owner/guns/`+strconv.FormatUint(uint64(gun.ID), 10)+`" class="text-green-600 hover:text-green-800">
-											Show
-										</a>
-										<a href="/owner/guns/`+strconv.FormatUint(uint64(gun.ID), 10)+`/edit" class="text-blue-600 hover:text-blue-800">
-											Edit
-										</a>
-										<form method="POST" action="/owner/guns/`+strconv.FormatUint(uint64(gun.ID), 10)+`/delete" class="inline">
-											<button type="submit" class="text-red-600 hover:text-red-800" onclick="return confirm('Are you sure you want to delete this firearm?')">
-												Delete
-											</button>
-										</form>
-									</div>
-								</td>
-							</tr>
-				`)
-				if err != nil {
-					return err
-				}
-			}
-
-			_, err = io.WriteString(w, `
-						</tbody>
-					</table>
-				</div>
-				`)
 			
-			// Add message for free tier users with more guns than shown
-			if len(data.Guns) > 0 && data.Guns[0].HasMoreGuns {
-				totalGuns := data.Guns[0].TotalGuns
-				shownGuns := len(data.Guns)
-				_, err = io.WriteString(w, `
-					<div class="mt-4 p-4 bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 text-center">
-						<p>
-							<span class="font-bold">Free Tier Limit:</span> Showing `+strconv.Itoa(shownGuns)+` of `+strconv.Itoa(totalGuns)+` firearms.
-							<a href="/pricing" class="text-blue-600 hover:underline">Upgrade your subscription</a> to view all your firearms.
-						</p>
-					</div>
-				`)
-				if err != nil {
-					return err
+			// Previous button
+			if data.CurrentPage > 1 {
+				prevPage := strconv.Itoa(data.CurrentPage - 1)
+				perPage := strconv.Itoa(data.PerPage)
+				searchParam := ""
+				if data.SearchTerm != "" {
+					searchParam = "&search=" + data.SearchTerm
 				}
-			}
-			
-			_, err = io.WriteString(w, `
-				<!-- Pagination (to be implemented) -->
-				<div class="mt-4 flex justify-between items-center">
-					<div>
-						<span class="text-gunmetal-600">Showing `+strconv.Itoa(len(data.Guns))+` firearms</span>
-					</div>
-					<div class="flex space-x-2">
-						<!-- Pagination controls will go here -->
-					</div>
-				</div>
 				
-				<script>
-					// Search functionality
-					document.getElementById('search').addEventListener('input', function(e) {
-						const searchTerm = e.target.value.toLowerCase();
-						const rows = document.querySelectorAll('#arsenal-table tbody tr');
-						
-						rows.forEach(row => {
-							const name = row.getAttribute('data-name');
-							const type = row.getAttribute('data-type');
-							const manufacturer = row.getAttribute('data-manufacturer');
-							const caliber = row.getAttribute('data-caliber');
-							
-							if (name.includes(searchTerm) || 
-								type.includes(searchTerm) || 
-								manufacturer.includes(searchTerm) || 
-								caliber.includes(searchTerm)) {
-								row.style.display = '';
-							} else {
-								row.style.display = 'none';
-							}
-						});
-					});
-					
-					// Sorting functionality
-					document.querySelectorAll('th[data-sort]').forEach(th => {
-						th.addEventListener('click', function() {
-							const sortBy = this.getAttribute('data-sort');
-							const tbody = document.querySelector('#arsenal-table tbody');
-							const rows = Array.from(tbody.querySelectorAll('tr'));
-							
-							// Toggle sort direction
-							const currentDirection = this.getAttribute('data-direction') || 'asc';
-							const newDirection = currentDirection === 'asc' ? 'desc' : 'asc';
-							
-							// Update all headers to show they're not being sorted
-							document.querySelectorAll('th[data-sort]').forEach(header => {
-								header.setAttribute('data-direction', '');
-								header.querySelector('.sort-icon').textContent = '↕';
-							});
-							
-							// Update this header to show it's being sorted
-							this.setAttribute('data-direction', newDirection);
-							this.querySelector('.sort-icon').textContent = newDirection === 'asc' ? '↑' : '↓';
-							
-							// Sort the rows
-							rows.sort((a, b) => {
-								let aValue, bValue;
-								
-								if (sortBy === 'name') {
-									aValue = a.getAttribute('data-name');
-									bValue = b.getAttribute('data-name');
-								} else if (sortBy === 'type') {
-									aValue = a.getAttribute('data-type');
-									bValue = b.getAttribute('data-type');
-								} else if (sortBy === 'manufacturer') {
-									aValue = a.getAttribute('data-manufacturer');
-									bValue = b.getAttribute('data-manufacturer');
-								} else if (sortBy === 'caliber') {
-									aValue = a.getAttribute('data-caliber');
-									bValue = b.getAttribute('data-caliber');
-								} else if (sortBy === 'acquired') {
-									// For dates, we'll use the text content of the cell
-									aValue = a.querySelector('td:nth-child(5)').textContent.trim();
-									bValue = b.querySelector('td:nth-child(5)').textContent.trim();
-									
-									// Handle "Unknown" values
-									if (aValue === 'Unknown') aValue = '0';
-									if (bValue === 'Unknown') bValue = '0';
-								}
-								
-								if (newDirection === 'asc') {
-									return aValue.localeCompare(bValue);
-								} else {
-									return bValue.localeCompare(aValue);
-								}
-							});
-							
-							// Re-append rows in the new order
-							rows.forEach(row => tbody.appendChild(row));
-						});
-					});
-				</script>
-				`)
-		} else {
+				prevLink := "/owner/guns/arsenal?page=" + prevPage + "&perPage=" + perPage + 
+					"&sortBy=" + data.SortBy + "&sortOrder=" + data.SortOrder + searchParam
+				
+				_, err = io.WriteString(w, `
+							<a href="`+prevLink+`" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gunmetal-300 bg-white text-sm font-medium text-gunmetal-500 hover:bg-gunmetal-50">
+								<span class="sr-only">Previous</span>
+								<svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+									<path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
+								</svg>
+							</a>`)
+			} else {
+				_, err = io.WriteString(w, `
+							<span class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gunmetal-300 bg-gunmetal-100 text-sm font-medium text-gunmetal-400 cursor-not-allowed">
+								<span class="sr-only">Previous</span>
+								<svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+									<path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
+								</svg>
+							</span>`)
+			}
+			
+			if err != nil {
+				return err
+			}
+			
+			// Page numbers
+			for i := data.StartPage; i <= data.EndPage; i++ {
+				pageNum := strconv.Itoa(i)
+				perPage := strconv.Itoa(data.PerPage)
+				searchParam := ""
+				if data.SearchTerm != "" {
+					searchParam = "&search=" + data.SearchTerm
+				}
+				
+				pageLink := "/owner/guns/arsenal?page=" + pageNum + "&perPage=" + perPage + 
+					"&sortBy=" + data.SortBy + "&sortOrder=" + data.SortOrder + searchParam
+				
+				if i == data.CurrentPage {
+					_, err = io.WriteString(w, `
+							<span class="relative inline-flex items-center px-4 py-2 border border-brass-500 bg-brass-50 text-sm font-medium text-brass-800">
+								`+pageNum+`
+							</span>`)
+				} else {
+					_, err = io.WriteString(w, `
+							<a href="`+pageLink+`" class="relative inline-flex items-center px-4 py-2 border border-gunmetal-300 bg-white text-sm font-medium text-gunmetal-700 hover:bg-gunmetal-50">
+								`+pageNum+`
+							</a>`)
+				}
+				
+				if err != nil {
+					return err
+				}
+			}
+			
+			// Next button
+			if data.CurrentPage < data.TotalPages {
+				nextPage := strconv.Itoa(data.CurrentPage + 1)
+				perPage := strconv.Itoa(data.PerPage)
+				searchParam := ""
+				if data.SearchTerm != "" {
+					searchParam = "&search=" + data.SearchTerm
+				}
+				
+				nextLink := "/owner/guns/arsenal?page=" + nextPage + "&perPage=" + perPage + 
+					"&sortBy=" + data.SortBy + "&sortOrder=" + data.SortOrder + searchParam
+				
+				_, err = io.WriteString(w, `
+							<a href="`+nextLink+`" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gunmetal-300 bg-white text-sm font-medium text-gunmetal-500 hover:bg-gunmetal-50">
+								<span class="sr-only">Next</span>
+								<svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+									<path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+								</svg>
+							</a>`)
+			} else {
+				_, err = io.WriteString(w, `
+							<span class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gunmetal-300 bg-gunmetal-100 text-sm font-medium text-gunmetal-400 cursor-not-allowed">
+								<span class="sr-only">Next</span>
+								<svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+									<path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+								</svg>
+							</span>`)
+			}
+			
+			if err != nil {
+				return err
+			}
+			
 			_, err = io.WriteString(w, `
-				<div class="text-center py-8">
-					<p class="text-gunmetal-700 mb-4">You haven't added any firearms yet.</p>
-					<a href="/owner/guns/new" class="bg-gunmetal-700 hover:bg-gunmetal-800 text-white font-bold py-2 px-4 rounded">
-						Add Your First Firearm
-					</a>
-				</div>
-				`)
+						</nav>
+					</div>
+				</div>`)
+			
+			if err != nil {
+				return err
+			}
 		}
-		if err != nil {
-			return err
-		}
-
+		
+		// Page footer
 		_, err = io.WriteString(w, `
 			</div>
-		</div>
-		`)
+		</div>`)
+		
 		return err
 	}))
 } 
