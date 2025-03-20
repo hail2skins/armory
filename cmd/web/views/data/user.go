@@ -28,3 +28,9 @@ type UserEditData struct {
 	AuthData
 	User models.User
 }
+
+// UserGrantSubscriptionData contains data for the grant subscription view
+type UserGrantSubscriptionData struct {
+	AuthData
+	User models.User
+}

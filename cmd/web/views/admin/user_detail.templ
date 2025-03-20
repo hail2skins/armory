@@ -133,6 +133,16 @@ templ UserDetail(data *data.UserDetailData) {
 			_, err = io.WriteString(w, `<p class="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800">Premium Lifetime</p>`)
 		case "promotion":
 			_, err = io.WriteString(w, `<p class="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-pink-100 text-pink-800">Promotion</p>`)
+		case "admin_grant":
+			_, err = io.WriteString(w, `<p class="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-cyan-100 text-cyan-800">
+				Admin Grant
+				`+func() string {
+				if data.User.IsLifetime() {
+					return `<span class="ml-1.5 inline-flex items-center px-1.5 py-0.25 rounded text-xs font-medium bg-purple-100 text-purple-800">Lifetime</span>`
+				}
+				return ""
+			}()+`
+			</p>`)
 		}
 		if err != nil {
 			return err
@@ -163,6 +173,43 @@ templ UserDetail(data *data.UserDetailData) {
 			return err
 		}
 
+		// Admin grant information (only show if granted by admin)
+		if data.User.IsAdminGranted() {
+			_, err = io.WriteString(w, `
+							</div>
+							
+							<div class="mt-2 pt-2 border-t border-gunmetal-200">
+								<p class="text-sm text-gunmetal-600 font-medium">Admin Grant Information</p>
+								
+								<div class="mt-2">
+									<p class="text-sm text-gunmetal-600">Granted By</p>
+									<p class="font-medium text-gunmetal-800">Admin ID: `+fmt.Sprint(data.User.GetGrantedByID())+`</p>
+								</div>
+								
+								<div class="mt-2">
+									<p class="text-sm text-gunmetal-600">Grant Reason</p>
+									<p class="font-medium text-gunmetal-800">`+data.User.GetGrantReason()+`</p>
+								</div>
+								
+								<div class="mt-2">
+									<p class="text-sm text-gunmetal-600">Grant Type</p>
+									<p class="font-medium text-gunmetal-800 flex items-center">
+										Admin Grant
+										`+func() string {
+										if data.User.IsLifetime() {
+											return `<span class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">Lifetime</span>`
+										}
+										return ""
+									}()+`
+									</p>
+								</div>
+							</div>
+			`)
+			if err != nil {
+				return err
+			}
+		}
+
 		_, err = io.WriteString(w, `
 							</div>
 						</div>
@@ -186,6 +233,12 @@ templ UserDetail(data *data.UserDetailData) {
 							Delete User
 						</button>
 					</form>
+					<a href="/admin/users/`+fmt.Sprint(data.User.GetID())+`/grant-subscription" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md text-sm flex items-center inline-block ml-2">
+						<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+							<path fill-rule="evenodd" d="M5 2a1 1 0 011 1v1h1a1 1 0 010 2H6v1a1 1 0 01-2 0V6H3a1 1 0 010-2h1zm0 10a1 1 0 011 1v1h1a1 1 0 110 2H6v1a1 1 0 11-2 0v-1H3a1 1 0 110-2h1zm12-3a1 1 0 01.967.744L14.146 7.2 17.5 9.134a1 1 0 010 1.732l-3.354 1.935-1.18 4.455a1 1 0 01-1.933 0L9.854 12.8 6.5 10.866a1 1 0 010-1.732l3.354-1.935 1.18-4.455A1 1 0 0112 2z" clip-rule="evenodd" />
+						</svg>
+						Grant Subscription
+					</a>
 			`)
 		} else {
 			_, err = io.WriteString(w, `

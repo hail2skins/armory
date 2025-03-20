@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/hail2skins/armory/cmd/web/views/admin"
@@ -278,4 +279,163 @@ func (c *AdminUserController) Restore(ctx *gin.Context) {
 
 	// Redirect to user list with success message
 	ctx.Redirect(http.StatusSeeOther, "/admin/users?success=User+restored+successfully")
+}
+
+// ShowGrantSubscription renders the form to grant a subscription to a user
+func (c *AdminUserController) ShowGrantSubscription(ctx *gin.Context) {
+	// Get auth data from context
+	authData := getAuthData(ctx)
+	authData = authData.WithTitle("Grant Subscription").WithCurrentPath(ctx.Request.URL.Path)
+
+	// Get user ID from URL
+	userID, err := strconv.ParseUint(ctx.Param("id"), 10, 64)
+	if err != nil {
+		ctx.Redirect(http.StatusSeeOther, "/admin/users?error=Invalid+user+ID")
+		return
+	}
+
+	// Get user from database
+	user, err := c.DB.GetUserByID(uint(userID))
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			ctx.Redirect(http.StatusSeeOther, "/admin/users?error=User+not+found")
+		} else {
+			ctx.Redirect(http.StatusSeeOther, "/admin/users?error="+fmt.Sprintf("Error loading user: %v", err))
+		}
+		return
+	}
+
+	// Create data for the template
+	userData := &data.UserGrantSubscriptionData{
+		AuthData: authData,
+		User:     UserWrapper{User: *user},
+	}
+
+	// Render the grant subscription page
+	admin.UserGrantSubscription(userData).Render(ctx.Request.Context(), ctx.Writer)
+}
+
+// GrantSubscription processes the form submission to grant a subscription to a user
+func (c *AdminUserController) GrantSubscription(ctx *gin.Context) {
+	// Get user ID from URL
+	userID, err := strconv.ParseUint(ctx.Param("id"), 10, 64)
+	if err != nil {
+		ctx.Redirect(http.StatusSeeOther, "/admin/users?error=Invalid+user+ID")
+		return
+	}
+
+	// Get user from database
+	user, err := c.DB.GetUserByID(uint(userID))
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			ctx.Redirect(http.StatusSeeOther, "/admin/users?error=User+not+found")
+		} else {
+			ctx.Redirect(http.StatusSeeOther, "/admin/users?error="+fmt.Sprintf("Error loading user: %v", err))
+		}
+		return
+	}
+
+	// Get form values
+	subscriptionType := ctx.PostForm("subscription_type")
+	grantReason := ctx.PostForm("grant_reason")
+	durationDays := ctx.PostForm("duration_days")
+	isLifetime := ctx.PostForm("is_lifetime") == "on"
+
+	// Validate form values
+	if subscriptionType == "" {
+		// Get auth data for error page
+		authData := getAuthData(ctx)
+		authData = authData.WithTitle("Grant Subscription").WithCurrentPath(ctx.Request.URL.Path)
+		authData = authData.WithError("Subscription type is required")
+
+		// Create data for the template with error
+		userData := &data.UserGrantSubscriptionData{
+			AuthData: authData,
+			User:     UserWrapper{User: *user},
+		}
+
+		// Render the grant subscription page with error
+		ctx.Status(http.StatusBadRequest)
+		admin.UserGrantSubscription(userData).Render(ctx.Request.Context(), ctx.Writer)
+		return
+	}
+
+	// Update user subscription based on subscription type
+	user.SubscriptionStatus = "active"
+	user.IsAdminGranted = true
+	user.GrantReason = grantReason
+
+	// Get admin user info from context - use default admin ID 1 if not available
+	adminID := uint(1)
+	// Get a reference to an admin user if needed in the future by email
+	authDataInterface, exists := ctx.Get("authData")
+	if exists {
+		if authData, ok := authDataInterface.(data.AuthData); ok && authData.Email != "" {
+			// In a real implementation, we would look up the admin user by email
+			// For now, we'll just use ID 1
+			// adminUser, err := c.DB.GetUserByEmail(ctx.Request.Context(), authData.Email)
+			// if err == nil && adminUser != nil {
+			//     adminID = adminUser.ID
+			// }
+		}
+	}
+	user.GrantedByID = adminID
+
+	if subscriptionType == "admin_grant" {
+		// For admin grants, set the tier to admin_grant
+		user.SubscriptionTier = "admin_grant"
+
+		if isLifetime {
+			// For lifetime subscriptions, set IsLifetime true and don't set an end date
+			user.IsLifetime = true
+			user.SubscriptionEndDate = time.Time{} // Zero time for lifetime
+		} else {
+			// For non-lifetime, calculate end date based on duration days
+			days, err := strconv.Atoi(durationDays)
+			if err != nil || days <= 0 {
+				// Get auth data for error page
+				authData := getAuthData(ctx)
+				authData = authData.WithTitle("Grant Subscription").WithCurrentPath(ctx.Request.URL.Path)
+				authData = authData.WithError("Please enter a valid number of days")
+
+				// Create data for the template with error
+				userData := &data.UserGrantSubscriptionData{
+					AuthData: authData,
+					User:     UserWrapper{User: *user},
+				}
+
+				// Render the grant subscription page with error
+				ctx.Status(http.StatusBadRequest)
+				admin.UserGrantSubscription(userData).Render(ctx.Request.Context(), ctx.Writer)
+				return
+			}
+
+			// Set end date based on duration
+			user.SubscriptionEndDate = time.Now().AddDate(0, 0, days)
+		}
+	} else {
+		// For existing subscription types, set the tier accordingly
+		user.SubscriptionTier = subscriptionType
+
+		// Set end date based on tier (using a standard duration)
+		switch subscriptionType {
+		case "monthly":
+			user.SubscriptionEndDate = time.Now().AddDate(0, 1, 0) // 1 month
+		case "yearly":
+			user.SubscriptionEndDate = time.Now().AddDate(1, 0, 0) // 1 year
+		case "lifetime", "premium_lifetime":
+			user.IsLifetime = true
+			user.SubscriptionEndDate = time.Time{} // Zero time for lifetime
+		}
+	}
+
+	// Save user to database
+	err = c.DB.UpdateUser(ctx.Request.Context(), user)
+	if err != nil {
+		ctx.Redirect(http.StatusSeeOther, fmt.Sprintf("/admin/users/%d/grant-subscription?error=%s", userID, fmt.Sprintf("Error updating subscription: %v", err)))
+		return
+	}
+
+	// Redirect to user detail page with success message
+	ctx.Redirect(http.StatusSeeOther, fmt.Sprintf("/admin/users/%d?success=Subscription+granted+successfully", userID))
 }

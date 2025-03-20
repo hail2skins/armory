@@ -167,7 +167,23 @@ templ Dashboard(data *data.AdminData) {
 					<div class="mb-8">
 						<h2 class="text-xl font-semibold mb-4 text-gunmetal-800">Recent Users</h2>
 						<div class="flex justify-between items-center mb-4">
-							<div class="flex items-center">
+							<div class="flex items-center space-x-3">
+								<form action="/admin/dashboard" method="GET" class="flex items-center space-x-2">
+									<input 
+										type="text" 
+										name="search" 
+										value="`+data.SearchQuery+`" 
+										placeholder="Search by email..." 
+										class="border border-gunmetal-300 rounded px-3 py-1 text-sm text-gunmetal-700"
+									>
+									<input type="hidden" name="sortBy" value="`+data.SortBy+`">
+									<input type="hidden" name="sortOrder" value="`+data.SortOrder+`">
+									<input type="hidden" name="page" value="1">
+									<input type="hidden" name="perPage" value="`+strconv.Itoa(data.PerPage)+`">
+									<button type="submit" class="px-3 py-1 bg-brass-500 hover:bg-brass-600 text-white rounded-md text-sm">
+										Search
+									</button>
+								</form>
 								<span class="mr-2 text-gunmetal-700">Show:</span>
 								<select id="perPage" class="border border-gunmetal-300 rounded px-2 py-1 text-sm text-gunmetal-700" hx-get="/admin/dashboard" hx-target="#usersTable" hx-swap="outerHTML" hx-trigger="change">
 		`)
@@ -248,7 +264,9 @@ templ Dashboard(data *data.AdminData) {
 			for _, user := range data.RecentUsers {
 				_, err = io.WriteString(w, `
 									<tr class="hover:bg-gunmetal-50">
-										<td class="py-3 px-4 text-gunmetal-800">`+user.GetUserName()+`</td>
+										<td class="py-3 px-4 text-gunmetal-800">
+											<a href="/admin/users/`+fmt.Sprint(user.GetID())+`" class="text-brass-600 hover:text-brass-700 hover:underline">`+user.GetUserName()+`</a>
+										</td>
 										<td class="py-3 px-4 text-gunmetal-800">`+user.GetCreatedAt().Format("Jan 2, 2006")+`</td>
 										<td class="py-3 px-4 text-gunmetal-800">
 					`)
@@ -287,6 +305,8 @@ templ Dashboard(data *data.AdminData) {
 					_, err = io.WriteString(w, `<span class="px-2 py-1 bg-yellow-200 text-yellow-800 rounded-full text-xs font-medium">Premium</span>`)
 				case "promotion":
 					_, err = io.WriteString(w, `<span class="px-2 py-1 bg-pink-200 text-pink-800 rounded-full text-xs font-medium">Promotion</span>`)
+				case "admin_grant":
+					_, err = io.WriteString(w, `<span class="px-2 py-1 bg-cyan-200 text-cyan-800 rounded-full text-xs font-medium">Admin Grant</span>`)
 				}
 				if err != nil {
 					return err

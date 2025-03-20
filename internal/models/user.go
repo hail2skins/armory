@@ -30,4 +30,16 @@ type User interface {
 
 	// GetSubscriptionEndDate returns when the user's subscription ends
 	GetSubscriptionEndDate() time.Time
+
+	// GetGrantReason returns the reason for the admin grant
+	GetGrantReason() string
+
+	// IsAdminGranted returns whether the subscription was granted by an admin
+	IsAdminGranted() bool
+
+	// IsLifetime returns whether the subscription is a lifetime subscription
+	IsLifetime() bool
+
+	// GetGrantedByID returns the ID of the admin who granted the subscription
+	GetGrantedByID() uint
 }

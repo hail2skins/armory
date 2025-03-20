@@ -52,6 +52,7 @@ type AdminData struct {
 	TotalPages                 int
 	SortBy                     string
 	SortOrder                  string
+	SearchQuery                string
 }
 
 // User interface for dashboard

@@ -41,9 +41,14 @@ type User struct {
 	SubscriptionStatus   string
 	SubscriptionEndDate  time.Time
 	PromotionID          uint
-	CreatedAt            time.Time
-	UpdatedAt            time.Time
-	DeletedAt            *time.Time
+	// Admin-granted subscription fields
+	GrantedByID    uint   // ID of the admin who granted the subscription
+	GrantReason    string // Reason for granting the subscription
+	IsAdminGranted bool   `gorm:"default:false"` // Whether the subscription was granted by an admin
+	IsLifetime     bool   `gorm:"default:false"` // Whether the subscription is a lifetime subscription
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+	DeletedAt      *time.Time
 }
 
 // GetUserName returns the user's email

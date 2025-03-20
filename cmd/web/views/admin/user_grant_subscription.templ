@@ -1,0 +1,181 @@
+package admin
+
+import (
+	"io"
+	"context"
+	"fmt"
+
+	"github.com/hail2skins/armory/cmd/web/views/data"
+	"github.com/hail2skins/armory/cmd/web/views/partials"
+)
+
+// UserGrantSubscription renders the form for granting a subscription to a user
+templ UserGrantSubscription(data *data.UserGrantSubscriptionData) {
+	@partials.Base(data.AuthData, templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+		_, err := io.WriteString(w, `
+			<div class="bg-white shadow-md rounded-lg p-6">
+				<div class="flex justify-between items-center mb-6">
+					<h1 class="text-2xl font-bold text-gunmetal-800">Grant Subscription</h1>
+					<div class="flex space-x-3">
+						<a href="/admin/users/`+fmt.Sprint(data.User.GetID())+`" class="text-brass-600 hover:text-brass-700 flex items-center">
+							<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+								<path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+							</svg>
+							Back to User Details
+						</a>
+					</div>
+				</div>
+		`)
+		if err != nil {
+			return err
+		}
+
+		// Show error message if any
+		if data.Error != "" {
+			_, err = io.WriteString(w, `
+				<div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+					<span class="block sm:inline">`+data.Error+`</span>
+				</div>
+			`)
+			if err != nil {
+				return err
+			}
+		}
+
+		// User info and form
+		_, err = io.WriteString(w, `
+				<div class="mb-8 grid md:grid-cols-2 gap-6">
+					<div class="bg-gunmetal-50 rounded-lg p-6">
+						<h2 class="text-lg font-semibold text-gunmetal-800 border-b border-gunmetal-200 pb-2 mb-4">User Information</h2>
+						
+						<div class="space-y-4">
+							<div>
+								<p class="text-sm text-gunmetal-600">Email Address</p>
+								<p class="font-medium text-gunmetal-800">`+data.User.GetUserName()+`</p>
+							</div>
+							
+							<div>
+								<p class="text-sm text-gunmetal-600">Current Subscription</p>
+								<p class="font-medium text-gunmetal-800">`+formatSubscriptionTier(data.User.GetSubscriptionTier())+`</p>
+							</div>
+							
+							<div>
+								<p class="text-sm text-gunmetal-600">Subscription End Date</p>
+		`)
+		if err != nil {
+			return err
+		}
+
+		// Subscription end date
+		if data.User.GetSubscriptionEndDate().IsZero() || data.User.GetSubscriptionTier() == "free" {
+			_, err = io.WriteString(w, `<p class="font-medium text-gunmetal-800 italic">Not applicable</p>`)
+		} else {
+			_, err = io.WriteString(w, `<p class="font-medium text-gunmetal-800">`+data.User.GetSubscriptionEndDate().Format("January 2, 2006")+`</p>`)
+		}
+		if err != nil {
+			return err
+		}
+
+		// Grant subscription form
+		_, err = io.WriteString(w, `
+							</div>
+						</div>
+					</div>
+					
+					<div class="bg-gunmetal-50 rounded-lg p-6">
+						<h2 class="text-lg font-semibold text-gunmetal-800 border-b border-gunmetal-200 pb-2 mb-4">Grant Subscription</h2>
+						
+						<form method="POST" action="/admin/users/`+fmt.Sprint(data.User.GetID())+`/grant-subscription" class="space-y-4">
+							<div>
+								<label for="subscription_type" class="block text-sm font-medium text-gunmetal-700">Subscription Type</label>
+								<select id="subscription_type" name="subscription_type" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gunmetal-300 focus:outline-none focus:ring-brass-500 focus:border-brass-500 sm:text-sm rounded-md" onchange="toggleAdminGrantOptions()">
+									<option value="">Select subscription type</option>
+									<option value="monthly">Monthly</option>
+									<option value="yearly">Yearly</option>
+									<option value="lifetime">Lifetime</option>
+									<option value="premium_lifetime">Premium Lifetime</option>
+									<option value="admin_grant">Admin Grant</option>
+								</select>
+							</div>
+							
+							<div id="admin_grant_options" class="hidden space-y-4">
+								<div>
+									<label for="duration_days" class="block text-sm font-medium text-gunmetal-700">Duration (days)</label>
+									<input type="number" name="duration_days" id="duration_days" min="1" class="mt-1 focus:ring-brass-500 focus:border-brass-500 block w-full shadow-sm sm:text-sm border-gunmetal-300 rounded-md px-3 py-2" placeholder="30">
+									<p class="mt-1 text-sm text-gunmetal-500">Leave empty for lifetime subscription</p>
+								</div>
+								
+								<div>
+									<div class="flex items-start">
+										<div class="flex items-center h-5">
+											<input id="is_lifetime" name="is_lifetime" type="checkbox" class="focus:ring-brass-500 h-4 w-4 text-brass-600 border-gunmetal-300 rounded" onchange="toggleDurationField()">
+										</div>
+										<div class="ml-3 text-sm">
+											<label for="is_lifetime" class="font-medium text-gunmetal-700">Lifetime Subscription</label>
+											<p class="text-gunmetal-500">Check this box for unlimited access</p>
+										</div>
+									</div>
+								</div>
+							</div>
+							
+							<div>
+								<label for="grant_reason" class="block text-sm font-medium text-gunmetal-700">Reason for Grant</label>
+								<textarea id="grant_reason" name="grant_reason" rows="3" class="mt-1 focus:ring-brass-500 focus:border-brass-500 block w-full shadow-sm sm:text-sm border-gunmetal-300 rounded-md px-3 py-2" placeholder="Provide a reason for granting this subscription"></textarea>
+							</div>
+							
+							<div class="pt-4">
+								<button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-brass-600 hover:bg-brass-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brass-500">
+									Grant Subscription
+								</button>
+							</div>
+						</form>
+						
+						<script>
+							function toggleAdminGrantOptions() {
+								const subscriptionType = document.getElementById('subscription_type').value;
+								const adminGrantOptions = document.getElementById('admin_grant_options');
+								
+								if (subscriptionType === 'admin_grant') {
+									adminGrantOptions.classList.remove('hidden');
+								} else {
+									adminGrantOptions.classList.add('hidden');
+								}
+							}
+							
+							function toggleDurationField() {
+								const isLifetime = document.getElementById('is_lifetime').checked;
+								const durationField = document.getElementById('duration_days');
+								
+								durationField.disabled = isLifetime;
+								if (isLifetime) {
+									durationField.value = '';
+								}
+							}
+						</script>
+					</div>
+				</div>
+			</div>
+		`)
+		return err
+	}))
+}
+
+// Helper function to format subscription tier for display
+func formatSubscriptionTier(tier string) string {
+	switch tier {
+	case "free":
+		return "Free"
+	case "monthly":
+		return "Monthly"
+	case "yearly":
+		return "Yearly"
+	case "lifetime":
+		return "Lifetime"
+	case "premium_lifetime":
+		return "Premium Lifetime"
+	case "admin_grant":
+		return "Admin Grant"
+	default:
+		return tier
+	}
+} 

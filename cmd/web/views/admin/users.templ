@@ -238,7 +238,9 @@ templ UserList(data *data.UserListData) {
 			for _, user := range data.Users {
 				_, err = io.WriteString(w, `
 									<tr class="hover:bg-gunmetal-50">
-										<td class="py-3 px-4 text-gunmetal-800">`+user.GetUserName()+`</td>
+										<td class="py-3 px-4 text-gunmetal-800">
+											<a href="/admin/users/`+fmt.Sprint(user.GetID())+`" class="text-brass-600 hover:text-brass-700 hover:underline">`+user.GetUserName()+`</a>
+										</td>
 										<td class="py-3 px-4 text-gunmetal-800">`+user.GetCreatedAt().Format("Jan 2, 2006")+`</td>
 										<td class="py-3 px-4 text-gunmetal-800">
 					`)
@@ -277,6 +279,8 @@ templ UserList(data *data.UserListData) {
 					_, err = io.WriteString(w, `<span class="px-2 py-1 bg-yellow-200 text-yellow-800 rounded-full text-xs font-medium">Premium</span>`)
 				case "promotion":
 					_, err = io.WriteString(w, `<span class="px-2 py-1 bg-pink-200 text-pink-800 rounded-full text-xs font-medium">Promotion</span>`)
+				case "admin_grant":
+					_, err = io.WriteString(w, `<span class="px-2 py-1 bg-cyan-200 text-cyan-800 rounded-full text-xs font-medium">Admin Grant</span>`)
 				}
 				if err != nil {
 					return err

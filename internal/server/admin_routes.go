@@ -211,6 +211,8 @@ func (s *Server) RegisterAdminRoutes(r *gin.Engine, authController *controller.A
 				userGroup.POST("/:id", casbinAuth.Authorize("admin", "update"), adminUserController.Update)
 				userGroup.POST("/:id/delete", casbinAuth.Authorize("admin", "delete"), adminUserController.Delete)
 				userGroup.POST("/:id/restore", casbinAuth.Authorize("admin", "update"), adminUserController.Restore)
+				userGroup.GET("/:id/grant-subscription", casbinAuth.Authorize("admin", "update"), adminUserController.ShowGrantSubscription)
+				userGroup.POST("/:id/grant-subscription", casbinAuth.Authorize("admin", "update"), adminUserController.GrantSubscription)
 			} else {
 				// Without Casbin, register routes with just authentication middleware
 				userGroup.GET("", adminUserController.Index)
@@ -219,6 +221,8 @@ func (s *Server) RegisterAdminRoutes(r *gin.Engine, authController *controller.A
 				userGroup.POST("/:id", adminUserController.Update)
 				userGroup.POST("/:id/delete", adminUserController.Delete)
 				userGroup.POST("/:id/restore", adminUserController.Restore)
+				userGroup.GET("/:id/grant-subscription", adminUserController.ShowGrantSubscription)
+				userGroup.POST("/:id/grant-subscription", adminUserController.GrantSubscription)
 			}
 		}
 

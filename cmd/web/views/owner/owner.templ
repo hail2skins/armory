@@ -76,6 +76,8 @@ templ Owner(data *data.OwnerData) {
 							case "promotion":
 								// Special handling for promotion tier with link to subscribe
 								return `PROMOTION <a href="/pricing" class="text-blue-600 hover:text-blue-800 font-bold">(SUB NOW!)</a>`
+							case "admin_grant":
+								tier = "Admin Grant"
 							default:
 								tier = data.SubscriptionTier
 							}

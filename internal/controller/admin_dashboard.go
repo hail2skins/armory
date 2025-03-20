@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -72,6 +73,9 @@ func (c *AdminDashboardController) Dashboard(ctx *gin.Context) {
 	sortBy := ctx.DefaultQuery("sortBy", "created_at")
 	sortOrder := ctx.DefaultQuery("sortOrder", "desc")
 
+	// Get search query
+	searchQuery := ctx.DefaultQuery("search", "")
+
 	// Get user statistics
 	totalUsers, err := c.DB.CountUsers()
 	if err != nil {
@@ -89,6 +93,17 @@ func (c *AdminDashboardController) Dashboard(ctx *gin.Context) {
 			"error": fmt.Sprintf("Error getting recent users: %v", err),
 		})
 		return
+	}
+
+	// Filter users by search query if provided
+	if searchQuery != "" {
+		filteredUsers := []database.User{}
+		for _, user := range dbUsers {
+			if strings.Contains(strings.ToLower(user.Email), strings.ToLower(searchQuery)) {
+				filteredUsers = append(filteredUsers, user)
+			}
+		}
+		dbUsers = filteredUsers
 	}
 
 	// Convert database users to models.User for the template
@@ -134,6 +149,7 @@ func (c *AdminDashboardController) Dashboard(ctx *gin.Context) {
 		YearlyGrowthRate:           4.2,
 		LifetimeGrowthRate:         1.5,
 		PremiumGrowthRate:          9.3,
+		SearchQuery:                searchQuery,
 	}
 
 	// Render the dashboard
@@ -192,6 +208,26 @@ func (u UserWrapper) GetSubscriptionStatus() string {
 // GetSubscriptionEndDate implements the User interface
 func (u UserWrapper) GetSubscriptionEndDate() time.Time {
 	return u.User.SubscriptionEndDate
+}
+
+// GetGrantReason implements the User interface
+func (u UserWrapper) GetGrantReason() string {
+	return u.User.GrantReason
+}
+
+// IsAdminGranted implements the User interface
+func (u UserWrapper) IsAdminGranted() bool {
+	return u.User.IsAdminGranted
+}
+
+// IsLifetime implements the User interface
+func (u UserWrapper) IsLifetime() bool {
+	return u.User.IsLifetime
+}
+
+// GetGrantedByID implements the User interface
+func (u UserWrapper) GetGrantedByID() uint {
+	return u.User.GrantedByID
 }
 
 // DetailedHealth renders the detailed health page
