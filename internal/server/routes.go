@@ -32,11 +32,17 @@ func (s *Server) RegisterRoutes() http.Handler {
 	// Register middleware
 	s.RegisterMiddleware(r, authController)
 
+	// Add Stripe IP filter middleware if available
+	if s.ipFilterService != nil {
+		// Apply the middleware to all routes
+		r.Use(s.ipFilterService.Middleware())
+	}
+
 	// Register static routes
 	s.RegisterStaticRoutes(r)
 
-	// Register API routes
-	s.RegisterAPIRoutes(r)
+	// Register API routes - pass the IP filter service
+	s.RegisterAPIRoutes(r, s.ipFilterService)
 
 	// Register home routes
 	s.RegisterHomeRoutes(r, homeController)

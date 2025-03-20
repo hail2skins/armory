@@ -5,11 +5,13 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/hail2skins/armory/internal/controller"
 	"github.com/hail2skins/armory/internal/middleware"
+	"github.com/hail2skins/armory/internal/services/stripe"
 )
 
 // RegisterAPIRoutes registers all API related routes
-func (s *Server) RegisterAPIRoutes(r *gin.Engine) {
+func (s *Server) RegisterAPIRoutes(r *gin.Engine, ipFilterService stripe.IPFilterService) {
 	// Create an API group
 	api := r.Group("/api")
 
@@ -105,6 +107,19 @@ func (s *Server) RegisterAPIRoutes(r *gin.Engine) {
 			"message": "Webhook statistics have been reset",
 		})
 	})
+
+	// Add Stripe IP filter admin routes
+	if ipFilterService != nil {
+		ipFilterAdmin := controller.NewIPFilterAdminController(ipFilterService)
+
+		// IP filter status and management
+		admin.GET("/stripe/ips", ipFilterAdmin.GetIPRangeStatus)
+		admin.POST("/stripe/ips/refresh", ipFilterAdmin.RefreshIPRanges)
+		admin.POST("/stripe/ips/toggle", ipFilterAdmin.ToggleIPFilter)
+
+		// IP verification endpoint
+		admin.GET("/stripe/ip-check", ipFilterAdmin.IsIPAllowed)
+	}
 
 	// Future API endpoints can be added here
 	// api.GET("/users", userController.ListUsersHandler)
