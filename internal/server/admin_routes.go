@@ -185,6 +185,7 @@ func (s *Server) RegisterAdminRoutes(r *gin.Engine, authController *controller.A
 				promotionGroup.GET("/:id", casbinAuth.Authorize("admin", "read"), adminPromotionController.Show)
 				promotionGroup.GET("/:id/edit", casbinAuth.Authorize("admin", "update"), adminPromotionController.Edit)
 				promotionGroup.POST("/:id", casbinAuth.Authorize("admin", "update"), adminPromotionController.Update)
+				promotionGroup.POST("/:id/delete", casbinAuth.Authorize("admin", "delete"), adminPromotionController.Delete)
 			} else {
 				// Without Casbin, register routes with just authentication middleware
 				promotionGroup.GET("", adminPromotionController.Index)
@@ -194,6 +195,7 @@ func (s *Server) RegisterAdminRoutes(r *gin.Engine, authController *controller.A
 				promotionGroup.GET("/:id", adminPromotionController.Show)
 				promotionGroup.GET("/:id/edit", adminPromotionController.Edit)
 				promotionGroup.POST("/:id", adminPromotionController.Update)
+				promotionGroup.POST("/:id/delete", adminPromotionController.Delete)
 			}
 		}
 

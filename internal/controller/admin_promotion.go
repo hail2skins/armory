@@ -9,6 +9,7 @@ import (
 	"github.com/hail2skins/armory/cmd/web/views/admin/promotion"
 	"github.com/hail2skins/armory/internal/database"
 	"github.com/hail2skins/armory/internal/models"
+	"gorm.io/gorm"
 )
 
 // AdminPromotionController handles administrative actions for promotions
@@ -602,4 +603,36 @@ func (c *AdminPromotionController) Update(ctx *gin.Context) {
 
 	// Redirect with success message
 	ctx.Redirect(http.StatusSeeOther, "/admin/dashboard?success=Promotion+has+been+updated+successfully")
+}
+
+// Delete handles the deletion of a promotion
+func (c *AdminPromotionController) Delete(ctx *gin.Context) {
+	// Parse the ID parameter
+	idParam := ctx.Param("id")
+	id, err := strconv.ParseUint(idParam, 10, 64)
+	if err != nil {
+		ctx.String(http.StatusBadRequest, "Invalid promotion ID")
+		return
+	}
+
+	// Find the promotion to make sure it exists
+	_, err = c.DB.FindPromotionByID(uint(id))
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			ctx.String(http.StatusNotFound, "Promotion not found")
+		} else {
+			ctx.String(http.StatusInternalServerError, "Error finding promotion")
+		}
+		return
+	}
+
+	// Delete the promotion (soft delete since it uses gorm.Model)
+	err = c.DB.DeletePromotion(uint(id))
+	if err != nil {
+		ctx.String(http.StatusInternalServerError, "Error deleting promotion")
+		return
+	}
+
+	// Redirect to the dashboard with a success message
+	ctx.Redirect(http.StatusSeeOther, "/admin/dashboard?success=Promotion+has+been+deleted+successfully")
 }

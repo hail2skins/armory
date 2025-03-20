@@ -362,6 +362,74 @@ func (s *AdminPromotionControllerTestSuite) TestUpdatePromotionValidationErrors(
 	s.Contains(resp.Body.String(), "bg-red-100") // Check for error styling class
 }
 
+// TestDeletePromotion tests the delete action for promotions
+func (s *AdminPromotionControllerTestSuite) TestDeletePromotion() {
+	// Create the controller
+	adminController := s.CreateAdminPromotionController()
+
+	// Mock DB behavior
+	s.MockDB.On("FindPromotionByID", uint(1)).Return(s.mockPromotion, nil).Once()
+	s.MockDB.On("DeletePromotion", uint(1)).Return(nil).Once()
+
+	// Register routes
+	s.Router.POST("/admin/promotions/:id/delete", adminController.Delete)
+
+	// Create a test request
+	req, _ := http.NewRequest("POST", "/admin/promotions/1/delete", nil)
+	resp := httptest.NewRecorder()
+
+	// Serve the request
+	s.Router.ServeHTTP(resp, req)
+
+	// Assert redirect response (assuming successful delete redirects)
+	s.Equal(http.StatusSeeOther, resp.Code)
+	s.Equal("/admin/dashboard?success=Promotion+has+been+deleted+successfully", resp.Header().Get("Location"))
+
+	// Assert that our methods were called
+	s.MockDB.AssertExpectations(s.T())
+}
+
+// TestDeletePromotionInvalidID tests deleting a promotion with an invalid ID
+func (s *AdminPromotionControllerTestSuite) TestDeletePromotionInvalidID() {
+	// Create the controller
+	adminController := s.CreateAdminPromotionController()
+
+	// Register routes
+	s.Router.POST("/admin/promotions/:id/delete", adminController.Delete)
+
+	// Create a test request with non-numeric ID
+	req, _ := http.NewRequest("POST", "/admin/promotions/invalid/delete", nil)
+	resp := httptest.NewRecorder()
+
+	// Serve the request
+	s.Router.ServeHTTP(resp, req)
+
+	// Assert response - should be a bad request
+	s.Equal(http.StatusBadRequest, resp.Code)
+}
+
+// TestDeletePromotionNotFound tests deleting a non-existent promotion
+func (s *AdminPromotionControllerTestSuite) TestDeletePromotionNotFound() {
+	// Create the controller
+	adminController := s.CreateAdminPromotionController()
+
+	// Mock DB behavior to return not found error
+	s.MockDB.On("FindPromotionByID", uint(999)).Return(nil, gorm.ErrRecordNotFound).Once()
+
+	// Register routes
+	s.Router.POST("/admin/promotions/:id/delete", adminController.Delete)
+
+	// Create a test request
+	req, _ := http.NewRequest("POST", "/admin/promotions/999/delete", nil)
+	resp := httptest.NewRecorder()
+
+	// Serve the request
+	s.Router.ServeHTTP(resp, req)
+
+	// Assert response - should be not found
+	s.Equal(http.StatusNotFound, resp.Code)
+}
+
 // Run the tests
 func TestAdminPromotionControllerSuite(t *testing.T) {
 	suite.Run(t, new(AdminPromotionControllerTestSuite))
