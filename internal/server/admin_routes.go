@@ -178,11 +178,18 @@ func (s *Server) RegisterAdminRoutes(r *gin.Engine, authController *controller.A
 		{
 			if casbinAuth != nil {
 				// Define routes with fine-grained Casbin authorization
+				promotionGroup.GET("", casbinAuth.Authorize("admin", "read"), adminPromotionController.Index)
+				promotionGroup.GET("/index", casbinAuth.Authorize("admin", "read"), adminPromotionController.Index)
 				promotionGroup.GET("/new", casbinAuth.Authorize("admin", "write"), adminPromotionController.New)
 				promotionGroup.POST("", casbinAuth.Authorize("admin", "write"), adminPromotionController.Create)
+				promotionGroup.GET("/:id", casbinAuth.Authorize("admin", "read"), adminPromotionController.Show)
 			} else {
+				// Without Casbin, register routes with just authentication middleware
+				promotionGroup.GET("", adminPromotionController.Index)
+				promotionGroup.GET("/index", adminPromotionController.Index)
 				promotionGroup.GET("/new", adminPromotionController.New)
 				promotionGroup.POST("", adminPromotionController.Create)
+				promotionGroup.GET("/:id", adminPromotionController.Show)
 			}
 		}
 

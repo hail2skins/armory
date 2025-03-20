@@ -113,7 +113,7 @@ func (s *AdminPromotionControllerTestSuite) TestCreatePromotion() {
 
 	// Assert redirect response (assuming successful creation redirects)
 	s.Equal(http.StatusSeeOther, resp.Code)
-	s.Equal("/admin/promotions?success=Promotion created successfully", resp.Header().Get("Location"))
+	s.Equal("/admin/dashboard?success=Promotion created successfully", resp.Header().Get("Location"))
 
 	// Assert that CreatePromotion was called
 	s.MockDB.AssertExpectations(s.T())
@@ -146,6 +146,100 @@ func (s *AdminPromotionControllerTestSuite) TestCreatePromotionValidationErrors(
 	s.Equal(http.StatusOK, resp.Code)
 	s.Contains(resp.Body.String(), "New Promotion")
 	s.Contains(resp.Body.String(), "bg-red-100") // Check for error styling class
+}
+
+// TestIndexRoute tests the index route for promotions
+func (s *AdminPromotionControllerTestSuite) TestIndexRoute() {
+	// Create the controller
+	adminController := s.CreateAdminPromotionController()
+
+	// Mock DB behavior to return promotions
+	promotions := []models.Promotion{*s.mockPromotion}
+	s.MockDB.On("FindAllPromotions").Return(promotions, nil).Once()
+
+	// Register routes
+	s.Router.GET("/admin/promotions", adminController.Index)
+
+	// Create a test request
+	req, _ := http.NewRequest("GET", "/admin/promotions", nil)
+	resp := httptest.NewRecorder()
+
+	// Serve the request
+	s.Router.ServeHTTP(resp, req)
+
+	// Assert response
+	s.Equal(http.StatusOK, resp.Code)
+	s.Contains(resp.Body.String(), "Promotions")
+	s.Contains(resp.Body.String(), "Test Free Trial") // Should contain our mock promotion name
+	s.MockDB.AssertExpectations(s.T())
+}
+
+// TestShowRoute tests the show route for promotions
+func (s *AdminPromotionControllerTestSuite) TestShowRoute() {
+	// Create the controller
+	adminController := s.CreateAdminPromotionController()
+
+	// Mock DB behavior to return a specific promotion
+	s.MockDB.On("FindPromotionByID", uint(1)).Return(s.mockPromotion, nil).Once()
+
+	// Register routes
+	s.Router.GET("/admin/promotions/:id", adminController.Show)
+
+	// Create a test request
+	req, _ := http.NewRequest("GET", "/admin/promotions/1", nil)
+	resp := httptest.NewRecorder()
+
+	// Serve the request
+	s.Router.ServeHTTP(resp, req)
+
+	// Assert response
+	s.Equal(http.StatusOK, resp.Code)
+	s.Contains(resp.Body.String(), "Promotion Details")
+	s.Contains(resp.Body.String(), "Test Free Trial")            // Should contain our mock promotion name
+	s.Contains(resp.Body.String(), "Test promotion description") // Should contain description
+	s.MockDB.AssertExpectations(s.T())
+}
+
+// TestShowRouteWithInvalidID tests the show route with an invalid promotion ID
+func (s *AdminPromotionControllerTestSuite) TestShowRouteWithInvalidID() {
+	// Create the controller
+	adminController := s.CreateAdminPromotionController()
+
+	// Register routes
+	s.Router.GET("/admin/promotions/:id", adminController.Show)
+
+	// Create a test request with invalid ID
+	req, _ := http.NewRequest("GET", "/admin/promotions/invalid", nil)
+	resp := httptest.NewRecorder()
+
+	// Serve the request
+	s.Router.ServeHTTP(resp, req)
+
+	// Assert response - should return a bad request
+	s.Equal(http.StatusBadRequest, resp.Code)
+}
+
+// TestShowRouteWithNotFoundID tests the show route with a non-existent promotion ID
+func (s *AdminPromotionControllerTestSuite) TestShowRouteWithNotFoundID() {
+	// Create the controller
+	adminController := s.CreateAdminPromotionController()
+
+	// Mock DB behavior to return not found for ID 999
+	s.MockDB.On("FindPromotionByID", uint(999)).Return(nil, gorm.ErrRecordNotFound).Once()
+
+	// Register routes
+	s.Router.GET("/admin/promotions/:id", adminController.Show)
+
+	// Create a test request with ID that doesn't exist
+	req, _ := http.NewRequest("GET", "/admin/promotions/999", nil)
+	resp := httptest.NewRecorder()
+
+	// Serve the request
+	s.Router.ServeHTTP(resp, req)
+
+	// Assert response - should return not found
+	s.Equal(http.StatusNotFound, resp.Code)
+	s.MockDB.AssertExpectations(s.T())
 }
 
 // Run the tests
