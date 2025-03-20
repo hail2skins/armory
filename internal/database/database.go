@@ -130,6 +130,7 @@ func (s *service) AutoMigrate() error {
 		&models.Caliber{},
 		&models.WeaponType{},
 		&models.Gun{},
+		&models.Promotion{},
 	)
 }
 
