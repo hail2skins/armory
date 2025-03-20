@@ -108,7 +108,8 @@ func (u *User) GenerateVerificationToken() string {
 		return ""
 	}
 	u.VerificationToken = base64.URLEncoding.EncodeToString(token)
-	u.VerificationTokenExpiry = time.Now().Add(24 * time.Hour)
+	u.VerificationSentAt = time.Now()
+	u.VerificationTokenExpiry = u.VerificationSentAt.Add(1 * time.Hour)
 	return u.VerificationToken
 }
 
@@ -140,10 +141,10 @@ func (u *User) IncrementLoginAttempts() {
 	u.LastLoginAttempt = time.Now()
 }
 
-// ResetLoginAttempts resets the login attempt counter and clears the timestamp
+// ResetLoginAttempts resets the login attempt counter and updates the timestamp
 func (u *User) ResetLoginAttempts() {
 	u.LoginAttempts = 0
-	u.LastLoginAttempt = time.Time{}
+	u.LastLoginAttempt = time.Now()
 }
 
 // SetPassword hashes and sets the user's password

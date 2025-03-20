@@ -77,12 +77,13 @@ func (s *MailjetService) SendVerificationEmail(email, token, baseURL string) err
 			},
 		},
 		Subject:  "Verify your email for Virtual Armory",
-		TextPart: fmt.Sprintf("Please verify your email by clicking this link: %s/verify-email?token=%s", baseURL, token),
+		TextPart: fmt.Sprintf("Please verify your email by clicking this link: %s/verify-email?token=%s. This verification link will expire in 60 minutes.", baseURL, token),
 		HTMLPart: fmt.Sprintf(`
 			<h3>Email Verification</h3>
 			<p>Thank you for registering with Virtual Armory!</p>
 			<p>Please verify your email by clicking the link below:</p>
 			<p><a href="%s/verify-email?token=%s">Verify Email</a></p>
+			<p><strong>Note:</strong> This verification link will expire in 60 minutes.</p>
 			<p>If you did not register for Virtual Armory, please ignore this email.</p>
 		`, baseURL, token),
 	}
@@ -114,12 +115,13 @@ func (s *MailjetService) SendEmailChangeVerification(email, token, baseURL strin
 			},
 		},
 		Subject:  "Verify your new email address for Virtual Armory",
-		TextPart: fmt.Sprintf("Please verify your new email address by clicking this link: %s/verify-email?token=%s", baseURL, token),
+		TextPart: fmt.Sprintf("Please verify your new email address by clicking this link: %s/verify-email?token=%s. This verification link will expire in 60 minutes.", baseURL, token),
 		HTMLPart: fmt.Sprintf(`
 			<h3>Email Change Verification</h3>
 			<p>You have requested to change your email address for your Virtual Armory account.</p>
 			<p>Please verify your new email address by clicking the link below:</p>
 			<p><a href="%s/verify-email?token=%s">Verify New Email Address</a></p>
+			<p><strong>Note:</strong> This verification link will expire in 60 minutes.</p>
 			<p>If you did not request this change, please ignore this email and your account will remain unchanged.</p>
 		`, baseURL, token),
 	}

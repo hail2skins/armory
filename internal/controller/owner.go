@@ -2177,7 +2177,8 @@ func (o *OwnerController) UpdateProfile(c *gin.Context) {
 			// The user remains verified for their current email
 			// Only set verified to false after verification with the new email
 			dbUser.VerificationToken = generateToken()
-			dbUser.VerificationTokenExpiry = time.Now().Add(24 * time.Hour)
+			dbUser.VerificationTokenExpiry = time.Now().Add(1 * time.Hour)
+			dbUser.VerificationSentAt = time.Now()
 
 			// Update the user in the database
 			if err := o.db.UpdateUser(ctx, dbUser); err != nil {
@@ -2303,7 +2304,8 @@ func (o *OwnerController) UpdateProfile(c *gin.Context) {
 		// The user remains verified for their current email
 		// Only set verified to false after verification with the new email
 		dbUser.VerificationToken = generateToken()
-		dbUser.VerificationTokenExpiry = time.Now().Add(24 * time.Hour)
+		dbUser.VerificationTokenExpiry = time.Now().Add(1 * time.Hour)
+		dbUser.VerificationSentAt = time.Now()
 
 		// Update the user in the database
 		if err := o.db.UpdateUser(ctx, dbUser); err != nil {

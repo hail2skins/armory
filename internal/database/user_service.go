@@ -103,7 +103,18 @@ func (s *service) AuthenticateUser(ctx context.Context, email, password string) 
 
 	// Check the password
 	if !CheckPassword(password, user.Password) {
+		// On failed login attempts, increment the counter
+		user.IncrementLoginAttempts()
+		if err := s.UpdateUser(ctx, user); err != nil {
+			return nil, err
+		}
 		return nil, nil // Password doesn't match
+	}
+
+	// On successful login, reset the login attempts counter
+	user.ResetLoginAttempts()
+	if err := s.UpdateUser(ctx, user); err != nil {
+		return nil, err
 	}
 
 	return user, nil
