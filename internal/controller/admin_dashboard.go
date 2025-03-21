@@ -88,6 +88,56 @@ func (c *AdminDashboardController) Dashboard(ctx *gin.Context) {
 		return
 	}
 
+	// Get total subscribed users (paying users only, not admin granted)
+	subscribedUsers, err := c.DB.CountActiveSubscribers()
+	if err != nil {
+		ctx.HTML(http.StatusInternalServerError, "error.html", gin.H{
+			"error": fmt.Sprintf("Error getting subscription statistics: %v", err),
+		})
+		return
+	}
+
+	// Get new registrations for this month
+	newRegistrations, err := c.DB.CountNewUsersThisMonth()
+	if err != nil {
+		ctx.HTML(http.StatusInternalServerError, "error.html", gin.H{
+			"error": fmt.Sprintf("Error getting new user statistics: %v", err),
+		})
+		return
+	}
+
+	// Get new subscriptions for this month
+	newSubscriptions, err := c.DB.CountNewSubscribersThisMonth()
+	if err != nil {
+		ctx.HTML(http.StatusInternalServerError, "error.html", gin.H{
+			"error": fmt.Sprintf("Error getting new subscription statistics: %v", err),
+		})
+		return
+	}
+
+	// Get comparative data for growth rate calculations
+	newUsersLastMonth, err := c.DB.CountNewUsersLastMonth()
+	if err != nil {
+		ctx.HTML(http.StatusInternalServerError, "error.html", gin.H{
+			"error": fmt.Sprintf("Error getting user growth statistics: %v", err),
+		})
+		return
+	}
+
+	newSubscribersLastMonth, err := c.DB.CountNewSubscribersLastMonth()
+	if err != nil {
+		ctx.HTML(http.StatusInternalServerError, "error.html", gin.H{
+			"error": fmt.Sprintf("Error getting subscription growth statistics: %v", err),
+		})
+		return
+	}
+
+	// Calculate growth rates
+	userGrowthRate := calculateGrowthRate(totalUsers, totalUsers-newRegistrations)
+	subscribedGrowthRate := calculateGrowthRate(subscribedUsers, subscribedUsers-newSubscriptions)
+	newRegistrationsGrowthRate := calculateGrowthRate(newRegistrations, newUsersLastMonth)
+	newSubscriptionsGrowthRate := calculateGrowthRate(newSubscriptions, newSubscribersLastMonth)
+
 	// Get recent users with pagination and sorting
 	offset := (page - 1) * perPage
 	dbUsers, err := c.DB.FindRecentUsers(offset, perPage, sortBy, sortOrder)
@@ -122,11 +172,6 @@ func (c *AdminDashboardController) Dashboard(ctx *gin.Context) {
 		totalPages++
 	}
 
-	// Mock data for dashboard statistics (replace with real data later)
-	subscribedUsers := int64(float64(totalUsers) * 0.7)
-	newRegistrations := int64(float64(totalUsers) * 0.1)
-	newSubscriptions := int64(float64(subscribedUsers) * 0.15)
-
 	// Create admin data with all the information
 	adminData := &data.AdminData{
 		AuthData:                   authData,
@@ -140,23 +185,30 @@ func (c *AdminDashboardController) Dashboard(ctx *gin.Context) {
 		SubscribedUsers:            subscribedUsers,
 		NewRegistrations:           newRegistrations,
 		NewSubscriptions:           newSubscriptions,
-		UserGrowthRate:             5.2,
-		SubscribedGrowthRate:       8.7,
-		NewRegistrationsGrowthRate: 12.3,
-		NewSubscriptionsGrowthRate: 7.1,
-		MonthlySubscribers:         int64(float64(subscribedUsers) * 0.45),
-		YearlySubscribers:          int64(float64(subscribedUsers) * 0.30),
-		LifetimeSubscribers:        int64(float64(subscribedUsers) * 0.15),
-		PremiumSubscribers:         int64(float64(subscribedUsers) * 0.10),
-		MonthlyGrowthRate:          6.8,
-		YearlyGrowthRate:           4.2,
-		LifetimeGrowthRate:         1.5,
-		PremiumGrowthRate:          9.3,
+		UserGrowthRate:             userGrowthRate,
+		SubscribedGrowthRate:       subscribedGrowthRate,
+		NewRegistrationsGrowthRate: newRegistrationsGrowthRate,
+		NewSubscriptionsGrowthRate: newSubscriptionsGrowthRate,
 		SearchQuery:                searchQuery,
 	}
 
 	// Render the dashboard
 	admin.Dashboard(adminData).Render(ctx.Request.Context(), ctx.Writer)
+}
+
+// calculateGrowthRate calculates the percentage growth between current and previous values
+// Returns a float64 percentage (e.g., 5.2 for 5.2% growth)
+func calculateGrowthRate(current, previous int64) float64 {
+	if previous == 0 {
+		// Avoid division by zero; if previous is 0, we consider it 100% growth
+		return 100.0
+	}
+
+	// Calculate percentage change
+	change := float64(current-previous) / float64(previous) * 100.0
+
+	// Round to 1 decimal place
+	return float64(int(change*10)) / 10
 }
 
 // UserWrapper wraps a database.User to implement the models.User interface

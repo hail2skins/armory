@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"errors"
-	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -538,23 +537,91 @@ func (s *TestService) CountUsers() (int64, error) {
 // FindRecentUsers returns a list of recent users with pagination and sorting
 func (s *TestService) FindRecentUsers(offset, limit int, sortBy, sortOrder string) ([]database.User, error) {
 	var users []database.User
-	query := s.db.Model(&database.User{})
+	result := s.db.Model(&database.User{}).
+		Order(sortBy + " " + sortOrder).
+		Offset(offset).
+		Limit(limit).
+		Find(&users)
+	return users, result.Error
+}
 
-	// Apply sorting
-	if sortBy != "" && sortOrder != "" {
-		query = query.Order(fmt.Sprintf("%s %s", sortBy, sortOrder))
-	} else {
-		query = query.Order("created_at desc")
-	}
+// CountActiveSubscribers returns the number of users with active paid subscriptions
+func (s *TestService) CountActiveSubscribers() (int64, error) {
+	var count int64
+	// This is a test implementation, so we'll return a dummy value
+	err := s.db.Model(&database.User{}).
+		Where("subscription_status = ? AND is_admin_granted = ? AND subscription_tier != ?",
+			"active", false, "free").
+		Count(&count).Error
+	return count, err
+}
 
-	// Apply pagination
-	if limit > 0 {
-		query = query.Limit(limit)
-	}
-	if offset > 0 {
-		query = query.Offset(offset)
-	}
+// CountNewUsersThisMonth returns the number of users registered in the current month
+func (s *TestService) CountNewUsersThisMonth() (int64, error) {
+	var count int64
+	// Get the first day of the current month
+	now := time.Now()
+	firstDay := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
 
-	err := query.Find(&users).Error
-	return users, err
+	// Count users created this month
+	err := s.db.Model(&database.User{}).
+		Where("created_at >= ?", firstDay).
+		Count(&count).Error
+
+	return count, err
+}
+
+// CountNewUsersLastMonth returns the number of users registered in the previous month
+func (s *TestService) CountNewUsersLastMonth() (int64, error) {
+	var count int64
+	// Get the first day of the current and previous month
+	now := time.Now()
+
+	// Get previous month
+	lastMonth := now.AddDate(0, -1, 0)
+	firstDayLastMonth := time.Date(lastMonth.Year(), lastMonth.Month(), 1, 0, 0, 0, 0, now.Location())
+	firstDayThisMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+
+	// Count users created last month
+	err := s.db.Model(&database.User{}).
+		Where("created_at >= ? AND created_at < ?", firstDayLastMonth, firstDayThisMonth).
+		Count(&count).Error
+
+	return count, err
+}
+
+// CountNewSubscribersThisMonth returns the number of new subscriptions in the current month
+func (s *TestService) CountNewSubscribersThisMonth() (int64, error) {
+	var count int64
+	// Get the first day of the current month
+	now := time.Now()
+	firstDay := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+
+	// Count users who got a subscription this month (not admin granted)
+	err := s.db.Model(&database.User{}).
+		Where("subscription_status = ? AND is_admin_granted = ? AND updated_at >= ? AND subscription_tier != ?",
+			"active", false, firstDay, "free").
+		Count(&count).Error
+
+	return count, err
+}
+
+// CountNewSubscribersLastMonth returns the number of new subscriptions in the previous month
+func (s *TestService) CountNewSubscribersLastMonth() (int64, error) {
+	var count int64
+	// Get the first day of the current and previous month
+	now := time.Now()
+
+	// Get previous month
+	lastMonth := now.AddDate(0, -1, 0)
+	firstDayLastMonth := time.Date(lastMonth.Year(), lastMonth.Month(), 1, 0, 0, 0, 0, now.Location())
+	firstDayThisMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+
+	// Count users who got a subscription last month (not admin granted)
+	err := s.db.Model(&database.User{}).
+		Where("subscription_status = ? AND is_admin_granted = ? AND updated_at >= ? AND updated_at < ? AND subscription_tier != ?",
+			"active", false, firstDayLastMonth, firstDayThisMonth, "free").
+		Count(&count).Error
+
+	return count, err
 }

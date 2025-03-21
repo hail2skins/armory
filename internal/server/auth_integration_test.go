@@ -631,8 +631,35 @@ func (m *MockDBWithContext) DeletePromotion(id uint) error {
 // FindActivePromotions mocks the database method to fetch active promotions
 func (m *MockDBWithContext) FindActivePromotions() ([]models.Promotion, error) {
 	args := m.Called()
-	if args.Get(0) == nil {
-		return []models.Promotion{}, args.Error(1)
-	}
 	return args.Get(0).([]models.Promotion), args.Error(1)
+}
+
+// CountActiveSubscribers returns the number of users with active paid subscriptions
+func (m *MockDBWithContext) CountActiveSubscribers() (int64, error) {
+	args := m.Called()
+	return args.Get(0).(int64), args.Error(1)
+}
+
+// CountNewUsersThisMonth returns the number of users registered in the current month
+func (m *MockDBWithContext) CountNewUsersThisMonth() (int64, error) {
+	args := m.Called()
+	return args.Get(0).(int64), args.Error(1)
+}
+
+// CountNewUsersLastMonth returns the number of users registered in the previous month
+func (m *MockDBWithContext) CountNewUsersLastMonth() (int64, error) {
+	args := m.Called()
+	return args.Get(0).(int64), args.Error(1)
+}
+
+// CountNewSubscribersThisMonth returns the number of new subscriptions in the current month
+func (m *MockDBWithContext) CountNewSubscribersThisMonth() (int64, error) {
+	args := m.Called()
+	return args.Get(0).(int64), args.Error(1)
+}
+
+// CountNewSubscribersLastMonth returns the number of new subscriptions in the previous month
+func (m *MockDBWithContext) CountNewSubscribersLastMonth() (int64, error) {
+	args := m.Called()
+	return args.Get(0).(int64), args.Error(1)
 }

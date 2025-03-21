@@ -66,6 +66,13 @@ func (s *AdminDashboardControllerTestSuite) TestDashboardRoute() {
 	// Mock the DB methods needed for the dashboard
 	s.MockDB.On("CountUsers").Return(int64(100), nil).Once()
 
+	// Mock the new methods for user statistics
+	s.MockDB.On("CountActiveSubscribers").Return(int64(50), nil).Once()
+	s.MockDB.On("CountNewUsersThisMonth").Return(int64(20), nil).Once()
+	s.MockDB.On("CountNewUsersLastMonth").Return(int64(15), nil).Once()
+	s.MockDB.On("CountNewSubscribersThisMonth").Return(int64(10), nil).Once()
+	s.MockDB.On("CountNewSubscribersLastMonth").Return(int64(8), nil).Once()
+
 	// Mock FindRecentUsers with proper user data
 	mockUsers := []database.User{
 		{

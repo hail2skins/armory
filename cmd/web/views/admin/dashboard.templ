@@ -138,32 +138,6 @@ templ Dashboard(data *data.AdminData) {
 						</div>
 					</div>
 					
-					<div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-						<div class="bg-indigo-50 p-4 rounded-lg shadow-md border border-indigo-100">
-							<h3 class="text-lg font-semibold mb-2 text-indigo-800">Monthly Subscribers</h3>
-							<p class="text-3xl font-bold text-indigo-900">`+fmt.Sprint(data.MonthlySubscribers)+`</p>
-							<p class="text-sm text-indigo-700 mt-2">`+fmt.Sprintf("%+.0f%%", data.MonthlyGrowthRate)+` from last month</p>
-						</div>
-						
-						<div class="bg-pink-50 p-4 rounded-lg shadow-md border border-pink-100">
-							<h3 class="text-lg font-semibold mb-2 text-pink-800">Yearly Subscribers</h3>
-							<p class="text-3xl font-bold text-pink-900">`+fmt.Sprint(data.YearlySubscribers)+`</p>
-							<p class="text-sm text-pink-700 mt-2">`+fmt.Sprintf("%+.0f%%", data.YearlyGrowthRate)+` from last month</p>
-						</div>
-						
-						<div class="bg-teal-50 p-4 rounded-lg shadow-md border border-teal-100">
-							<h3 class="text-lg font-semibold mb-2 text-teal-800">Lifetime Subscribers</h3>
-							<p class="text-3xl font-bold text-teal-900">`+fmt.Sprint(data.LifetimeSubscribers)+`</p>
-							<p class="text-sm text-teal-700 mt-2">`+fmt.Sprintf("%+.0f%%", data.LifetimeGrowthRate)+` from last month</p>
-						</div>
-						
-						<div class="bg-red-50 p-4 rounded-lg shadow-md border border-red-100">
-							<h3 class="text-lg font-semibold mb-2 text-red-800">Premium Subscribers</h3>
-							<p class="text-3xl font-bold text-red-900">`+fmt.Sprint(data.PremiumSubscribers)+`</p>
-							<p class="text-sm text-red-700 mt-2">`+fmt.Sprintf("%+.0f%%", data.PremiumGrowthRate)+` from last month</p>
-						</div>
-					</div>
-					
 					<div class="mb-8">
 						<h2 class="text-xl font-semibold mb-4 text-gunmetal-800">Recent Users</h2>
 						<div class="flex justify-between items-center mb-4">

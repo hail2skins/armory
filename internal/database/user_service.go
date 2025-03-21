@@ -51,6 +51,21 @@ type UserService interface {
 
 	// FindRecentUsers returns a list of recent users with pagination and sorting
 	FindRecentUsers(offset, limit int, sortBy, sortOrder string) ([]User, error)
+
+	// CountActiveSubscribers returns the number of users with active paid subscriptions
+	CountActiveSubscribers() (int64, error)
+
+	// CountNewUsersThisMonth returns the number of users registered in the current month
+	CountNewUsersThisMonth() (int64, error)
+
+	// CountNewUsersLastMonth returns the number of users registered in the previous month
+	CountNewUsersLastMonth() (int64, error)
+
+	// CountNewSubscribersThisMonth returns the number of new subscriptions in the current month
+	CountNewSubscribersThisMonth() (int64, error)
+
+	// CountNewSubscribersLastMonth returns the number of new subscriptions in the previous month
+	CountNewSubscribersLastMonth() (int64, error)
 }
 
 // Ensure service implements UserService
@@ -270,4 +285,109 @@ func (s *service) FindRecentUsers(offset, limit int, sortBy, sortOrder string) (
 		Limit(limit).
 		Find(&users)
 	return users, result.Error
+}
+
+// CountActiveSubscribers returns the number of users with active paid subscriptions
+func (s *service) CountActiveSubscribers() (int64, error) {
+	var count int64
+
+	// Count users with active subscriptions who have not been granted by admin
+	// This counts only paid subscribers
+	err := s.db.Model(&User{}).
+		Where("subscription_status = ? AND is_admin_granted = ? AND subscription_tier != ?",
+			"active", false, "free").
+		Count(&count).Error
+
+	return count, err
+}
+
+// getFirstDayOfMonth returns the first day of the current month
+func getFirstDayOfMonth() time.Time {
+	now := time.Now()
+	return time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+}
+
+// getFirstDayOfLastMonth returns the first day of the previous month
+func getFirstDayOfLastMonth() time.Time {
+	now := time.Now()
+
+	// Go back one month
+	lastMonth := now.AddDate(0, -1, 0)
+
+	// First day of the last month
+	return time.Date(lastMonth.Year(), lastMonth.Month(), 1, 0, 0, 0, 0, now.Location())
+}
+
+// getFirstDayOfNextMonth returns the first day of the next month
+func getFirstDayOfNextMonth() time.Time {
+	firstOfThisMonth := getFirstDayOfMonth()
+	return firstOfThisMonth.AddDate(0, 1, 0)
+}
+
+// CountNewUsersThisMonth returns the number of users registered in the current month
+func (s *service) CountNewUsersThisMonth() (int64, error) {
+	var count int64
+
+	// Get the first day of the current month
+	firstDay := getFirstDayOfMonth()
+
+	// Count users created this month
+	err := s.db.Model(&User{}).
+		Where("created_at >= ?", firstDay).
+		Count(&count).Error
+
+	return count, err
+}
+
+// CountNewUsersLastMonth returns the number of users registered in the previous month
+func (s *service) CountNewUsersLastMonth() (int64, error) {
+	var count int64
+
+	// Get the first day of the previous month
+	firstDayLastMonth := getFirstDayOfLastMonth()
+
+	// Get the first day of the current month
+	firstDayThisMonth := getFirstDayOfMonth()
+
+	// Count users created last month
+	err := s.db.Model(&User{}).
+		Where("created_at >= ? AND created_at < ?", firstDayLastMonth, firstDayThisMonth).
+		Count(&count).Error
+
+	return count, err
+}
+
+// CountNewSubscribersThisMonth returns the number of new subscriptions in the current month
+func (s *service) CountNewSubscribersThisMonth() (int64, error) {
+	var count int64
+
+	// Get the first day of the current month
+	firstDay := getFirstDayOfMonth()
+
+	// Count users who got a subscription this month (not admin granted)
+	err := s.db.Model(&User{}).
+		Where("subscription_status = ? AND is_admin_granted = ? AND updated_at >= ? AND subscription_tier != ?",
+			"active", false, firstDay, "free").
+		Count(&count).Error
+
+	return count, err
+}
+
+// CountNewSubscribersLastMonth returns the number of new subscriptions in the previous month
+func (s *service) CountNewSubscribersLastMonth() (int64, error) {
+	var count int64
+
+	// Get the first day of the previous month
+	firstDayLastMonth := getFirstDayOfLastMonth()
+
+	// Get the first day of the current month
+	firstDayThisMonth := getFirstDayOfMonth()
+
+	// Count users who got a subscription last month (not admin granted)
+	err := s.db.Model(&User{}).
+		Where("subscription_status = ? AND is_admin_granted = ? AND updated_at >= ? AND updated_at < ? AND subscription_tier != ?",
+			"active", false, firstDayLastMonth, firstDayThisMonth, "free").
+		Count(&count).Error
+
+	return count, err
 }
