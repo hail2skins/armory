@@ -11,6 +11,7 @@ import (
 	"github.com/hail2skins/armory/cmd/web/views/admin"
 	"github.com/hail2skins/armory/cmd/web/views/data"
 	"github.com/hail2skins/armory/internal/database"
+	"github.com/hail2skins/armory/internal/metrics"
 	"github.com/hail2skins/armory/internal/models"
 )
 
@@ -267,10 +268,138 @@ func (c *AdminDashboardController) ErrorMetrics(ctx *gin.Context) {
 	authData := getAuthData(ctx)
 	authData = authData.WithTitle("Error Metrics").WithCurrentPath(ctx.Request.URL.Path)
 
-	// Create admin data with auth data
+	// Get the error metrics instance from context
+	// This will be set by middleware in server setup
+	errorMetricsInterface, exists := ctx.Get("errorMetrics")
+	if !exists {
+		// Fallback if not in context
+		adminData := &data.AdminData{
+			AuthData: authData.WithError("Error metrics unavailable"),
+		}
+		admin.ErrorMetrics(adminData).Render(ctx.Request.Context(), ctx.Writer)
+		return
+	}
+
+	errorMetrics, ok := errorMetricsInterface.(*metrics.ErrorMetrics)
+	if !ok {
+		adminData := &data.AdminData{
+			AuthData: authData.WithError("Error metrics type mismatch"),
+		}
+		admin.ErrorMetrics(adminData).Render(ctx.Request.Context(), ctx.Writer)
+		return
+	}
+
+	// Get recent errors (last 10)
+	recentErrorsData := errorMetrics.GetRecentErrors(10)
+
+	// Transform to view-friendly format
+	recentErrors := make([]data.ErrorEntry, 0, len(recentErrorsData))
+	for _, err := range recentErrorsData {
+		// Determine error level based on type or other criteria
+		level := "INFO"
+		if err.ErrorType == "internal_error" || err.ErrorType == "database_error" || err.ErrorType == "payment_error" {
+			level = "ERROR"
+		} else if err.ErrorType == "validation_error" || err.ErrorType == "auth_error" {
+			level = "WARNING"
+		}
+
+		// Determine service based on path or error type
+		service := "System"
+		if strings.Contains(err.Path, "/auth") || strings.Contains(err.ErrorType, "auth") {
+			service = "Authentication"
+		} else if strings.Contains(err.Path, "/api") {
+			service = "API"
+		} else if strings.Contains(err.ErrorType, "database") {
+			service = "Database"
+		} else if strings.Contains(err.Path, "/payment") || strings.Contains(err.ErrorType, "payment") {
+			service = "Payment"
+		}
+
+		// Create a user-friendly message
+		message := err.ErrorType
+		if message == "internal_error" {
+			message = "Internal server error occurred"
+		} else if strings.Contains(message, "auth") {
+			message = "Authentication error: " + strings.Replace(message, "auth_error_", "", 1)
+		} else if strings.Contains(message, "validation") {
+			message = "Validation failed: " + strings.Replace(message, "validation_error_", "", 1)
+		}
+
+		recentErrors = append(recentErrors, data.ErrorEntry{
+			ErrorType:    err.ErrorType,
+			Count:        err.Count,
+			LastOccurred: err.LastOccurred,
+			Path:         err.Path,
+			Level:        level,
+			Service:      service,
+			Message:      message,
+			IPAddress:    err.IPAddress,
+		})
+	}
+
+	// Get error rates for last 24 hours
+	errorRates := errorMetrics.GetErrorRates(24 * time.Hour)
+
+	// Count by severity
+	var criticalCount, warningCount, infoCount int64
+	for errType, count := range errorRates {
+		if errType == "internal_error" || errType == "database_error" || errType == "payment_error" {
+			criticalCount += int64(count)
+		} else if errType == "validation_error" || errType == "auth_error" {
+			warningCount += int64(count)
+		} else {
+			infoCount += int64(count)
+		}
+	}
+
+	// Get error rates by service
+	errorRatesByService := make(map[string]float64)
+	totalErrors := 0.0
+
+	// Aggregate errors by service
+	for errType, count := range errorRates {
+		service := "Other"
+		if strings.Contains(errType, "auth") {
+			service = "Authentication"
+		} else if strings.Contains(errType, "api") {
+			service = "API"
+		} else if strings.Contains(errType, "database") {
+			service = "Database"
+		} else if strings.Contains(errType, "payment") {
+			service = "Payment"
+		} else if strings.Contains(errType, "server") {
+			service = "Server"
+		}
+
+		errorRatesByService[service] += count
+		totalErrors += count
+	}
+
+	// Convert to percentages if we have errors
+	if totalErrors > 0 {
+		for service, count := range errorRatesByService {
+			errorRatesByService[service] = (count / totalErrors) * 100
+		}
+	}
+
+	// Get latency percentiles
+	latencyPercentiles := errorMetrics.GetLatencyPercentiles()
+
+	// Create admin data with auth data and metrics
 	adminData := &data.AdminData{
 		AuthData: authData,
 	}
+
+	// Add error metrics
+	adminData = adminData.WithErrorMetrics(
+		criticalCount,
+		warningCount,
+		infoCount,
+		recentErrors,
+		errorRatesByService,
+		totalErrors,
+		latencyPercentiles,
+	)
 
 	// Render the error metrics page
 	admin.ErrorMetrics(adminData).Render(ctx.Request.Context(), ctx.Writer)

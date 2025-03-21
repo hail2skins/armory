@@ -80,6 +80,17 @@ func (s *Server) RegisterMiddleware(r *gin.Engine, authController *controller.Au
 	// Set up error handling middleware
 	middleware.SetupErrorHandling(r)
 
+	// Add error metrics to the context for admin routes
+	r.Use(func(c *gin.Context) {
+		// Get the error metrics instance
+		errorMetrics := middleware.GetErrorMetrics()
+
+		// Add to context
+		c.Set("errorMetrics", errorMetrics)
+
+		c.Next()
+	})
+
 	// Apply security headers
 	r.Use(securityHeaders())
 

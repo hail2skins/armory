@@ -12,7 +12,7 @@ func TestErrorMetricsRecord(t *testing.T) {
 	em := NewErrorMetrics()
 
 	// Record an error
-	em.Record("validation_error", 400, 0.5, "/users")
+	em.Record("validation_error", 400, 0.5, "/users", "192.168.1.1")
 
 	// Get stats
 	stats := em.GetStats()
@@ -24,6 +24,7 @@ func TestErrorMetricsRecord(t *testing.T) {
 	assert.Equal(t, "/users", errorCounts["validation_error"].Path)
 	assert.Equal(t, 1, len(errorCounts["validation_error"].Latencies))
 	assert.Equal(t, 0.5, errorCounts["validation_error"].Latencies[0])
+	assert.Equal(t, "192.168.1.1", errorCounts["validation_error"].IPAddresses[0])
 
 	// Check status code counts
 	statusCounts, ok := stats["status_counts"].(map[int]*ErrorEntry)
@@ -40,12 +41,12 @@ func TestMultipleErrorsAndLatencies(t *testing.T) {
 	em := NewErrorMetrics()
 
 	// Record multiple errors of the same type
-	em.Record("validation_error", 400, 0.3, "/users")
-	em.Record("validation_error", 400, 0.5, "/users")
-	em.Record("validation_error", 400, 0.7, "/users")
+	em.Record("validation_error", 400, 0.3, "/users", "192.168.1.1")
+	em.Record("validation_error", 400, 0.5, "/users", "192.168.1.2")
+	em.Record("validation_error", 400, 0.7, "/users", "192.168.1.3")
 
 	// Record a different error type
-	em.Record("auth_error", 401, 0.2, "/login")
+	em.Record("auth_error", 401, 0.2, "/login", "192.168.1.4")
 
 	// Get stats
 	stats := em.GetStats()
@@ -54,12 +55,16 @@ func TestMultipleErrorsAndLatencies(t *testing.T) {
 	// Check validation error counts
 	assert.Equal(t, int64(3), errorCounts["validation_error"].Count)
 	assert.Equal(t, 3, len(errorCounts["validation_error"].Latencies))
+	assert.Equal(t, 3, len(errorCounts["validation_error"].IPAddresses))
 
 	// Check auth error counts
 	assert.Equal(t, int64(1), errorCounts["auth_error"].Count)
 
 	// Check average latency
 	assert.InDelta(t, 0.5, errorCounts["validation_error"].AvgLatency(), 0.01)
+
+	// Check LastIP method
+	assert.Equal(t, "192.168.1.3", errorCounts["validation_error"].LastIP())
 }
 
 func TestGetRecentErrors(t *testing.T) {
@@ -70,8 +75,8 @@ func TestGetRecentErrors(t *testing.T) {
 	earlier := now.Add(-5 * time.Minute)
 
 	// Manually record with specific timestamps
-	em.recordWithTime("validation_error", 400, 0.3, "/users", earlier)
-	em.recordWithTime("auth_error", 401, 0.2, "/login", now)
+	em.recordWithTime("validation_error", 400, 0.3, "/users", "192.168.1.1", earlier)
+	em.recordWithTime("auth_error", 401, 0.2, "/login", "192.168.1.2", now)
 
 	// Get recent errors (limit to 2)
 	recentErrors := em.GetRecentErrors(2)
@@ -80,6 +85,8 @@ func TestGetRecentErrors(t *testing.T) {
 	assert.Equal(t, 2, len(recentErrors))
 	assert.Equal(t, "auth_error", recentErrors[0].ErrorType)
 	assert.Equal(t, "validation_error", recentErrors[1].ErrorType)
+	assert.Equal(t, "192.168.1.2", recentErrors[0].IPAddress)
+	assert.Equal(t, "192.168.1.1", recentErrors[1].IPAddress)
 }
 
 func TestCleanup(t *testing.T) {
@@ -87,10 +94,10 @@ func TestCleanup(t *testing.T) {
 
 	// Create an old error (1 day ago)
 	oldTime := time.Now().Add(-24 * time.Hour)
-	em.recordWithTime("old_error", 500, 0.3, "/old", oldTime)
+	em.recordWithTime("old_error", 500, 0.3, "/old", "192.168.1.1", oldTime)
 
 	// Create a new error (just now)
-	em.Record("new_error", 400, 0.2, "/new")
+	em.Record("new_error", 400, 0.2, "/new", "192.168.1.2")
 
 	// Cleanup errors older than 1 hour
 	em.Cleanup(1 * time.Hour)
@@ -103,6 +110,7 @@ func TestCleanup(t *testing.T) {
 	assert.Equal(t, int64(0), errorCounts["old_error"].Count)
 	assert.Nil(t, errorCounts["old_error"].Latencies)
 	assert.Nil(t, errorCounts["old_error"].Timestamps)
+	assert.Nil(t, errorCounts["old_error"].IPAddresses)
 
 	// New error should still be there
 	assert.Equal(t, int64(1), errorCounts["new_error"].Count)
@@ -113,10 +121,10 @@ func TestGetErrorRates(t *testing.T) {
 
 	// Record errors at different times
 	now := time.Now()
-	em.recordWithTime("validation_error", 400, 0.3, "/users", now.Add(-5*time.Minute))
-	em.recordWithTime("validation_error", 400, 0.3, "/users", now.Add(-15*time.Minute))
-	em.recordWithTime("validation_error", 400, 0.3, "/users", now.Add(-25*time.Minute))
-	em.recordWithTime("auth_error", 401, 0.2, "/login", now.Add(-2*time.Minute))
+	em.recordWithTime("validation_error", 400, 0.3, "/users", "192.168.1.1", now.Add(-5*time.Minute))
+	em.recordWithTime("validation_error", 400, 0.3, "/users", "192.168.1.2", now.Add(-15*time.Minute))
+	em.recordWithTime("validation_error", 400, 0.3, "/users", "192.168.1.3", now.Add(-25*time.Minute))
+	em.recordWithTime("auth_error", 401, 0.2, "/login", "192.168.1.4", now.Add(-2*time.Minute))
 
 	// Get error rates for last 10 minutes
 	rates := em.GetErrorRatesWithReference(10*time.Minute, now)
@@ -131,7 +139,7 @@ func TestPercentiles(t *testing.T) {
 
 	// Record errors with a wide range of latencies
 	for i := 0; i < 100; i++ {
-		em.Record("test_error", 500, float64(i)/10.0, "/test")
+		em.Record("test_error", 500, float64(i)/10.0, "/test", "192.168.1."+string(rune(i%10+'0')))
 	}
 
 	// Get percentiles

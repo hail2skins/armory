@@ -13,6 +13,7 @@ type ErrorEntry struct {
 	Latencies    []float64
 	Path         string
 	Timestamps   []time.Time
+	IPAddresses  []string // Store IP addresses for each occurrence
 }
 
 // AvgLatency calculates the average latency for this error type
@@ -25,6 +26,14 @@ func (e *ErrorEntry) AvgLatency() float64 {
 		sum += l
 	}
 	return sum / float64(len(e.Latencies))
+}
+
+// LastIP returns the IP address of the most recent occurrence
+func (e *ErrorEntry) LastIP() string {
+	if len(e.IPAddresses) == 0 {
+		return "unknown"
+	}
+	return e.IPAddresses[len(e.IPAddresses)-1]
 }
 
 // ErrorMetrics tracks error statistics across the application
@@ -45,20 +54,21 @@ func NewErrorMetrics() *ErrorMetrics {
 }
 
 // Record adds an error occurrence to the metrics
-func (em *ErrorMetrics) Record(errorType string, statusCode int, latency float64, path string) {
-	em.recordWithTime(errorType, statusCode, latency, path, time.Now())
+func (em *ErrorMetrics) Record(errorType string, statusCode int, latency float64, path string, ipAddress string) {
+	em.recordWithTime(errorType, statusCode, latency, path, ipAddress, time.Now())
 }
 
 // recordWithTime is an internal method for testing that allows setting the timestamp
-func (em *ErrorMetrics) recordWithTime(errorType string, statusCode int, latency float64, path string, timestamp time.Time) {
+func (em *ErrorMetrics) recordWithTime(errorType string, statusCode int, latency float64, path string, ipAddress string, timestamp time.Time) {
 	em.mu.Lock()
 	defer em.mu.Unlock()
 
 	// Record error type metrics
 	if _, exists := em.errors[errorType]; !exists {
 		em.errors[errorType] = &ErrorEntry{
-			Timestamps: make([]time.Time, 0),
-			Latencies:  make([]float64, 0),
+			Timestamps:  make([]time.Time, 0),
+			Latencies:   make([]float64, 0),
+			IPAddresses: make([]string, 0),
 		}
 	}
 	entry := em.errors[errorType]
@@ -67,30 +77,35 @@ func (em *ErrorMetrics) recordWithTime(errorType string, statusCode int, latency
 	entry.Latencies = append(entry.Latencies, latency)
 	entry.Path = path
 	entry.Timestamps = append(entry.Timestamps, timestamp)
+	entry.IPAddresses = append(entry.IPAddresses, ipAddress)
 
 	// Record endpoint metrics
 	if _, exists := em.endpoints[path]; !exists {
 		em.endpoints[path] = &ErrorEntry{
-			Timestamps: make([]time.Time, 0),
-			Latencies:  make([]float64, 0),
+			Timestamps:  make([]time.Time, 0),
+			Latencies:   make([]float64, 0),
+			IPAddresses: make([]string, 0),
 		}
 	}
 	em.endpoints[path].Count++
 	em.endpoints[path].LastOccurred = timestamp
 	em.endpoints[path].Latencies = append(em.endpoints[path].Latencies, latency)
 	em.endpoints[path].Timestamps = append(em.endpoints[path].Timestamps, timestamp)
+	em.endpoints[path].IPAddresses = append(em.endpoints[path].IPAddresses, ipAddress)
 
 	// Record status code metrics
 	if _, exists := em.statusCodes[statusCode]; !exists {
 		em.statusCodes[statusCode] = &ErrorEntry{
-			Timestamps: make([]time.Time, 0),
-			Latencies:  make([]float64, 0),
+			Timestamps:  make([]time.Time, 0),
+			Latencies:   make([]float64, 0),
+			IPAddresses: make([]string, 0),
 		}
 	}
 	em.statusCodes[statusCode].Count++
 	em.statusCodes[statusCode].LastOccurred = timestamp
 	em.statusCodes[statusCode].Latencies = append(em.statusCodes[statusCode].Latencies, latency)
 	em.statusCodes[statusCode].Timestamps = append(em.statusCodes[statusCode].Timestamps, timestamp)
+	em.statusCodes[statusCode].IPAddresses = append(em.statusCodes[statusCode].IPAddresses, ipAddress)
 }
 
 // GetStats returns all collected error statistics
@@ -111,6 +126,7 @@ func (em *ErrorMetrics) GetRecentErrors(count int) []struct {
 	Count        int64
 	LastOccurred time.Time
 	Path         string
+	IPAddress    string
 } {
 	em.mu.RLock()
 	defer em.mu.RUnlock()
@@ -120,6 +136,7 @@ func (em *ErrorMetrics) GetRecentErrors(count int) []struct {
 		Count        int64
 		LastOccurred time.Time
 		Path         string
+		IPAddress    string
 	}, 0, len(em.errors))
 
 	for errType, entry := range em.errors {
@@ -128,11 +145,13 @@ func (em *ErrorMetrics) GetRecentErrors(count int) []struct {
 			Count        int64
 			LastOccurred time.Time
 			Path         string
+			IPAddress    string
 		}{
 			ErrorType:    errType,
 			Count:        entry.Count,
 			LastOccurred: entry.LastOccurred,
 			Path:         entry.Path,
+			IPAddress:    entry.LastIP(),
 		})
 	}
 
@@ -215,6 +234,7 @@ func (em *ErrorMetrics) Cleanup(maxAge time.Duration) {
 			entry.Count = 0
 			entry.Latencies = nil
 			entry.Timestamps = nil
+			entry.IPAddresses = nil
 		}
 	}
 
@@ -224,6 +244,7 @@ func (em *ErrorMetrics) Cleanup(maxAge time.Duration) {
 			entry.Count = 0
 			entry.Latencies = nil
 			entry.Timestamps = nil
+			entry.IPAddresses = nil
 		}
 	}
 
@@ -233,6 +254,7 @@ func (em *ErrorMetrics) Cleanup(maxAge time.Duration) {
 			entry.Count = 0
 			entry.Latencies = nil
 			entry.Timestamps = nil
+			entry.IPAddresses = nil
 		}
 	}
 }

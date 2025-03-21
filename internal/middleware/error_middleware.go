@@ -8,21 +8,24 @@ import (
 	"github.com/hail2skins/armory/internal/logger"
 )
 
-// Simple metrics collector for errors
+// errorMetricsCollector is a simple collector for error metrics
 type errorMetricsCollector struct{}
 
-var errorMetrics = &errorMetricsCollector{}
+// errorMetricsCollectorInstance is the global instance of the error metrics collector
+var errorMetricsCollectorInstance = &errorMetricsCollector{}
 
-// Record records error metrics
+// Record records an error metric
 func (e *errorMetricsCollector) Record(errorType string, status int, duration float64, path string) {
-	// This is a placeholder for actual metrics collection
-	// In a real application, this would send metrics to a monitoring system
-	logger.Info("Error metrics", map[string]interface{}{
+	// Create fields for logging
+	fields := map[string]interface{}{
 		"error_type": errorType,
 		"status":     status,
 		"duration":   duration,
 		"path":       path,
-	})
+	}
+
+	// Log the error metric
+	logger.Info("Error metrics", fields)
 }
 
 // ErrorHandler returns a middleware that handles errors using our custom error types and logger
@@ -70,23 +73,41 @@ func getUserID(c *gin.Context) uint {
 	return 0
 }
 
-// recordErrorMetrics records error metrics for the given error
+// recordErrorMetrics records error metrics
 func recordErrorMetrics(c *gin.Context, err error, duration float64) {
-	// Get the error type
-	errorType := "internal_error" // Default type
+	// Default error type if we can't determine it
+	errorType := "internal_error"
 
-	// Try to determine the error type
-	switch e := err.(type) {
-	case interface{ ErrorType() string }:
-		// If the error has an ErrorType method, use that
-		errorType = e.ErrorType()
-	default:
-		// Otherwise, use the error message
-		errorType = e.Error()
+	// Try to determine the error type if the error has a type method
+	if typedErr, ok := err.(interface{ Type() string }); ok {
+		errorType = typedErr.Type()
+	} else if typedErr, ok := err.(interface{ ErrorType() string }); ok {
+		// Alternative method name for error type
+		errorType = typedErr.ErrorType()
+	} else {
+		// Use the error message as the type
+		errorType = err.Error()
 	}
 
-	// Record the error metrics
-	errorMetrics.Record(
+	// Get the client IP address
+	clientIP := c.ClientIP()
+	if clientIP == "" {
+		clientIP = "unknown"
+	}
+
+	// Record metrics in our advanced metrics system
+	if errorMetricsInstance != nil {
+		errorMetricsInstance.Record(
+			errorType,
+			c.Writer.Status(),
+			duration,
+			c.Request.URL.Path,
+			clientIP,
+		)
+	}
+
+	// Also record using our simple collector for logging
+	errorMetricsCollectorInstance.Record(
 		errorType,
 		c.Writer.Status(),
 		duration,

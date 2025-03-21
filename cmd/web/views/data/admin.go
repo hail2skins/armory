@@ -53,6 +53,27 @@ type AdminData struct {
 	SortBy                     string
 	SortOrder                  string
 	SearchQuery                string
+
+	// For error metrics
+	CriticalErrorCount  int64
+	WarningCount        int64
+	InfoCount           int64
+	RecentErrors        []ErrorEntry
+	ErrorRatesByService map[string]float64
+	TotalErrorRate      float64
+	LatencyPercentiles  map[string]float64
+}
+
+// ErrorEntry represents a simplified error record for views
+type ErrorEntry struct {
+	ErrorType    string
+	Count        int64
+	LastOccurred time.Time
+	Path         string
+	Level        string
+	Service      string
+	Message      string
+	IPAddress    string
 }
 
 // User interface for dashboard
@@ -209,5 +230,23 @@ func (a *AdminData) WithPromotion(promotion *models.Promotion) *AdminData {
 // WithFormData returns a copy of the AdminData with the specified form data
 func (a *AdminData) WithFormData(formData map[string]interface{}) *AdminData {
 	a.FormData = formData
+	return a
+}
+
+// WithErrorMetrics sets the error metrics data
+func (a *AdminData) WithErrorMetrics(
+	criticalCount, warningCount, infoCount int64,
+	recentErrors []ErrorEntry,
+	errorRatesByService map[string]float64,
+	totalErrorRate float64,
+	latencyPercentiles map[string]float64,
+) *AdminData {
+	a.CriticalErrorCount = criticalCount
+	a.WarningCount = warningCount
+	a.InfoCount = infoCount
+	a.RecentErrors = recentErrors
+	a.ErrorRatesByService = errorRatesByService
+	a.TotalErrorRate = totalErrorRate
+	a.LatencyPercentiles = latencyPercentiles
 	return a
 }

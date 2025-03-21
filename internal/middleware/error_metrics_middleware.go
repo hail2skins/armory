@@ -58,12 +58,19 @@ func ErrorMetricsMiddleware() gin.HandlerFunc {
 				errorType = e.Error()
 			}
 
+			// Get the client IP address
+			clientIP := c.ClientIP()
+			if clientIP == "" {
+				clientIP = "unknown"
+			}
+
 			// Record the error metrics
 			errorMetricsInstance.Record(
 				errorType,
 				c.Writer.Status(),
 				duration,
 				c.Request.URL.Path,
+				clientIP,
 			)
 		}
 	}
