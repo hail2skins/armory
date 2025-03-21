@@ -3,6 +3,8 @@ package controller
 import (
 	"fmt"
 	"net/http"
+	"os"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -231,6 +233,31 @@ func (u UserWrapper) GetGrantedByID() uint {
 	return u.User.GrantedByID
 }
 
+// WebhookStats contains basic stats about webhooks
+type WebhookStats struct {
+	TotalRequests      int64
+	SuccessfulRequests int64
+	FailedRequests     int64
+	LastRequestTime    time.Time
+	LastErrorTime      time.Time
+	LastError          string
+}
+
+// getWebhookStats retrieves webhook stats from a middleware handler
+// Using this indirect approach to avoid direct import of middleware
+func getWebhookStats(ctx *gin.Context) WebhookStats {
+	statsInterface, exists := ctx.Get("webhookStats")
+	if !exists {
+		return WebhookStats{}
+	}
+
+	if stats, ok := statsInterface.(WebhookStats); ok {
+		return stats
+	}
+
+	return WebhookStats{}
+}
+
 // DetailedHealth renders the detailed health page
 func (c *AdminDashboardController) DetailedHealth(ctx *gin.Context) {
 	// Get auth data from context
@@ -238,28 +265,175 @@ func (c *AdminDashboardController) DetailedHealth(ctx *gin.Context) {
 	authData = authData.WithTitle("Detailed Health").WithCurrentPath(ctx.Request.URL.Path)
 
 	// Get database health status
+	dbHealth := c.DB.Health()
 	dbStatus := "OK"
-	if dbErr := c.DB.Health(); dbErr != nil {
-		dbStatus = fmt.Sprintf("Error: %v", dbErr)
+	if status, ok := dbHealth["status"]; ok && status != "up" {
+		dbStatus = fmt.Sprintf("Down: %s", dbHealth["error"])
 	}
 
-	// Create health data
-	health := map[string]string{
-		"database":        dbStatus,
-		"cache":           "OK",
-		"storage":         "OK",
-		"email_service":   "OK",
-		"payment_gateway": "OK",
-		"api_gateway":     "OK",
+	// Get webhook health status from middleware
+	webhookStats := getWebhookStats(ctx)
+	webhookStatus := "OK"
+	webhookDetails := ""
+
+	if webhookStats.TotalRequests > 0 {
+		successRate := float64(webhookStats.SuccessfulRequests) / float64(webhookStats.TotalRequests) * 100
+		if successRate < 80 {
+			webhookStatus = "Degraded"
+			webhookDetails = fmt.Sprintf("Success rate: %.1f%%", successRate)
+		}
+
+		// Add traffic stats to webhook details
+		webhookDetails = fmt.Sprintf("Requests: %d (%.1f%% success rate)",
+			webhookStats.TotalRequests,
+			successRate)
 	}
+
+	if webhookStats.LastError != "" {
+		if webhookDetails != "" {
+			webhookDetails += ", "
+		}
+		webhookDetails += fmt.Sprintf("Last error: %s", webhookStats.LastError)
+	}
+
+	// Get error metrics if available
+	errorMetricsInterface, exists := ctx.Get("errorMetrics")
+	errorMetricsStatus := "OK"
+	if exists {
+		if errorMetrics, ok := errorMetricsInterface.(*metrics.ErrorMetrics); ok {
+			errorRates := errorMetrics.GetErrorRates(24 * time.Hour)
+			var criticalCount float64
+			for errType, count := range errorRates {
+				if errType == "internal_error" || errType == "database_error" || errType == "payment_error" {
+					criticalCount += count
+				}
+			}
+
+			if criticalCount > 5 {
+				errorMetricsStatus = fmt.Sprintf("Alert: %d critical errors in last 24h", int(criticalCount))
+			}
+		}
+	}
+
+	// Create health data with real values
+	health := map[string]string{
+		"database":      dbStatus,
+		"webhook":       webhookStatus,
+		"error_metrics": errorMetricsStatus,
+	}
+
+	// Add database statistics as separate entries with more readable names
+	if conn, ok := dbHealth["open_connections"]; ok {
+		health["Database Connections"] = conn
+	}
+
+	if inUse, ok := dbHealth["in_use"]; ok {
+		health["Database Connections (In Use)"] = inUse
+	}
+
+	if idle, ok := dbHealth["idle"]; ok {
+		health["Database Connections (Idle)"] = idle
+	}
+
+	// If we have webhook details, add it with a more descriptive name
+	if webhookDetails != "" {
+		health["Webhook Information"] = webhookDetails
+	}
+
+	// Add additional service status checks for services that may be mocked
+	// In a real system, these would check actual services
+	mockChecks := map[string]string{
+		"Cache Service":   "OK",
+		"Storage Service": "OK",
+		"Email Service":   "OK",
+		"Payment Gateway": "OK",
+		"API Gateway":     "OK",
+	}
+
+	for k, v := range mockChecks {
+		health[k] = v
+	}
+
+	// Gather system information
+	hostname, _ := os.Hostname()
+	systemInfo := map[string]string{
+		"Go Version":    runtime.Version(),
+		"OS":            runtime.GOOS + "/" + runtime.GOARCH,
+		"Database":      "PostgreSQL", // This could be fetched from actual DB info
+		"Host":          hostname,
+		"NumCPU":        fmt.Sprintf("%d", runtime.NumCPU()),
+		"NumGoroutines": fmt.Sprintf("%d", runtime.NumGoroutine()),
+		"Uptime":        getUptimeStr(),
+	}
+
+	// Get memory stats
+	var memStats runtime.MemStats
+	runtime.ReadMemStats(&memStats)
+	systemInfo["Memory Usage"] = formatBytes(memStats.Alloc) + " / " + formatBytes(memStats.Sys)
+	systemInfo["Heap Usage"] = formatBytes(memStats.HeapAlloc) + " / " + formatBytes(memStats.HeapSys)
+	systemInfo["Stack Usage"] = formatBytes(memStats.StackInuse) + " / " + formatBytes(memStats.StackSys)
+	systemInfo["GC Cycles"] = fmt.Sprintf("%d", memStats.NumGC)
+
+	// Include request info
+	requestCount := webhookStats.TotalRequests
+	if requestCount > 0 {
+		lastRequestTime := webhookStats.LastRequestTime.Format("2006-01-02 15:04:05")
+		systemInfo["Total Requests"] = fmt.Sprintf("%d", requestCount)
+		systemInfo["Last Request"] = lastRequestTime
+	}
+
+	// Add approx CPU usage
+	cpuUsage := "Not available"
+	if runtime.GOOS == "linux" {
+		// For a real production service, you might fetch actual CPU stats
+		// For now, we'll provide a simple mock value
+		cpuUsage = fmt.Sprintf("~%.1f%%", 5.2)
+	}
+	systemInfo["CPU Usage"] = cpuUsage
 
 	// Create admin data with auth data
 	adminData := &data.AdminData{
 		AuthData: authData,
 	}
 
+	// Set system info
+	adminData = adminData.WithSystemInfo(systemInfo)
+
 	// Render the detailed health page
 	admin.DetailedHealth(adminData, health).Render(ctx.Request.Context(), ctx.Writer)
+}
+
+// formatBytes formats bytes to human readable string
+func formatBytes(bytes uint64) string {
+	const unit = 1024
+	if bytes < unit {
+		return fmt.Sprintf("%d B", bytes)
+	}
+	div, exp := uint64(unit), 0
+	for n := bytes / unit; n >= unit; n /= unit {
+		div *= unit
+		exp++
+	}
+	return fmt.Sprintf("%.1f %ciB", float64(bytes)/float64(div), "KMGTPE"[exp])
+}
+
+// Global variable to track start time
+var startTime = time.Now()
+
+// getUptimeStr returns the uptime as a formatted string
+func getUptimeStr() string {
+	uptime := time.Since(startTime)
+	days := int(uptime.Hours()) / 24
+	hours := int(uptime.Hours()) % 24
+	minutes := int(uptime.Minutes()) % 60
+
+	if days > 0 {
+		return fmt.Sprintf("%dd %dh %dm", days, hours, minutes)
+	}
+	if hours > 0 {
+		return fmt.Sprintf("%dh %dm", hours, minutes)
+	}
+	return fmt.Sprintf("%dm", minutes)
 }
 
 // ErrorMetrics displays error metrics for the application

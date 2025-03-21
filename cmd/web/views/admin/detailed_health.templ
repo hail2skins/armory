@@ -3,6 +3,8 @@ package admin
 import (
 	"context"
 	"io"
+	"strconv"
+	"strings"
 
 	"github.com/hail2skins/armory/cmd/web/views/data"
 	"github.com/hail2skins/armory/cmd/web/views/partials"
@@ -43,6 +45,7 @@ templ DetailedHealth(data *data.AdminData, health map[string]string) {
 
 		_, err = io.WriteString(w, `
 					<div class="overflow-x-auto">
+						<h2 class="text-xl font-semibold mb-4 text-gunmetal-800">Service Status</h2>
 						<table class="min-w-full bg-white border border-gunmetal-200 rounded-lg overflow-hidden">
 							<thead class="bg-gunmetal-200">
 								<tr>
@@ -56,61 +59,144 @@ templ DetailedHealth(data *data.AdminData, health map[string]string) {
 			return err
 		}
 
-		for service, status := range health {
-			_, err = io.WriteString(w, `
-								<tr class="hover:bg-gunmetal-50">
-									<td class="py-3 px-4 font-medium capitalize text-gunmetal-800">`+service+`</td>
-									<td class="py-3 px-4">
-			`)
-			if err != nil {
-				return err
-			}
-
-			if status == "OK" {
-				_, err = io.WriteString(w, `
-											<span class="inline-flex items-center">
-												<span class="w-3 h-3 bg-green-500 rounded-full mr-2"></span>
-												<span class="text-gunmetal-800">`+status+`</span>
-											</span>
-				`)
-			} else {
-				_, err = io.WriteString(w, `
-											<span class="inline-flex items-center">
-												<span class="w-3 h-3 bg-red-500 rounded-full mr-2"></span>
-												<span class="text-gunmetal-800">`+status+`</span>
-											</span>
-				`)
-			}
-			if err != nil {
-				return err
-			}
-
-			_, err = io.WriteString(w, `
-									</td>
-								</tr>
-			`)
-			if err != nil {
-				return err
+		// Group health metrics by category
+		coreServices := []string{"database", "webhook", "error_metrics", "Cache Service", "Storage Service", 
+						  "Email Service", "Payment Gateway", "API Gateway"}
+		dbMetrics := []string{"Database Connections", "Database Connections (In Use)", "Database Connections (Idle)"}
+		infoMetrics := []string{"Webhook Information"}
+		
+		// First show core services
+		for _, serviceName := range coreServices {
+			if status, exists := health[serviceName]; exists {
+				err = renderServiceRow(w, serviceName, status)
+				if err != nil {
+					return err
+				}
 			}
 		}
-
+		
+		_, err = io.WriteString(w, `
+							</tbody>
+						</table>
+					</div>
+					
+					<div class="overflow-x-auto mt-6">
+						<h2 class="text-xl font-semibold mb-4 text-gunmetal-800">Database Metrics</h2>
+						<table class="min-w-full bg-white border border-gunmetal-200 rounded-lg overflow-hidden">
+							<thead class="bg-gunmetal-200">
+								<tr>
+									<th class="py-3 px-4 text-left text-gunmetal-800">Metric</th>
+									<th class="py-3 px-4 text-left text-gunmetal-800">Value</th>
+								</tr>
+							</thead>
+							<tbody class="divide-y divide-gunmetal-200">
+		`)
+		if err != nil {
+			return err
+		}
+		
+		// Show database metrics
+		for _, metricName := range dbMetrics {
+			if value, exists := health[metricName]; exists {
+				err = renderServiceRow(w, metricName, value)
+				if err != nil {
+					return err
+				}
+			}
+		}
+		
+		// If we have any info metrics, show them in their own section
+		if hasInfoMetrics(health, infoMetrics) {
+			_, err = io.WriteString(w, `
+								</tbody>
+							</table>
+						</div>
+						
+						<div class="overflow-x-auto mt-6">
+							<h2 class="text-xl font-semibold mb-4 text-gunmetal-800">Additional Information</h2>
+							<table class="min-w-full bg-white border border-gunmetal-200 rounded-lg overflow-hidden">
+								<thead class="bg-gunmetal-200">
+									<tr>
+										<th class="py-3 px-4 text-left text-gunmetal-800">Type</th>
+										<th class="py-3 px-4 text-left text-gunmetal-800">Details</th>
+									</tr>
+								</thead>
+								<tbody class="divide-y divide-gunmetal-200">
+			`)
+			if err != nil {
+				return err
+			}
+			
+			// Show info metrics
+			for _, infoName := range infoMetrics {
+				if info, exists := health[infoName]; exists {
+					err = renderServiceRow(w, infoName, info)
+					if err != nil {
+						return err
+					}
+				}
+			}
+		}
+		
 		_, err = io.WriteString(w, `
 							</tbody>
 						</table>
 					</div>
 					
 					<div class="mt-8">
-						<h2 class="text-xl font-bold mb-4 text-gunmetal-800">Technical Information</h2>
+						<h2 class="text-xl font-bold mb-4 text-gunmetal-800">System Information</h2>
 						<div class="bg-gunmetal-100 p-4 rounded border border-gunmetal-200">
 							<pre class="whitespace-pre-wrap text-sm text-gunmetal-800">
-Go Version: 1.20.1
+`)
+		if err != nil {
+			return err
+		}
+
+		// Display real system information
+		if data.SystemInfo != nil {
+			// Order systemInfo for better readability
+			orderedKeys := []string{
+				"Go Version", "OS", "Host", "Database", "Uptime", 
+				"NumCPU", "CPU Usage", "Memory Usage", "Heap Usage", 
+				"Stack Usage", "NumGoroutines", "GC Cycles",
+				"Total Requests", "Last Request",
+			}
+			
+			// First display ordered keys
+			for _, key := range orderedKeys {
+				if value, exists := data.SystemInfo[key]; exists {
+					_, err = io.WriteString(w, key+": "+value+"\n")
+					if err != nil {
+						return err
+					}
+				}
+			}
+			
+			// Then any remaining keys not in the ordered list
+			for key, value := range data.SystemInfo {
+				if !contains(orderedKeys, key) {
+					_, err = io.WriteString(w, key+": "+value+"\n")
+					if err != nil {
+						return err
+					}
+				}
+			}
+		} else {
+			// Fallback to mock data if no real data available
+			_, err = io.WriteString(w, `Go Version: 1.20.1
 Runtime: linux/amd64  
 Database: PostgreSQL 15.3
 Host: app-server-1
 Request Rate: 5.2 req/s
 Memory Usage: 256MB
 CPU Usage: 12.5%
-Uptime: 15d 7h 23m
+Uptime: 15d 7h 23m`)
+			if err != nil {
+				return err
+			}
+		}
+
+		_, err = io.WriteString(w, `
 							</pre>
 						</div>
 					</div>
@@ -122,4 +208,101 @@ Uptime: 15d 7h 23m
 		`)
 		return err
 	}))
+}
+
+// Helper functions
+func renderServiceRow(w io.Writer, service, status string) error {
+	_, err := io.WriteString(w, `
+						<tr class="hover:bg-gunmetal-50">
+							<td class="py-3 px-4 font-medium capitalize text-gunmetal-800">`+service+`</td>
+							<td class="py-3 px-4">
+	`)
+	if err != nil {
+		return err
+	}
+
+	// Determine if this is an error status or a numeric value
+	isNumeric := false
+	isWarning := false
+	
+	// Check if the status is numeric (database stats)
+	_, numericErr := strconv.Atoi(status)
+	isNumeric = numericErr == nil
+	
+	// Check if this is a warning status (starts with "Degraded")
+	if strings.HasPrefix(status, "Degraded") || strings.HasPrefix(status, "Warning") {
+		isWarning = true
+	}
+	
+	// Determine how to display the status based on its value
+	if status == "OK" {
+		// OK status - green
+		_, err = io.WriteString(w, `
+								<span class="inline-flex items-center">
+									<span class="w-3 h-3 bg-green-500 rounded-full mr-2"></span>
+									<span class="text-gunmetal-800">`+status+`</span>
+								</span>
+		`)
+	} else if isNumeric {
+		// Numeric value - blue
+		_, err = io.WriteString(w, `
+								<span class="inline-flex items-center">
+									<span class="w-3 h-3 bg-blue-500 rounded-full mr-2"></span>
+									<span class="text-gunmetal-800">`+status+`</span>
+								</span>
+		`)
+	} else if isWarning {
+		// Warning status - amber
+		_, err = io.WriteString(w, `
+								<span class="inline-flex items-center">
+									<span class="w-3 h-3 bg-amber-500 rounded-full mr-2"></span>
+									<span class="text-gunmetal-800">`+status+`</span>
+								</span>
+		`)
+	} else if status == "" {
+		// Empty status - gray
+		_, err = io.WriteString(w, `
+								<span class="inline-flex items-center">
+									<span class="w-3 h-3 bg-gray-300 rounded-full mr-2"></span>
+									<span class="text-gunmetal-800">Not available</span>
+								</span>
+		`)
+	} else {
+		// Error status - red
+		_, err = io.WriteString(w, `
+								<span class="inline-flex items-center">
+									<span class="w-3 h-3 bg-red-500 rounded-full mr-2"></span>
+									<span class="text-gunmetal-800">`+status+`</span>
+								</span>
+		`)
+	}
+	if err != nil {
+		return err
+	}
+
+	_, err = io.WriteString(w, `
+							</td>
+						</tr>
+	`)
+	return err
+}
+
+// Check if any of the info metrics exist in the health map
+func hasInfoMetrics(health map[string]string, infoMetrics []string) bool {
+	for _, metric := range infoMetrics {
+		if _, exists := health[metric]; exists {
+			return true
+		}
+	}
+	return false
+}
+
+// Check if a string is in a slice
+func contains(slice []string, item string) bool {
+	for _, s := range slice {
+		if s == item {
+			return true
+		}
+	}
+	return false
 } 

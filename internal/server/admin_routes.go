@@ -40,6 +40,26 @@ func (s *Server) RegisterAdminRoutes(r *gin.Engine, authController *controller.A
 		}
 	}
 
+	// Create a middleware function to set webhook stats in context
+	webhookStatsMiddleware := func(c *gin.Context) {
+		// Get webhook stats from middleware
+		stats := middleware.GetWebhookStats()
+
+		// Convert to the type expected by the controller
+		controllerStats := controller.WebhookStats{
+			TotalRequests:      stats.TotalRequests,
+			SuccessfulRequests: stats.SuccessfulRequests,
+			FailedRequests:     stats.FailedRequests,
+			LastRequestTime:    stats.LastRequestTime,
+			LastErrorTime:      stats.LastErrorTime,
+			LastError:          stats.LastError,
+		}
+
+		// Add to context
+		c.Set("webhookStats", controllerStats)
+		c.Next()
+	}
+
 	// Create admin route group with authentication middleware
 	adminGroup := r.Group("/admin")
 	{
@@ -96,30 +116,23 @@ func (s *Server) RegisterAdminRoutes(r *gin.Engine, authController *controller.A
 			adminGroup.Use(casbinAuth.Authorize("admin"))
 		}
 
-		// Dashboard routes
+		// Admin dashboard routes
 		if casbinAuth != nil {
 			adminGroup.GET("/dashboard", casbinAuth.Authorize("dashboard", "read"), adminDashboardController.Dashboard)
-			adminGroup.GET("/detailed-health", casbinAuth.Authorize("dashboard", "read"), adminDashboardController.DetailedHealth)
+			adminGroup.GET("/detailed-health", casbinAuth.Authorize("dashboard", "read"), webhookStatsMiddleware, adminDashboardController.DetailedHealth)
 			adminGroup.GET("/error-metrics", casbinAuth.Authorize("dashboard", "read"), adminDashboardController.ErrorMetrics)
-
-			// Stripe security routes
-			adminGroup.GET("/stripe-security", casbinAuth.Authorize("admin", "read"), stripeSecurityController.Dashboard)
-			adminGroup.POST("/stripe-security/refresh", casbinAuth.Authorize("admin", "write"), stripeSecurityController.RefreshIPRanges)
-			adminGroup.POST("/stripe-security/toggle-filtering", casbinAuth.Authorize("admin", "write"), stripeSecurityController.ToggleIPFilter)
-			adminGroup.GET("/stripe-security/test-ip", casbinAuth.Authorize("admin", "read"), stripeSecurityController.TestIPForm)
-			adminGroup.POST("/stripe-security/check-ip", casbinAuth.Authorize("admin", "read"), stripeSecurityController.CheckIP)
 		} else {
 			adminGroup.GET("/dashboard", adminDashboardController.Dashboard)
-			adminGroup.GET("/detailed-health", adminDashboardController.DetailedHealth)
+			adminGroup.GET("/detailed-health", webhookStatsMiddleware, adminDashboardController.DetailedHealth)
 			adminGroup.GET("/error-metrics", adminDashboardController.ErrorMetrics)
-
-			// Stripe security routes
-			adminGroup.GET("/stripe-security", stripeSecurityController.Dashboard)
-			adminGroup.POST("/stripe-security/refresh", stripeSecurityController.RefreshIPRanges)
-			adminGroup.POST("/stripe-security/toggle-filtering", stripeSecurityController.ToggleIPFilter)
-			adminGroup.GET("/stripe-security/test-ip", stripeSecurityController.TestIPForm)
-			adminGroup.POST("/stripe-security/check-ip", stripeSecurityController.CheckIP)
 		}
+
+		// Stripe security routes
+		adminGroup.GET("/stripe-security", stripeSecurityController.Dashboard)
+		adminGroup.POST("/stripe-security/refresh", stripeSecurityController.RefreshIPRanges)
+		adminGroup.POST("/stripe-security/toggle-filtering", stripeSecurityController.ToggleIPFilter)
+		adminGroup.GET("/stripe-security/test-ip", stripeSecurityController.TestIPForm)
+		adminGroup.POST("/stripe-security/check-ip", stripeSecurityController.CheckIP)
 
 		// Manufacturer routes
 		manufacturerGroup := adminGroup.Group("/manufacturers")

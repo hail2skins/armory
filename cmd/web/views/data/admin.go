@@ -62,6 +62,9 @@ type AdminData struct {
 	ErrorRatesByService map[string]float64
 	TotalErrorRate      float64
 	LatencyPercentiles  map[string]float64
+
+	// For system health
+	SystemInfo map[string]string
 }
 
 // ErrorEntry represents a simplified error record for views
@@ -248,5 +251,11 @@ func (a *AdminData) WithErrorMetrics(
 	a.ErrorRatesByService = errorRatesByService
 	a.TotalErrorRate = totalErrorRate
 	a.LatencyPercentiles = latencyPercentiles
+	return a
+}
+
+// WithSystemInfo sets the system information data
+func (a *AdminData) WithSystemInfo(systemInfo map[string]string) *AdminData {
+	a.SystemInfo = systemInfo
 	return a
 }
