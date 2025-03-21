@@ -56,316 +56,325 @@ templ pricingContent(data PricingData) {
 				</div>
 			}
 
-			<!-- Header -->
-			<div class="text-center mb-12">
-				<h2 class="text-3xl font-extrabold text-gray-900 sm:text-4xl">
-					Simple, transparent pricing
-				</h2>
-				<p class="mt-4 text-lg text-gray-600">
-					Choose the plan that works best for you
-				</p>
-			</div>
-
-			<!-- Pricing Cards -->
-			<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+			<!-- Main pricing content with background image -->
+			<div class="relative rounded-lg shadow-xl overflow-hidden">
+				<!-- Background image -->
+				<div class="absolute inset-0 bg-cover bg-center z-0 opacity-80" style="background-image: url('/assets/pricing-back.jpg')"></div>
 				
-				<!-- Free Plan -->
-				<div class="border border-gray-200 rounded-lg shadow-sm p-6 bg-white">
-					<h2 class="text-2xl font-semibold text-gray-900">Free</h2>
-					<p class="mt-4 text-sm text-gray-500">Basic access</p>
-					<p class="mt-8">
-						<span class="text-4xl font-extrabold text-gray-900">$0</span>
-						<span class="text-base font-medium text-gray-500">/forever</span>
-					</p>
-					<ul class="mt-6 space-y-3">
-						<li class="flex items-start">
-							<span class="text-green-500 flex-shrink-0 mr-2">✓</span>
-							<span class="text-sm text-gray-500">Store up to 2 guns</span>
-						</li>
-						<li class="flex items-start">
-							<span class="text-green-500 flex-shrink-0 mr-2">✓</span>
-							<span class="text-sm text-gray-500">Store up to 4 ammunition*</span>
-						</li>
-						<li class="flex items-start">
-							<span class="text-green-500 flex-shrink-0 mr-2">✓</span>
-							<span class="text-sm text-gray-500">Limited range days*</span>
-						</li>
-						<li class="flex items-start">
-							<span class="text-green-500 flex-shrink-0 mr-2">✓</span>
-							<span class="text-sm text-gray-500">No maintenance records*</span>
-						</li>
-					</ul>
-					<div class="mt-8">
-						<div class="text-gray-500 font-medium py-2 px-4 text-center">
-							Default Free Plan
-						</div>
-					</div>
-				</div>
-
-				<!-- Monthly Plan -->
-				<div class="border border-gray-200 rounded-lg shadow-sm p-6 bg-white">
-					<h2 class="text-2xl font-semibold text-gray-900">Liking It</h2>
-					<p class="mt-4 text-sm text-gray-500">Flexible option</p>
-					<p class="mt-8">
-						<span class="text-4xl font-extrabold text-gray-900">$5</span>
-						<span class="text-base font-medium text-gray-500">/mo</span>
-					</p>
-					<ul class="mt-6 space-y-3">
-						<li class="flex items-start">
-							<span class="text-green-500 flex-shrink-0 mr-2">✓</span>
-							<span class="text-sm text-gray-500">Unlimited guns/ammo*</span>
-						</li>
-						<li class="flex items-start">
-							<span class="text-green-500 flex-shrink-0 mr-2">✓</span>
-							<span class="text-sm text-gray-500">Unlimited range days*</span>
-						</li>
-						<li class="flex items-start">
-							<span class="text-green-500 flex-shrink-0 mr-2">✓</span>
-							<span class="text-sm text-gray-500">Unlimited maintenance records*</span>
-						</li>
-						<li class="flex items-start">
-							<span class="text-green-500 flex-shrink-0 mr-2">✓</span>
-							<span class="text-sm text-gray-500">Cancel anytime</span>
-						</li>
-					</ul>
-					<div class="mt-8">
-						if data.Authenticated {
-							if data.CurrentPlan == "monthly" {
-								<div class="text-indigo-600 font-medium py-2 px-4 text-center border border-indigo-600 rounded">
-									Current Plan
-								</div>
-							} else if canSubscribeToTier(data.CurrentPlan, "monthly") {
-								<form action="/checkout" method="POST">
-									<input type="hidden" name="tier" value="monthly" />
-									<button type="submit" class="block w-full bg-indigo-600 text-white font-semibold py-2 px-4 rounded hover:bg-indigo-700 transition duration-200 text-center">
-										Subscribe Monthly
-									</button>
-								</form>
-							} else {
-								<div class="text-gray-400 font-medium py-2 px-4 text-center">
-									Not Available
-								</div>
-							}
-						} else {
-							<a href="/login" class="block w-full bg-indigo-600 text-white font-semibold py-2 px-4 rounded hover:bg-indigo-700 transition duration-200 text-center">
-								Login to Subscribe
-							</a>
-						}
-					</div>
-				</div>
-
-				<!-- Yearly Plan -->
-				<div class="border border-gray-200 rounded-lg shadow-sm p-6 bg-white relative">
-					<!-- Popular badge -->
-					<div class="absolute top-0 right-0 -mt-2 -mr-2">
-						<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-							Popular
-						</span>
-					</div>
-					<h2 class="text-2xl font-semibold text-gray-900">Loving It</h2>
-					<p class="mt-4 text-sm text-gray-500">Best value</p>
-					<p class="mt-8">
-						<span class="text-4xl font-extrabold text-gray-900">$30</span>
-						<span class="text-base font-medium text-gray-500">/yr</span>
-					</p>
-					<ul class="mt-6 space-y-3">
-						<li class="flex items-start">
-							<span class="text-green-500 flex-shrink-0 mr-2">✓</span>
-							<span class="text-sm text-gray-500">Unlimited guns/ammo*</span>
-						</li>
-						<li class="flex items-start">
-							<span class="text-green-500 flex-shrink-0 mr-2">✓</span>
-							<span class="text-sm text-gray-500">Unlimited range days*</span>
-						</li>
-						<li class="flex items-start">
-							<span class="text-green-500 flex-shrink-0 mr-2">✓</span>
-							<span class="text-sm text-gray-500">Unlimited maintenance records*</span>
-						</li>
-						<li class="flex items-start">
-							<span class="text-green-500 flex-shrink-0 mr-2">✓</span>
-							<span class="text-sm text-gray-500">Cancel anytime</span>
-						</li>
-					</ul>
-					<div class="mt-8">
-						if data.Authenticated {
-							if data.CurrentPlan == "yearly" {
-								<div class="text-green-600 font-medium py-2 px-4 text-center border border-green-600 rounded">
-									Current Plan
-								</div>
-							} else if canSubscribeToTier(data.CurrentPlan, "yearly") {
-								<form action="/checkout" method="POST">
-									<input type="hidden" name="tier" value="yearly" />
-									<button type="submit" class="block w-full bg-green-600 text-white font-semibold py-2 px-4 rounded hover:bg-green-700 transition duration-200 text-center">
-										Subscribe Yearly
-									</button>
-								</form>
-							} else {
-								<div class="text-gray-400 font-medium py-2 px-4 text-center">
-									Not Available
-								</div>
-							}
-						} else {
-							<a href="/login" class="block w-full bg-green-600 text-white font-semibold py-2 px-4 rounded hover:bg-green-700 transition duration-200 text-center">
-								Login to Subscribe
-							</a>
-						}
-					</div>
-				</div>
-
-				<!-- Lifetime Plan -->
-				<div class="border border-gray-200 rounded-lg shadow-sm p-6 bg-white">
-					<h2 class="text-2xl font-semibold text-gray-900">Supporter</h2>
-					<p class="mt-4 text-sm text-gray-500">Forever access</p>
-					<p class="mt-8">
-						<span class="text-4xl font-extrabold text-gray-900">$100</span>
-						<span class="text-base font-medium text-gray-500">/lifetime</span>
-					</p>
-					<ul class="mt-6 space-y-3">
-						<li class="flex items-start">
-							<span class="text-green-500 flex-shrink-0 mr-2">✓</span>
-							<span class="text-sm text-gray-500">Unlimited guns/ammo*</span>
-						</li>
-						<li class="flex items-start">
-							<span class="text-green-500 flex-shrink-0 mr-2">✓</span>
-							<span class="text-sm text-gray-500">Unlimited range days*</span>
-						</li>
-						<li class="flex items-start">
-							<span class="text-green-500 flex-shrink-0 mr-2">✓</span>
-							<span class="text-sm text-gray-500">Unlimited maintenance records*</span>
-						</li>
-						<li class="flex items-start">
-							<span class="text-green-500 flex-shrink-0 mr-2">✓</span>
-							<span class="text-sm text-gray-500">First to access new features*</span>
-						</li>
-					</ul>
-					<div class="mt-8">
-						if data.Authenticated {
-							if data.CurrentPlan == "lifetime" {
-								<div class="text-purple-600 font-medium py-2 px-4 text-center border border-purple-600 rounded">
-									Current Plan
-								</div>
-							} else if canSubscribeToTier(data.CurrentPlan, "lifetime") {
-								<form action="/checkout" method="POST">
-									<input type="hidden" name="tier" value="lifetime" />
-									<button type="submit" class="block w-full bg-purple-600 text-white font-semibold py-2 px-4 rounded hover:bg-purple-700 transition duration-200 text-center">
-										Get Lifetime Access
-									</button>
-								</form>
-							} else {
-								<div class="text-gray-400 font-medium py-2 px-4 text-center">
-									Not Available
-								</div>
-							}
-						} else {
-							<a href="/login" class="block w-full bg-purple-600 text-white font-semibold py-2 px-4 rounded hover:bg-purple-700 transition duration-200 text-center">
-								Login to Subscribe
-							</a>
-						}
-					</div>
-				</div>
-			</div>
-
-			<!-- Asterisk Key -->
-			<div class="text-center mt-6 mb-12">
-				<p class="text-sm text-gray-500">* = When available</p>
-			</div>
-
-			<!-- Two-column layout for Big Baller and FAQ -->
-			<div class="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
-				<!-- Premium Lifetime Plan (Big Baller) -->
-				<div class="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-lg shadow-lg overflow-hidden">
-					<div class="p-8">
-						<h2 class="text-3xl font-extrabold text-white">
-							Big Baller
-							<span class="block text-lg font-medium mt-1">You shouldn't have, but thanks.</span>
+				<!-- Content with translucent background -->
+				<div class="relative z-10 bg-white bg-opacity-90 p-8 rounded-lg">
+					<!-- Header -->
+					<div class="text-center mb-12">
+						<h2 class="text-3xl font-extrabold text-gray-900 sm:text-4xl">
+							Simple, transparent pricing
 						</h2>
-						<p class="mt-4 text-lg leading-6 text-white">
-							For our biggest supporters who want to help us grow.
+						<p class="mt-4 text-lg text-gray-600">
+							Choose the plan that works best for you
 						</p>
-						<ul class="mt-8 space-y-4">
-							<li class="flex items-start">
-								<span class="text-white flex-shrink-0 mr-2">✓</span>
-								<span class="text-base font-medium text-white">Everything the site has.</span>
-							</li>
-							<li class="flex items-start">
-								<span class="text-white flex-shrink-0 mr-2">✓</span>
-								<span class="text-base font-medium text-white">Christmas cards. Seriously, send your address and they are yours.</span>
-							</li>
-							<li class="flex items-start">
-								<span class="text-white flex-shrink-0 mr-2">✓</span>
-								<span class="text-base font-medium text-white">If it grows and makers provide goodies, they go to you first. if we ever get spiff, you get spiff.</span>
-							</li>
-							<li class="flex items-start">
-								<span class="text-white flex-shrink-0 mr-2">✓</span>
-								<span class="text-base font-medium text-white">We do not recommend anyone buy this package. But, this investment would help us grow and you get any benefit we can provide.</span>
-							</li>
-						</ul>
-						<div class="mt-8">
-							if data.Authenticated {
-								if data.CurrentPlan == "premium_lifetime" {
-									<div class="text-white font-medium py-2 px-4 text-center border border-white rounded">
-										Current Plan
-									</div>
-								} else if canSubscribeToTier(data.CurrentPlan, "premium_lifetime") {
-									<form action="/checkout" method="POST">
-										<input type="hidden" name="tier" value="premium_lifetime" />
-										<button type="submit" class="block w-full bg-white text-indigo-600 font-semibold py-2 px-4 rounded hover:bg-gray-100 transition duration-200 text-center">
-											Buy Premium Lifetime - $1000
-										</button>
-									</form>
+					</div>
+
+					<!-- Pricing Cards -->
+					<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+					
+						<!-- Free Plan -->
+						<div class="border border-gray-200 rounded-lg shadow-sm p-6 bg-white bg-opacity-60">
+							<h2 class="text-2xl font-semibold text-gray-900">Free</h2>
+							<p class="mt-4 text-sm text-gray-500">Basic access</p>
+							<p class="mt-8">
+								<span class="text-4xl font-extrabold text-gray-900">$0</span>
+								<span class="text-base font-medium text-gray-500">/forever</span>
+							</p>
+							<ul class="mt-6 space-y-3">
+								<li class="flex items-start">
+									<span class="text-green-500 flex-shrink-0 mr-2">✓</span>
+									<span class="text-sm text-gray-500">Store up to 2 guns</span>
+								</li>
+								<li class="flex items-start">
+									<span class="text-green-500 flex-shrink-0 mr-2">✓</span>
+									<span class="text-sm text-gray-500">Store up to 4 ammunition*</span>
+								</li>
+								<li class="flex items-start">
+									<span class="text-green-500 flex-shrink-0 mr-2">✓</span>
+									<span class="text-sm text-gray-500">Limited range days*</span>
+								</li>
+								<li class="flex items-start">
+									<span class="text-green-500 flex-shrink-0 mr-2">✓</span>
+									<span class="text-sm text-gray-500">No maintenance records*</span>
+								</li>
+							</ul>
+							<div class="mt-8">
+								<div class="text-gray-500 font-medium py-2 px-4 text-center">
+									Default Free Plan
+								</div>
+							</div>
+						</div>
+
+						<!-- Monthly Plan -->
+						<div class="border border-gray-200 rounded-lg shadow-sm p-6 bg-white bg-opacity-60">
+							<h2 class="text-2xl font-semibold text-gray-900">Liking It</h2>
+							<p class="mt-4 text-sm text-gray-500">Flexible option</p>
+							<p class="mt-8">
+								<span class="text-4xl font-extrabold text-gray-900">$5</span>
+								<span class="text-base font-medium text-gray-500">/mo</span>
+							</p>
+							<ul class="mt-6 space-y-3">
+								<li class="flex items-start">
+									<span class="text-green-500 flex-shrink-0 mr-2">✓</span>
+									<span class="text-sm text-gray-500">Unlimited guns/ammo*</span>
+								</li>
+								<li class="flex items-start">
+									<span class="text-green-500 flex-shrink-0 mr-2">✓</span>
+									<span class="text-sm text-gray-500">Unlimited range days*</span>
+								</li>
+								<li class="flex items-start">
+									<span class="text-green-500 flex-shrink-0 mr-2">✓</span>
+									<span class="text-sm text-gray-500">Unlimited maintenance records*</span>
+								</li>
+								<li class="flex items-start">
+									<span class="text-green-500 flex-shrink-0 mr-2">✓</span>
+									<span class="text-sm text-gray-500">Cancel anytime</span>
+								</li>
+							</ul>
+							<div class="mt-8">
+								if data.Authenticated {
+									if data.CurrentPlan == "monthly" {
+										<div class="text-indigo-600 font-medium py-2 px-4 text-center border border-indigo-600 rounded">
+											Current Plan
+										</div>
+									} else if canSubscribeToTier(data.CurrentPlan, "monthly") {
+										<form action="/checkout" method="POST">
+											<input type="hidden" name="tier" value="monthly" />
+											<button type="submit" class="block w-full bg-indigo-600 text-white font-semibold py-2 px-4 rounded hover:bg-indigo-700 transition duration-200 text-center">
+												Subscribe Monthly
+											</button>
+										</form>
+									} else {
+										<div class="text-gray-400 font-medium py-2 px-4 text-center">
+											Not Available
+										</div>
+									}
 								} else {
-									<div class="text-gray-300 font-medium py-2 px-4 text-center">
-										Not Available
-									</div>
+									<a href="/login" class="block w-full bg-indigo-600 text-white font-semibold py-2 px-4 rounded hover:bg-indigo-700 transition duration-200 text-center">
+										Login to Subscribe
+									</a>
 								}
-							} else {
-								<a href="/login" class="block w-full bg-white text-indigo-600 font-semibold py-2 px-4 rounded hover:bg-gray-100 transition duration-200 text-center">
-									Login to Subscribe
-								</a>
-							}
+							</div>
+						</div>
+
+						<!-- Yearly Plan -->
+						<div class="border border-gray-200 rounded-lg shadow-sm p-6 bg-white bg-opacity-60 relative">
+							<!-- Popular badge -->
+							<div class="absolute top-0 right-0 -mt-2 -mr-2">
+								<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+									Popular
+								</span>
+							</div>
+							<h2 class="text-2xl font-semibold text-gray-900">Loving It</h2>
+							<p class="mt-4 text-sm text-gray-500">Best value</p>
+							<p class="mt-8">
+								<span class="text-4xl font-extrabold text-gray-900">$30</span>
+								<span class="text-base font-medium text-gray-500">/yr</span>
+							</p>
+							<ul class="mt-6 space-y-3">
+								<li class="flex items-start">
+									<span class="text-green-500 flex-shrink-0 mr-2">✓</span>
+									<span class="text-sm text-gray-500">Unlimited guns/ammo*</span>
+								</li>
+								<li class="flex items-start">
+									<span class="text-green-500 flex-shrink-0 mr-2">✓</span>
+									<span class="text-sm text-gray-500">Unlimited range days*</span>
+								</li>
+								<li class="flex items-start">
+									<span class="text-green-500 flex-shrink-0 mr-2">✓</span>
+									<span class="text-sm text-gray-500">Unlimited maintenance records*</span>
+								</li>
+								<li class="flex items-start">
+									<span class="text-green-500 flex-shrink-0 mr-2">✓</span>
+									<span class="text-sm text-gray-500">Cancel anytime</span>
+								</li>
+							</ul>
+							<div class="mt-8">
+								if data.Authenticated {
+									if data.CurrentPlan == "yearly" {
+										<div class="text-green-600 font-medium py-2 px-4 text-center border border-green-600 rounded">
+											Current Plan
+										</div>
+									} else if canSubscribeToTier(data.CurrentPlan, "yearly") {
+										<form action="/checkout" method="POST">
+											<input type="hidden" name="tier" value="yearly" />
+											<button type="submit" class="block w-full bg-green-600 text-white font-semibold py-2 px-4 rounded hover:bg-green-700 transition duration-200 text-center">
+												Subscribe Yearly
+											</button>
+										</form>
+									} else {
+										<div class="text-gray-400 font-medium py-2 px-4 text-center">
+											Not Available
+										</div>
+									}
+								} else {
+									<a href="/login" class="block w-full bg-green-600 text-white font-semibold py-2 px-4 rounded hover:bg-green-700 transition duration-200 text-center">
+										Login to Subscribe
+									</a>
+								}
+							</div>
+						</div>
+
+						<!-- Lifetime Plan -->
+						<div class="border border-gray-200 rounded-lg shadow-sm p-6 bg-white bg-opacity-60">
+							<h2 class="text-2xl font-semibold text-gray-900">Supporter</h2>
+							<p class="mt-4 text-sm text-gray-500">Forever access</p>
+							<p class="mt-8">
+								<span class="text-4xl font-extrabold text-gray-900">$100</span>
+								<span class="text-base font-medium text-gray-500">/lifetime</span>
+							</p>
+							<ul class="mt-6 space-y-3">
+								<li class="flex items-start">
+									<span class="text-green-500 flex-shrink-0 mr-2">✓</span>
+									<span class="text-sm text-gray-500">Unlimited guns/ammo*</span>
+								</li>
+								<li class="flex items-start">
+									<span class="text-green-500 flex-shrink-0 mr-2">✓</span>
+									<span class="text-sm text-gray-500">Unlimited range days*</span>
+								</li>
+								<li class="flex items-start">
+									<span class="text-green-500 flex-shrink-0 mr-2">✓</span>
+									<span class="text-sm text-gray-500">Unlimited maintenance records*</span>
+								</li>
+								<li class="flex items-start">
+									<span class="text-green-500 flex-shrink-0 mr-2">✓</span>
+									<span class="text-sm text-gray-500">First to access new features*</span>
+								</li>
+							</ul>
+							<div class="mt-8">
+								if data.Authenticated {
+									if data.CurrentPlan == "lifetime" {
+										<div class="text-purple-600 font-medium py-2 px-4 text-center border border-purple-600 rounded">
+											Current Plan
+										</div>
+									} else if canSubscribeToTier(data.CurrentPlan, "lifetime") {
+										<form action="/checkout" method="POST">
+											<input type="hidden" name="tier" value="lifetime" />
+											<button type="submit" class="block w-full bg-purple-600 text-white font-semibold py-2 px-4 rounded hover:bg-purple-700 transition duration-200 text-center">
+												Get Lifetime Access
+											</button>
+										</form>
+									} else {
+										<div class="text-gray-400 font-medium py-2 px-4 text-center">
+											Not Available
+										</div>
+									}
+								} else {
+									<a href="/login" class="block w-full bg-purple-600 text-white font-semibold py-2 px-4 rounded hover:bg-purple-700 transition duration-200 text-center">
+										Login to Subscribe
+									</a>
+								}
+							</div>
 						</div>
 					</div>
-				</div>
 
-				<!-- FAQ Section -->
-				<div class="bg-white border border-gray-200 rounded-lg shadow-sm p-8">
-					<h2 class="text-2xl font-extrabold text-gray-900 mb-6">
-						Frequently asked questions
-					</h2>
-					<dl class="space-y-6 divide-y divide-gray-200">
-						<div class="pt-6 first:pt-0">
-							<dt class="text-lg font-medium text-gray-900">
-								What's included in the free plan?
-							</dt>
-							<dd class="mt-2 text-base text-gray-500">
-								The free plan gives you basic access to track your firearms and accessories. You can add a limited number of items and access basic features.
-							</dd>
+					<!-- Asterisk Key -->
+					<div class="text-center mt-6 mb-12">
+						<p class="text-sm text-gray-500">* = When available</p>
+					</div>
+
+					<!-- Two-column layout for Big Baller and FAQ -->
+					<div class="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
+						<!-- Premium Lifetime Plan (Big Baller) -->
+						<div class="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-lg shadow-lg overflow-hidden opacity-75">
+							<div class="p-8">
+								<h2 class="text-3xl font-extrabold text-white">
+									Big Baller
+									<span class="block text-lg font-medium mt-1">You shouldn't have, but thanks.</span>
+								</h2>
+								<p class="mt-4 text-lg leading-6 text-white">
+									For our biggest supporters who want to help us grow.
+								</p>
+								<ul class="mt-8 space-y-4">
+									<li class="flex items-start">
+										<span class="text-white flex-shrink-0 mr-2">✓</span>
+										<span class="text-base font-medium text-white">Everything the site has.</span>
+									</li>
+									<li class="flex items-start">
+										<span class="text-white flex-shrink-0 mr-2">✓</span>
+										<span class="text-base font-medium text-white">Christmas cards. Seriously, send your address and they are yours.</span>
+									</li>
+									<li class="flex items-start">
+										<span class="text-white flex-shrink-0 mr-2">✓</span>
+										<span class="text-base font-medium text-white">If it grows and makers provide goodies, they go to you first. if we ever get spiff, you get spiff.</span>
+									</li>
+									<li class="flex items-start">
+										<span class="text-white flex-shrink-0 mr-2">✓</span>
+										<span class="text-base font-medium text-white">We do not recommend anyone buy this package. But, this investment would help us grow and you get any benefit we can provide.</span>
+									</li>
+								</ul>
+								<div class="mt-8">
+									if data.Authenticated {
+										if data.CurrentPlan == "premium_lifetime" {
+											<div class="text-white font-medium py-2 px-4 text-center border border-white rounded">
+												Current Plan
+											</div>
+										} else if canSubscribeToTier(data.CurrentPlan, "premium_lifetime") {
+											<form action="/checkout" method="POST">
+												<input type="hidden" name="tier" value="premium_lifetime" />
+												<button type="submit" class="block w-full bg-white text-indigo-600 font-semibold py-2 px-4 rounded hover:bg-gray-100 transition duration-200 text-center">
+													Buy Premium Lifetime - $1000
+												</button>
+											</form>
+										} else {
+											<div class="text-gray-300 font-medium py-2 px-4 text-center">
+												Not Available
+											</div>
+										}
+									} else {
+										<a href="/login" class="block w-full bg-white text-indigo-600 font-semibold py-2 px-4 rounded hover:bg-gray-100 transition duration-200 text-center">
+											Login to Subscribe
+										</a>
+									}
+								</div>
+							</div>
 						</div>
-						<div class="pt-6">
-							<dt class="text-lg font-medium text-gray-900">
-								Can I upgrade or cancel my plan?
-							</dt>
-							<dd class="mt-2 text-base text-gray-500">
-								Yes, you can upgrade your plan or cancel at any time and use the service for the amount of time you paid. There are no refunds issued for cancellation.
-							</dd>
+
+						<!-- FAQ Section -->
+						<div class="bg-white bg-opacity-75 border border-gray-200 rounded-lg shadow-sm p-8">
+							<h2 class="text-2xl font-extrabold text-gray-900 mb-6">
+								Frequently asked questions
+							</h2>
+							<dl class="space-y-6 divide-y divide-gray-200">
+								<div class="pt-6 first:pt-0">
+									<dt class="text-lg font-medium text-gray-900">
+										What's included in the free plan?
+									</dt>
+									<dd class="mt-2 text-base text-gray-500">
+										The free plan gives you basic access to track your firearms and accessories. You can add a limited number of items and access basic features.
+									</dd>
+								</div>
+								<div class="pt-6">
+									<dt class="text-lg font-medium text-gray-900">
+										Can I upgrade or cancel my plan?
+									</dt>
+									<dd class="mt-2 text-base text-gray-500">
+										Yes, you can upgrade your plan or cancel at any time and use the service for the amount of time you paid. There are no refunds issued for cancellation.
+									</dd>
+								</div>
+								<div class="pt-6">
+									<dt class="text-lg font-medium text-gray-900">
+										What payment methods do you accept?
+									</dt>
+									<dd class="mt-2 text-base text-gray-500">
+										We accept all major credit cards through our secure payment processor, Stripe.
+									</dd>
+								</div>
+								<div class="pt-6">
+									<dt class="text-lg font-medium text-gray-900">
+										Is my data secure?
+									</dt>
+									<dd class="mt-2 text-base text-gray-500">
+										Yes, we take security seriously. All data is encrypted and stored securely. We never share your personal information with third parties.
+									</dd>
+								</div>
+							</dl>
 						</div>
-						<div class="pt-6">
-							<dt class="text-lg font-medium text-gray-900">
-								What payment methods do you accept?
-							</dt>
-							<dd class="mt-2 text-base text-gray-500">
-								We accept all major credit cards through our secure payment processor, Stripe.
-							</dd>
-						</div>
-						<div class="pt-6">
-							<dt class="text-lg font-medium text-gray-900">
-								Is my data secure?
-							</dt>
-							<dd class="mt-2 text-base text-gray-500">
-								Yes, we take security seriously. All data is encrypted and stored securely. We never share your personal information with third parties.
-							</dd>
-						</div>
-					</dl>
+					</div>
 				</div>
 			</div>
 		</div>

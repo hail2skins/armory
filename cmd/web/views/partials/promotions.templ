@@ -16,7 +16,10 @@ templ PromotionBanner(data data.AuthData) {
 					<div class="pl-4 flex items-center">
 						<span class="font-bold text-lg">{ promo.Name }</span>
 					</div>
-					<div class="flex-1 text-center">
+					<div class="flex-1 text-center flex items-center justify-center">
+						if promo.Banner != "" {
+							<img src={ promo.Banner } alt="Promotion" class="h-12 mr-3 rounded" />
+						}
 						<p class="text-md">Register now and get <span class="font-bold">{ strconv.Itoa(promo.BenefitDays) } days free!</span></p>
 					</div>
 					<div class="pr-4 flex items-center justify-end">
