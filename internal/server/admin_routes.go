@@ -21,6 +21,9 @@ func (s *Server) RegisterAdminRoutes(r *gin.Engine, authController *controller.A
 	adminPromotionController := controller.NewAdminPromotionController(s.db)
 	adminUserController := controller.NewAdminUserController(s.db)
 
+	// Create Stripe security controller
+	stripeSecurityController := controller.NewStripeSecurityController(s.ipFilterService)
+
 	// Use the shared Casbin auth instance from the server
 	casbinAuth := s.casbinAuth
 	if casbinAuth == nil {
@@ -98,10 +101,24 @@ func (s *Server) RegisterAdminRoutes(r *gin.Engine, authController *controller.A
 			adminGroup.GET("/dashboard", casbinAuth.Authorize("dashboard", "read"), adminDashboardController.Dashboard)
 			adminGroup.GET("/detailed-health", casbinAuth.Authorize("dashboard", "read"), adminDashboardController.DetailedHealth)
 			adminGroup.GET("/error-metrics", casbinAuth.Authorize("dashboard", "read"), adminDashboardController.ErrorMetrics)
+
+			// Stripe security routes
+			adminGroup.GET("/stripe-security", casbinAuth.Authorize("admin", "read"), stripeSecurityController.Dashboard)
+			adminGroup.POST("/stripe-security/refresh", casbinAuth.Authorize("admin", "write"), stripeSecurityController.RefreshIPRanges)
+			adminGroup.POST("/stripe-security/toggle-filtering", casbinAuth.Authorize("admin", "write"), stripeSecurityController.ToggleIPFilter)
+			adminGroup.GET("/stripe-security/test-ip", casbinAuth.Authorize("admin", "read"), stripeSecurityController.TestIPForm)
+			adminGroup.POST("/stripe-security/check-ip", casbinAuth.Authorize("admin", "read"), stripeSecurityController.CheckIP)
 		} else {
 			adminGroup.GET("/dashboard", adminDashboardController.Dashboard)
 			adminGroup.GET("/detailed-health", adminDashboardController.DetailedHealth)
 			adminGroup.GET("/error-metrics", adminDashboardController.ErrorMetrics)
+
+			// Stripe security routes
+			adminGroup.GET("/stripe-security", stripeSecurityController.Dashboard)
+			adminGroup.POST("/stripe-security/refresh", stripeSecurityController.RefreshIPRanges)
+			adminGroup.POST("/stripe-security/toggle-filtering", stripeSecurityController.ToggleIPFilter)
+			adminGroup.GET("/stripe-security/test-ip", stripeSecurityController.TestIPForm)
+			adminGroup.POST("/stripe-security/check-ip", stripeSecurityController.CheckIP)
 		}
 
 		// Manufacturer routes

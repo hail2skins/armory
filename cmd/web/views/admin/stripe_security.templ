@@ -1,0 +1,409 @@
+package admin
+
+import (
+	"github.com/hail2skins/armory/cmd/web/views/data"
+	"github.com/hail2skins/armory/cmd/web/views/partials"
+	"time"
+	"fmt"
+	"context"
+	"io"
+)
+
+// IPRangeData represents an IP range for display
+type IPRangeData struct {
+	CIDR   string
+	Source string
+}
+
+// StripeSecurityData contains data for the stripe security dashboard
+type StripeSecurityData struct {
+	*data.AuthData
+	Status struct {
+		LastUpdate time.Time
+		NumRanges  int
+		Failed     bool
+		IsEnabled  bool
+		OverrideSet bool
+	}
+	IPRanges []IPRangeData
+}
+
+// StripeSecurityPage renders the Stripe security dashboard
+templ StripeSecurityPage(data *StripeSecurityData) {
+	@partials.Base(*data.AuthData, templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+		_, err := io.WriteString(w, `
+		<div class="flex">
+		`)
+		if err != nil {
+			return err
+		}
+		
+		err = partials.AdminSidebar(data.CurrentPath).Render(ctx, w)
+		if err != nil {
+			return err
+		}
+		
+		_, err = io.WriteString(w, `
+			<div class="flex-1 p-10 ml-64">
+				<div class="mb-6">
+					<h1 class="text-3xl font-bold text-gunmetal-900 mb-6">Stripe Security Dashboard</h1>
+		`)
+		if err != nil {
+			return err
+		}
+		
+		_, err = io.WriteString(w, `
+					<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+						<!-- Status Panel -->
+						<div class="bg-white p-6 rounded-lg shadow-md border border-gray-200">
+							<div class="mb-4">
+								<h2 class="text-xl font-semibold mb-2 text-gunmetal-800">IP Filtering Status</h2>
+								<div class="flex items-center mb-2">
+									<div class="w-3 h-3 rounded-full mr-2 `)
+		if err != nil {
+			return err
+		}
+
+		// Status indicator color
+		if data.Status.IsEnabled {
+			if data.Status.Failed {
+				_, err = io.WriteString(w, `bg-yellow-500`)
+			} else {
+				_, err = io.WriteString(w, `bg-green-500`)
+			}
+		} else {
+			_, err = io.WriteString(w, `bg-red-500`)
+		}
+		if err != nil {
+			return err
+		}
+		
+		_, err = io.WriteString(w, `"></div>
+									<span class="text-gray-700">`)
+		if err != nil {
+			return err
+		}
+						
+		// Status text
+		if data.Status.IsEnabled {
+			if data.Status.Failed {
+				_, err = io.WriteString(w, `Enabled (Warning: Last fetch failed)`)
+			} else {
+				_, err = io.WriteString(w, `Enabled and Active`)
+			}
+		} else {
+			_, err = io.WriteString(w, `Disabled`)
+		}
+		if err != nil {
+			return err
+		}
+		
+		_, err = io.WriteString(w, `</span>
+								</div>
+								
+								<div class="text-sm text-gray-700 mb-1">
+									<span class="font-medium">IP Ranges Loaded:</span> `)
+		if err != nil {
+			return err
+		}
+		
+		_, err = io.WriteString(w, fmt.Sprintf("%d", data.Status.NumRanges))
+		if err != nil {
+			return err
+		}
+		
+		_, err = io.WriteString(w, `
+								</div>
+								
+								<div class="text-sm text-gray-700 mb-1">
+									<span class="font-medium">Last Updated:</span> `)
+		if err != nil {
+			return err
+		}
+		
+		if !data.Status.LastUpdate.IsZero() {
+			_, err = io.WriteString(w, data.Status.LastUpdate.Format("Jan 2, 2006 15:04:05 MST"))
+		} else {
+			_, err = io.WriteString(w, `Never`)
+		}
+		if err != nil {
+			return err
+		}
+		
+		_, err = io.WriteString(w, `
+								</div>
+								
+								<div class="text-sm text-gray-700">
+									<span class="font-medium">Override Secret Set:</span> `)
+		if err != nil {
+			return err
+		}
+		
+		if data.Status.OverrideSet {
+			_, err = io.WriteString(w, `Yes`)
+		} else {
+			_, err = io.WriteString(w, `No`)
+		}
+		if err != nil {
+			return err
+		}
+		
+		_, err = io.WriteString(w, `
+								</div>
+							</div>
+							
+							<div class="mb-4">
+								<form method="post" action="/admin/stripe-security/toggle-filtering" class="mb-2">
+									<button type="submit" class="px-4 py-2 bg-gunmetal-700 hover:bg-gunmetal-800 text-white rounded font-medium transition">
+										`)
+		if err != nil {
+			return err
+		}
+		
+		if data.Status.IsEnabled {
+			_, err = io.WriteString(w, `Disable IP Filtering`)
+		} else {
+			_, err = io.WriteString(w, `Enable IP Filtering`)
+		}
+		if err != nil {
+			return err
+		}
+		
+		_, err = io.WriteString(w, `
+									</button>
+								</form>
+								
+								<form method="post" action="/admin/stripe-security/refresh" class="mb-2">
+									<button type="submit" class="px-4 py-2 bg-brass-500 hover:bg-brass-600 text-white rounded font-medium transition">
+										Refresh IP Ranges
+									</button>
+								</form>
+								
+								<a href="/admin/stripe-security/test-ip" class="inline-block px-4 py-2 bg-gunmetal-500 hover:bg-gunmetal-600 text-white rounded font-medium transition">
+									Test IP Address
+								</a>
+							</div>
+							
+							<div class="text-sm text-gray-600">
+								<p>IP filtering helps secure your Stripe webhooks by only allowing requests from Stripe's IP addresses.</p>
+							</div>
+						</div>
+						
+						<!-- Configuration Panel -->
+						<div class="bg-white p-6 rounded-lg shadow-md border border-gray-200">
+							<h2 class="text-xl font-semibold mb-4 text-gunmetal-800">Configuration</h2>
+							
+							<div class="mb-6">
+								<h3 class="text-lg font-medium mb-2 text-gunmetal-700">Environment Variables</h3>
+								<div class="bg-gray-100 p-4 rounded font-mono text-sm mb-4">
+									<div class="mb-2"><span class="text-green-600">STRIPE_IP_FILTER_ENABLED</span>=<span class="text-blue-600">true</span></div>
+									<div><span class="text-green-600">STRIPE_IP_FILTER_OVERRIDE_SECRET</span>=<span class="text-blue-600">your-secure-secret</span></div>
+								</div>
+								<p class="text-sm text-gray-600">
+									Set these variables in your environment to configure IP filtering.
+									The override secret allows bypassing IP filtering for testing by including 
+									<code class="bg-gray-100 px-1 py-0.5 rounded">X-Stripe-Override: your-secure-secret</code> in the request header.
+								</p>
+							</div>
+							
+							<div>
+								<h3 class="text-lg font-medium mb-2 text-gunmetal-700">Webhook Integration</h3>
+								<p class="text-sm text-gray-600 mb-2">
+									Ensure your Stripe webhook endpoint verifies both IP addresses and signatures:
+								</p>
+								<div class="bg-gray-100 p-4 rounded font-mono text-sm">
+<pre>// Example code
+router.POST("/webhook", StripeIPFilterMiddleware(), func(c *gin.Context) {
+    // Process webhook after IP validation
+    payload, err := c.GetRawData()
+    // Verify signature using Stripe's SDK
+    event, err := webhook.ConstructEvent(
+        payload, c.GetHeader("Stripe-Signature"), webhookSecret)
+    // Handle the event...
+})</pre>
+								</div>
+							</div>
+						</div>
+					</div>
+					
+					<!-- IP Ranges Table -->
+					<div class="mt-8">
+						<h2 class="text-xl font-semibold mb-4 text-gunmetal-800">Stored IP Ranges</h2>
+						<div class="bg-white rounded-lg shadow-md border border-gray-200">
+							<div class="overflow-x-auto">
+								<table class="min-w-full divide-y divide-gray-200">
+									<thead class="bg-gunmetal-100">
+										<tr>
+											<th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gunmetal-600 uppercase tracking-wider">IP Range</th>
+											<th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gunmetal-600 uppercase tracking-wider">Source</th>
+										</tr>
+									</thead>
+									<tbody class="bg-white divide-y divide-gray-200">
+										`)
+		if err != nil {
+			return err
+		}
+		
+		if len(data.IPRanges) == 0 {
+			_, err = io.WriteString(w, `
+										<tr>
+											<td colspan="2" class="px-6 py-4 text-center text-sm text-gray-500">
+												No IP ranges loaded. Try refreshing the IP ranges.
+											</td>
+										</tr>
+										`)
+			if err != nil {
+				return err
+			}
+		} else {
+			for _, ipRange := range data.IPRanges {
+				_, err = io.WriteString(w, `
+										<tr>
+											<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">`+ipRange.CIDR+`</td>
+											<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">`+ipRange.Source+`</td>
+										</tr>
+										`)
+				if err != nil {
+					return err
+				}
+			}
+		}
+		
+		_, err = io.WriteString(w, `
+									</tbody>
+								</table>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		`)
+		return err
+	}))
+}
+
+// IPTestResultPage renders the result of an IP test
+templ IPTestResultPage(data *data.AuthData, ip string, allowed bool) {
+	@partials.Base(*data, templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+		_, err := io.WriteString(w, `
+		<div class="flex">
+		`)
+		if err != nil {
+			return err
+		}
+		
+		err = partials.AdminSidebar(data.CurrentPath).Render(ctx, w)
+		if err != nil {
+			return err
+		}
+		
+		_, err = io.WriteString(w, `
+			<div class="flex-1 p-10 ml-64">
+				<div class="mb-6">
+					<h1 class="text-3xl font-bold text-gunmetal-900 mb-6">IP Test Results</h1>
+					
+					<div class="bg-white rounded-lg shadow-md border border-gray-200 mb-8">
+						<div class="p-6 border-b border-gray-200">
+							<h2 class="text-xl font-bold text-gunmetal-900">IP Verification Result</h2>
+							<p class="text-gray-600 mt-2">
+								Results for IP address: <span class="font-semibold">`+ip+`</span>
+							</p>
+						</div>
+						<div class="p-6">
+							<div class="flex items-center mb-4">
+								<div class="w-4 h-4 rounded-full mr-2 `)
+		if err != nil {
+			return err
+		}
+		
+		if allowed {
+			_, err = io.WriteString(w, `bg-green-500`)
+		} else {
+			_, err = io.WriteString(w, `bg-red-500`)
+		}
+		if err != nil {
+			return err
+		}
+		
+		_, err = io.WriteString(w, `"></div>
+								<span class="text-lg `)
+		if err != nil {
+			return err
+		}
+		
+		if allowed {
+			_, err = io.WriteString(w, `text-green-700`)
+		} else {
+			_, err = io.WriteString(w, `text-red-700`) 
+		}
+		if err != nil {
+			return err
+		}
+		
+		_, err = io.WriteString(w, `">
+									`)
+		if err != nil {
+			return err
+		}
+		
+		if allowed {
+			_, err = io.WriteString(w, `IP is recognized as a Stripe IP`)
+		} else {
+			_, err = io.WriteString(w, `IP is NOT recognized as a Stripe IP`)
+		}
+		if err != nil {
+			return err
+		}
+		
+		_, err = io.WriteString(w, `
+								</span>
+							</div>
+							
+							<div class="py-4 text-sm text-gray-600">
+								<p class="mb-2">
+									`)
+		if err != nil {
+			return err
+		}
+		
+		if allowed {
+			_, err = io.WriteString(w, `
+									This IP address matches one of the Stripe IP ranges in our database.
+									Webhook requests from this IP would be allowed by the IP filter.
+									`)
+		} else {
+			_, err = io.WriteString(w, `
+									This IP address does not match any Stripe IP ranges in our database.
+									Webhook requests from this IP would be blocked by the IP filter.
+									`)
+		}
+		if err != nil {
+			return err
+		}
+		
+		_, err = io.WriteString(w, `
+								</p>
+								<p>
+									Note: IP verification is just one layer of security. Always ensure 
+									webhook signatures are also verified using Stripe's SDK.
+								</p>
+							</div>
+							
+							<div class="pt-4 border-t border-gray-200">
+								<a href="/admin/stripe-security/test-ip" class="bg-gunmetal-700 hover:bg-gunmetal-800 text-white px-4 py-2 rounded font-medium transition">
+									Test Another IP
+								</a>
+								<a href="/admin/stripe-security" class="ml-2 text-brass-600 hover:text-brass-800">
+									Back to Security Dashboard
+								</a>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		`)
+		return err
+	}))
+} 
