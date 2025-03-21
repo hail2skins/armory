@@ -1,15 +1,19 @@
 package integration
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/hail2skins/armory/internal/controller"
 	"github.com/hail2skins/armory/internal/database"
+	"github.com/hail2skins/armory/internal/models"
 	"github.com/hail2skins/armory/internal/testutils"
 	"github.com/stretchr/testify/suite"
 	"golang.org/x/crypto/bcrypt"
@@ -77,6 +81,11 @@ func (s *AuthIntegrationSuite) setupRoutes() {
 	// Owner routes
 	s.Router.GET("/owner", s.OwnerController.LandingPage)
 	s.Router.GET("/owner/guns/arsenal", s.OwnerController.Arsenal)
+	s.Router.GET("/owner/guns/new", s.OwnerController.New)
+	s.Router.POST("/owner/guns", s.OwnerController.Create)
+	s.Router.GET("/owner/guns/:id", s.OwnerController.Show)
+	s.Router.GET("/owner/guns/:id/edit", s.OwnerController.Edit)
+	s.Router.POST("/owner/guns/:id/update", s.OwnerController.Update)
 }
 
 // TestLoginAndOwnerPage tests the complete login flow and owner page content
@@ -91,6 +100,15 @@ func (s *AuthIntegrationSuite) TestLoginAndOwnerPage() {
 
 	// Save the user directly to the database
 	err := s.DB.Create(testUser).Error
+	s.NoError(err)
+
+	// Create seed data for calibers, and manufacturers - use existing weapon type
+	caliber := models.Caliber{Caliber: "5.56 NATO", Popularity: 100}
+	err = s.DB.Create(&caliber).Error
+	s.NoError(err)
+
+	manufacturer := models.Manufacturer{Name: "Smith & Wesson", Popularity: 100}
+	err = s.DB.Create(&manufacturer).Error
 	s.NoError(err)
 
 	// Verify the user was saved correctly
@@ -181,7 +199,329 @@ func (s *AuthIntegrationSuite) TestLoginAndOwnerPage() {
 	s.NotContains(arsenalBody, `href="/login"`, "Arsenal page should not have Login link")
 	s.NotContains(arsenalBody, `href="/register"`, "Arsenal page should not have Register link")
 
-	// Clean up - using the DB directly since Service doesn't expose Delete
+	// Now test the "Add New Firearm" page
+	newGunReq, _ := http.NewRequest("GET", "/owner/guns/new", nil)
+	for _, cookie := range cookies {
+		newGunReq.AddCookie(cookie)
+	}
+	newGunResp := httptest.NewRecorder()
+	s.Router.ServeHTTP(newGunResp, newGunReq)
+
+	// Check status code
+	s.Equal(http.StatusOK, newGunResp.Code, "New gun page should return 200 OK")
+
+	// Get the response body as a string
+	newGunBody := newGunResp.Body.String()
+
+	// Verify the content of the new gun page
+	s.Contains(newGunBody, "Add New Firearm", "Page should have correct title")
+	s.Contains(newGunBody, `href="/owner"`, "Page should have a back link to dashboard")
+	s.Contains(newGunBody, "Back to Dashboard", "Page should have 'Back to Dashboard' text")
+
+	// Verify form fields
+	s.Contains(newGunBody, `name="name"`, "Form should have a name field")
+	s.Contains(newGunBody, `name="serial_number"`, "Form should have a serial number field")
+	s.Contains(newGunBody, `name="acquired"`, "Form should have an acquired date field")
+	s.Contains(newGunBody, `name="weapon_type_id"`, "Form should have a weapon type dropdown")
+	s.Contains(newGunBody, `name="caliber_id"`, "Form should have a caliber dropdown")
+	s.Contains(newGunBody, `name="manufacturer_id"`, "Form should have a manufacturer dropdown")
+	s.Contains(newGunBody, `name="paid"`, "Form should have a paid field")
+	s.Contains(newGunBody, "Please enter in USD", "Page should have text about USD")
+	s.Contains(newGunBody, "Add Firearm", "Page should have an 'Add Firearm' button")
+
+	// Verify the navigation bar
+	s.Contains(newGunBody, `href="/owner"`, "Page should have My Armory link")
+	s.Contains(newGunBody, `href="/logout"`, "Page should have Logout link")
+	s.NotContains(newGunBody, `href="/login"`, "Page should not have Login link")
+	s.NotContains(newGunBody, `href="/register"`, "Page should not have Register link")
+
+	// Test submitting an invalid form (missing required fields)
+	invalidForm := url.Values{}
+	// Serial number and paid are optional
+	invalidForm.Add("serial_number", "123456")
+	invalidForm.Add("paid", "300")
+
+	invalidReq, _ := http.NewRequest("POST", "/owner/guns", strings.NewReader(invalidForm.Encode()))
+	invalidReq.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	for _, cookie := range cookies {
+		invalidReq.AddCookie(cookie)
+	}
+	invalidResp := httptest.NewRecorder()
+	s.Router.ServeHTTP(invalidResp, invalidReq)
+
+	// Should not redirect (form should be redisplayed with errors)
+	s.NotEqual(http.StatusSeeOther, invalidResp.Code, "Invalid form submission should not redirect")
+
+	// Now test submitting a valid form with all required fields
+	// First, fetch the IDs of our created reference data
+	var weaponTypeFromDB models.WeaponType
+	var caliberFromDB models.Caliber
+	var manufacturerFromDB models.Manufacturer
+
+	// Find an existing Rifle weapon type - not creating a new one
+	err = s.DB.First(&weaponTypeFromDB).Error
+	s.NoError(err, "Should find a weapon type in the database")
+
+	err = s.DB.Where("caliber = ?", "5.56 NATO").First(&caliberFromDB).Error
+	s.NoError(err, "Should find the caliber we created")
+
+	err = s.DB.Where("name = ?", "Smith & Wesson").First(&manufacturerFromDB).Error
+	s.NoError(err, "Should find the manufacturer we created")
+
+	validForm := url.Values{}
+	validForm.Add("name", "AR-15")
+	validForm.Add("serial_number", "12345678")
+	validForm.Add("acquired", time.Now().Format("2006-01-02"))
+	validForm.Add("weapon_type_id", fmt.Sprintf("%d", weaponTypeFromDB.ID))
+	validForm.Add("caliber_id", fmt.Sprintf("%d", caliberFromDB.ID))
+	validForm.Add("manufacturer_id", fmt.Sprintf("%d", manufacturerFromDB.ID))
+	validForm.Add("paid", "300.00")
+
+	validReq, _ := http.NewRequest("POST", "/owner/guns", strings.NewReader(validForm.Encode()))
+	validReq.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	for _, cookie := range cookies {
+		validReq.AddCookie(cookie)
+	}
+	validResp := httptest.NewRecorder()
+	s.Router.ServeHTTP(validResp, validReq)
+
+	// Should redirect to owner page
+	s.Equal(http.StatusSeeOther, validResp.Code, "Valid form submission should redirect")
+	s.Equal("/owner", validResp.Header().Get("Location"), "Should redirect to owner page")
+
+	// Skip flash message verification - this is too brittle in tests
+	// and we already verified that the gun creation worked via database check
+
+	// Query the database for the gun we just created
+	var gun models.Gun
+	err = s.DB.Preload("WeaponType").Preload("Caliber").Preload("Manufacturer").Where("name = ?", "AR-15").First(&gun).Error
+	s.NoError(err, "Should be able to find the newly created gun")
+
+	// Now check the owner page to verify the gun was added
+	finalOwnerReq, _ := http.NewRequest("GET", "/owner", nil)
+	for _, cookie := range cookies {
+		finalOwnerReq.AddCookie(cookie)
+	}
+	finalOwnerResp := httptest.NewRecorder()
+	s.Router.ServeHTTP(finalOwnerResp, finalOwnerReq)
+
+	// Check the updated owner page
+	updatedBody := finalOwnerResp.Body.String()
+
+	// Verify updated totals
+	s.Contains(updatedBody, "Total Firearms:</strong> 1", "Gun count should now be 1")
+	s.Contains(updatedBody, "Total Paid:</strong> $300.00", "Total paid should show $300.00")
+
+	// Verify the gun is in the table using actual data from the database
+	s.Contains(updatedBody, gun.Name, "Gun name should appear in the table")
+	s.Contains(updatedBody, gun.WeaponType.Type, "Weapon type should appear in the table")
+	s.Contains(updatedBody, gun.Manufacturer.Name, "Manufacturer should appear in the table")
+	s.Contains(updatedBody, gun.Caliber.Caliber, "Caliber should appear in the table")
+
+	// Check the paid amount - note this might be encoded as HTML so we use a more generic check
+	paidStr := fmt.Sprintf("%.2f", *gun.Paid)
+	s.Contains(updatedBody, paidStr, "Paid amount should appear in the table")
+
+	// The "No firearms added yet" text should be gone
+	s.NotContains(updatedBody, "No firearms added yet", "Empty state message should be gone")
+
+	// Verify the arsenal is no longer empty by visiting it again
+	finalArsenalReq, _ := http.NewRequest("GET", "/owner/guns/arsenal", nil)
+	for _, cookie := range cookies {
+		finalArsenalReq.AddCookie(cookie)
+	}
+	finalArsenalResp := httptest.NewRecorder()
+	s.Router.ServeHTTP(finalArsenalResp, finalArsenalReq)
+
+	finalArsenalBody := finalArsenalResp.Body.String()
+
+	// The empty state message should be gone
+	s.NotContains(finalArsenalBody, "No firearms found", "Arsenal should no longer be empty")
+
+	// The gun we created should be visible with its details
+	s.Contains(finalArsenalBody, gun.Name, "Gun name should appear in arsenal")
+	s.Contains(finalArsenalBody, gun.WeaponType.Type, "Weapon type should appear in arsenal")
+	s.Contains(finalArsenalBody, gun.Manufacturer.Name, "Manufacturer should appear in arsenal")
+	s.Contains(finalArsenalBody, gun.Caliber.Caliber, "Caliber should appear in arsenal")
+
+	// Check that the paid amount appears (accounting for formatting)
+	paidStr = fmt.Sprintf("%.2f", *gun.Paid)
+	s.Contains(finalArsenalBody, paidStr, "Paid amount should appear in arsenal")
+
+	// Now test the gun show page
+	gunShowURL := fmt.Sprintf("/owner/guns/%d", gun.ID)
+	gunShowReq, _ := http.NewRequest("GET", gunShowURL, nil)
+	for _, cookie := range cookies {
+		gunShowReq.AddCookie(cookie)
+	}
+	gunShowResp := httptest.NewRecorder()
+	s.Router.ServeHTTP(gunShowResp, gunShowReq)
+
+	// Check status code
+	s.Equal(http.StatusOK, gunShowResp.Code, "Gun show page should return 200 OK")
+
+	// Get the response body as a string
+	gunShowBody := gunShowResp.Body.String()
+
+	// Verify gun details appear on the page
+	s.Contains(gunShowBody, gun.Name, "Gun name should appear on the show page")
+	s.Contains(gunShowBody, gun.SerialNumber, "Serial number should appear on the show page")
+	s.Contains(gunShowBody, gun.WeaponType.Type, "Weapon type should appear on the show page")
+	s.Contains(gunShowBody, gun.Manufacturer.Name, "Manufacturer should appear on the show page")
+	s.Contains(gunShowBody, gun.Caliber.Caliber, "Caliber should appear on the show page")
+
+	// If the gun has an acquired date, check that too
+	if gun.Acquired != nil {
+		acquiredDate := gun.Acquired.Format("January 2, 2006") // American date format: Month DD, YYYY
+		s.Contains(gunShowBody, acquiredDate, "Acquired date should appear on the show page")
+	}
+
+	// Check the paid amount
+	s.Contains(gunShowBody, fmt.Sprintf("$%.2f", *gun.Paid), "Paid amount should appear on the show page")
+
+	// Check that the page has buttons for Edit and Delete
+	s.Contains(gunShowBody, "Edit Firearm", "Show page should have Edit button")
+	s.Contains(gunShowBody, "Delete Firearm", "Show page should have Delete button")
+
+	// Now test the gun edit flow
+	gunEditURL := fmt.Sprintf("/owner/guns/%d/edit", gun.ID)
+	editReq, _ := http.NewRequest("GET", gunEditURL, nil)
+	for _, cookie := range cookies {
+		editReq.AddCookie(cookie)
+	}
+	editResp := httptest.NewRecorder()
+	s.Router.ServeHTTP(editResp, editReq)
+
+	// Check status code
+	s.Equal(http.StatusOK, editResp.Code, "Gun edit page should return 200 OK")
+
+	// Get the response body as a string
+	editBody := editResp.Body.String()
+
+	// Verify edit page content
+	s.Contains(editBody, "Edit Firearm", "Page should have correct title")
+	s.Contains(editBody, `href="/owner"`, "Page should have a back link to dashboard")
+	s.Contains(editBody, "Back to Dashboard", "Page should have 'Back to Dashboard' text")
+
+	// Verify nav bar has correct links for authenticated user
+	s.Contains(editBody, `href="/owner"`, "Page should have My Armory link")
+	s.Contains(editBody, `href="/logout"`, "Page should have Logout link")
+	s.NotContains(editBody, `href="/login"`, "Page should not have Login link")
+	s.NotContains(editBody, `href="/register"`, "Page should not have Register link")
+
+	// Verify form fields
+	s.Contains(editBody, `name="name"`, "Form should have a name field")
+	s.Contains(editBody, `name="serial_number"`, "Form should have a serial number field")
+	s.Contains(editBody, `name="acquired_date"`, "Form should have an acquired date field")
+	s.Contains(editBody, `name="weapon_type_id"`, "Form should have a weapon type dropdown")
+	s.Contains(editBody, `name="caliber_id"`, "Form should have a caliber dropdown")
+	s.Contains(editBody, `name="manufacturer_id"`, "Form should have a manufacturer dropdown")
+	s.Contains(editBody, `name="paid"`, "Form should have a paid field")
+	s.Contains(editBody, "Update Firearm", "Page should have an 'Update Firearm' button")
+
+	// Now find a second weapon type, caliber, and manufacturer for the update
+	var secondWeaponType models.WeaponType
+	var secondCaliber models.Caliber
+	var secondManufacturer models.Manufacturer
+
+	// Try to find a different weapon type than the one currently used
+	err = s.DB.Where("id != ?", gun.WeaponTypeID).First(&secondWeaponType).Error
+	if err != nil {
+		// If we can't find another one, create a new one
+		secondWeaponType = models.WeaponType{Type: "Pistol", Popularity: 95}
+		err = s.DB.Create(&secondWeaponType).Error
+		s.NoError(err, "Should be able to create a second weapon type")
+	}
+
+	// Try to find a different caliber
+	err = s.DB.Where("id != ?", gun.CaliberID).First(&secondCaliber).Error
+	if err != nil {
+		// If we can't find another one, create a new one
+		secondCaliber = models.Caliber{Caliber: "9mm", Popularity: 95}
+		err = s.DB.Create(&secondCaliber).Error
+		s.NoError(err, "Should be able to create a second caliber")
+	}
+
+	// Try to find a different manufacturer
+	err = s.DB.Where("id != ?", gun.ManufacturerID).First(&secondManufacturer).Error
+	if err != nil {
+		// If we can't find another one, create a new one
+		secondManufacturer = models.Manufacturer{Name: "Glock", Popularity: 95}
+		err = s.DB.Create(&secondManufacturer).Error
+		s.NoError(err, "Should be able to create a second manufacturer")
+	}
+
+	// Prepare update form data
+	updatedName := "Modified AR-15"
+	updatedSerialNumber := "87654321"
+	updatedAcquiredDate := time.Now().AddDate(-1, 0, 0).Format("2006-01-02") // One year ago
+	updatedPaid := "400.00"
+
+	updateForm := url.Values{}
+	updateForm.Add("name", updatedName)
+	updateForm.Add("serial_number", updatedSerialNumber)
+	updateForm.Add("acquired_date", updatedAcquiredDate)
+	updateForm.Add("weapon_type_id", fmt.Sprintf("%d", secondWeaponType.ID))
+	updateForm.Add("caliber_id", fmt.Sprintf("%d", secondCaliber.ID))
+	updateForm.Add("manufacturer_id", fmt.Sprintf("%d", secondManufacturer.ID))
+	updateForm.Add("paid", updatedPaid)
+
+	// Submit the update form
+	updateReq, _ := http.NewRequest("POST", fmt.Sprintf("/owner/guns/%d/update", gun.ID), strings.NewReader(updateForm.Encode()))
+	updateReq.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	for _, cookie := range cookies {
+		updateReq.AddCookie(cookie)
+	}
+	updateResp := httptest.NewRecorder()
+	s.Router.ServeHTTP(updateResp, updateReq)
+
+	// Should redirect to owner page
+	s.Equal(http.StatusSeeOther, updateResp.Code, "Gun update should redirect")
+	s.Equal("/owner", updateResp.Header().Get("Location"), "Should redirect to owner page")
+
+	// Query the database for the updated gun
+	var updatedGun models.Gun
+	err = s.DB.Preload("WeaponType").Preload("Caliber").Preload("Manufacturer").First(&updatedGun, gun.ID).Error
+	s.NoError(err, "Should be able to find the updated gun")
+
+	// Verify the gun was updated correctly
+	s.Equal(updatedName, updatedGun.Name, "Gun name should be updated")
+	s.Equal(updatedSerialNumber, updatedGun.SerialNumber, "Gun serial number should be updated")
+	s.Equal(secondWeaponType.ID, updatedGun.WeaponTypeID, "Gun weapon type should be updated")
+	s.Equal(secondCaliber.ID, updatedGun.CaliberID, "Gun caliber should be updated")
+	s.Equal(secondManufacturer.ID, updatedGun.ManufacturerID, "Gun manufacturer should be updated")
+
+	// Parse the updated paid value for comparison
+	updatedPaidFloat, err := strconv.ParseFloat(updatedPaid, 64)
+	s.NoError(err, "Should be able to parse updated paid value")
+	s.Equal(updatedPaidFloat, *updatedGun.Paid, "Gun paid amount should be updated")
+
+	// Now check the owner page to see the updated gun
+	checkOwnerReq, _ := http.NewRequest("GET", "/owner", nil)
+	for _, cookie := range cookies {
+		checkOwnerReq.AddCookie(cookie)
+	}
+	checkOwnerResp := httptest.NewRecorder()
+	s.Router.ServeHTTP(checkOwnerResp, checkOwnerReq)
+
+	// Check status code
+	s.Equal(http.StatusOK, checkOwnerResp.Code, "Owner page should return 200 OK")
+
+	// Get the response body as a string
+	finalOwnerBody := checkOwnerResp.Body.String()
+
+	// Verify the updated values appear on the owner page
+	s.Contains(finalOwnerBody, updatedName, "Updated gun name should appear on the owner page")
+	s.Contains(finalOwnerBody, updatedGun.WeaponType.Type, "Updated weapon type should appear on the owner page")
+	s.Contains(finalOwnerBody, updatedGun.Manufacturer.Name, "Updated manufacturer should appear on the owner page")
+	s.Contains(finalOwnerBody, updatedGun.Caliber.Caliber, "Updated caliber should appear on the owner page")
+	s.Contains(finalOwnerBody, fmt.Sprintf("$%.2f", *updatedGun.Paid), "Updated paid amount should appear on the owner page")
+
+	// Clean up - delete the gun and user
+	s.DB.Exec("DELETE FROM guns")
+	s.DB.Exec("DELETE FROM weapon_types")
+	s.DB.Exec("DELETE FROM calibers")
+	s.DB.Exec("DELETE FROM manufacturers")
 	result = s.DB.Unscoped().Delete(testUser)
 	s.NoError(result.Error)
 }
