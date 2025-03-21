@@ -235,10 +235,10 @@ func (a *AuthController) LoginHandler(c *gin.Context) {
 
 	// Set welcome message using the setFlash function from middleware
 	if setFlash, exists := c.Get("setFlash"); exists {
-		setFlash.(func(string))("Welcome back, " + user.Email)
+		setFlash.(func(string))("Enjoy adding to your armory!")
 	} else {
 		// Fallback to setting the cookie directly if middleware is not available
-		c.SetCookie("flash", "Welcome back, "+user.Email, 10, "/", "", false, false)
+		c.SetCookie("flash", "Enjoy adding to your armory!", 10, "/", "", false, false)
 	}
 
 	// Redirect to owner page
@@ -377,6 +377,9 @@ func (a *AuthController) RegisterHandler(c *gin.Context) {
 			"email": user.Email,
 		})
 	}
+
+	// Set the verification email in a cookie so it can be displayed on the verification page
+	c.SetCookie("verification_email", user.Email, 3600, "/", "", false, false)
 
 	// Redirect to verification sent page or home page based on test environment
 	if c.Request.Header.Get("X-Test") == "true" {

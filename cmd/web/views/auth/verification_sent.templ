@@ -22,7 +22,12 @@ templ VerificationSent(data data.AuthData) {
 				<div class="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
 					<div class="text-center">
 						<p class="text-gray-700 mb-4">
-							A verification email has been sent to <span class="font-medium">` + data.Email + `</span>.
+							A verification email has been sent to ` + func() string {
+								if data.Email != "" {
+									return `<span class="font-medium">` + data.Email + `</span>`
+								}
+								return `.` // Add a period if email is empty
+							}() + `.
 							Please check your inbox and click the verification link to complete your registration.
 						</p>
 						
