@@ -194,6 +194,52 @@ func (s *IntegrationSuite) SetupTest() {
 			s.T().Log("Using the REAL OwnerController.LandingPage for integration tests")
 			s.OwnerController.LandingPage(c)
 		})
+
+		// Add owner/guns routes
+		ownerGuns := protected.Group("/owner/guns")
+		{
+			// Arsenal view - shows all guns with sorting and searching
+			ownerGuns.GET("/arsenal", func(c *gin.Context) {
+				s.T().Log("Using the REAL OwnerController.Arsenal for integration tests")
+				s.OwnerController.Arsenal(c)
+			})
+
+			// New gun form
+			ownerGuns.GET("/new", func(c *gin.Context) {
+				s.T().Log("Using the REAL OwnerController.New for integration tests")
+				s.OwnerController.New(c)
+			})
+
+			// Create a new gun
+			ownerGuns.POST("", func(c *gin.Context) {
+				s.T().Log("Using the REAL OwnerController.Create for integration tests")
+				s.OwnerController.Create(c)
+			})
+
+			// Show a specific gun
+			ownerGuns.GET("/:id", func(c *gin.Context) {
+				s.T().Log("Using the REAL OwnerController.Show for integration tests")
+				s.OwnerController.Show(c)
+			})
+
+			// Edit gun form
+			ownerGuns.GET("/:id/edit", func(c *gin.Context) {
+				s.T().Log("Using the REAL OwnerController.Edit for integration tests")
+				s.OwnerController.Edit(c)
+			})
+
+			// Update gun
+			ownerGuns.POST("/:id", func(c *gin.Context) {
+				s.T().Log("Using the REAL OwnerController.Update for integration tests")
+				s.OwnerController.Update(c)
+			})
+
+			// Delete gun
+			ownerGuns.POST("/:id/delete", func(c *gin.Context) {
+				s.T().Log("Using the REAL OwnerController.Delete for integration tests")
+				s.OwnerController.Delete(c)
+			})
+		}
 	}
 }
 
