@@ -663,3 +663,100 @@ func (m *MockDBWithContext) CountNewSubscribersLastMonth() (int64, error) {
 	args := m.Called()
 	return args.Get(0).(int64), args.Error(1)
 }
+
+// LoginTestSuite is a test suite for login functionality
+type LoginTestSuite struct {
+	testutils.IntegrationTestSuite
+}
+
+// TestLoginLogout tests the complete login and logout flow
+func (s *LoginTestSuite) TestLoginLogout() {
+	// Create a test user
+	user, err := s.DB.CreateUser(context.Background(), "test@example.com", "password123")
+	s.NoError(err)
+	s.NotNil(user)
+
+	// Mark user as verified
+	user.Verified = true
+	err = s.DB.UpdateUser(context.Background(), user)
+	s.NoError(err)
+
+	// Test 1: Successful login
+	loginForm := url.Values{}
+	loginForm.Add("email", "test@example.com")
+	loginForm.Add("password", "password123")
+
+	resp, err := http.Post(s.Server.URL+"/login", "application/x-www-form-urlencoded", strings.NewReader(loginForm.Encode()))
+	s.NoError(err)
+	s.Equal(http.StatusSeeOther, resp.StatusCode)
+	s.Equal("/owner", resp.Header.Get("Location"))
+
+	// Save cookies from login
+	s.SaveCookies(resp)
+
+	// Test 2: Access owner page (should succeed)
+	req, _ := http.NewRequest("GET", s.Server.URL+"/owner", nil)
+	s.ApplyCookies(req)
+	resp, err = http.DefaultClient.Do(req)
+	s.NoError(err)
+	s.Equal(http.StatusOK, resp.StatusCode)
+
+	// Test 3: Logout
+	req, _ = http.NewRequest("GET", s.Server.URL+"/logout", nil)
+	s.ApplyCookies(req)
+	resp, err = http.DefaultClient.Do(req)
+	s.NoError(err)
+	s.Equal(http.StatusSeeOther, resp.StatusCode)
+	s.Equal("/", resp.Header.Get("Location"))
+
+	// Test 4: Try to access owner page after logout (should fail)
+	req, _ = http.NewRequest("GET", s.Server.URL+"/owner", nil)
+	s.ApplyCookies(req)
+	resp, err = http.DefaultClient.Do(req)
+	s.NoError(err)
+	s.Equal(http.StatusFound, resp.StatusCode) // Should redirect to login
+}
+
+// TestLoginFailures tests various login failure scenarios
+func (s *LoginTestSuite) TestLoginFailures() {
+	// Create a test user
+	user, err := s.DB.CreateUser(context.Background(), "test@example.com", "password123")
+	s.NoError(err)
+	s.NotNil(user)
+
+	// Test 1: Wrong password
+	loginForm := url.Values{}
+	loginForm.Add("email", "test@example.com")
+	loginForm.Add("password", "wrongpassword")
+
+	resp, err := http.Post(s.Server.URL+"/login", "application/x-www-form-urlencoded", strings.NewReader(loginForm.Encode()))
+	s.NoError(err)
+	s.Equal(http.StatusOK, resp.StatusCode) // Shows login form with error
+
+	// Test 2: Non-existent user
+	loginForm = url.Values{}
+	loginForm.Add("email", "nonexistent@example.com")
+	loginForm.Add("password", "password123")
+
+	resp, err = http.Post(s.Server.URL+"/login", "application/x-www-form-urlencoded", strings.NewReader(loginForm.Encode()))
+	s.NoError(err)
+	s.Equal(http.StatusOK, resp.StatusCode) // Shows login form with error
+
+	// Test 3: Unverified user
+	user2, err := s.DB.CreateUser(context.Background(), "unverified@example.com", "password123")
+	s.NoError(err)
+	s.NotNil(user2)
+
+	loginForm = url.Values{}
+	loginForm.Add("email", "unverified@example.com")
+	loginForm.Add("password", "password123")
+
+	resp, err = http.Post(s.Server.URL+"/login", "application/x-www-form-urlencoded", strings.NewReader(loginForm.Encode()))
+	s.NoError(err)
+	s.Equal(http.StatusOK, resp.StatusCode) // Shows login form with error
+}
+
+func TestLogin(t *testing.T) {
+	suite := &LoginTestSuite{}
+	testutils.RunIntegrationSuite(t, &suite.IntegrationTestSuite)
+}
