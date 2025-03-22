@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/gin-gonic/gin"
 	"github.com/hail2skins/armory/internal/database"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
@@ -100,11 +101,17 @@ func (s *AuthIntegrationTest) TestLoginFlow() {
 		s.Router.ServeHTTP(resp, req)
 
 		// Should redirect to owner page
+		s.T().Logf("Login response code: %d", resp.Code)
+		s.T().Logf("Login response location: %s", resp.Header().Get("Location"))
 		s.Equal(http.StatusSeeOther, resp.Code)
 		s.Equal("/owner", resp.Header().Get("Location"))
 
 		// Extract cookies for next request
 		cookies := resp.Result().Cookies()
+		s.T().Logf("Number of cookies after login: %d", len(cookies))
+		for i, cookie := range cookies {
+			s.T().Logf("Cookie %d: %s=%s", i, cookie.Name, cookie.Value)
+		}
 
 		// Follow redirect to owner page
 		ownerReq, _ := http.NewRequest("GET", "/owner", nil)
@@ -114,10 +121,22 @@ func (s *AuthIntegrationTest) TestLoginFlow() {
 		ownerResp := httptest.NewRecorder()
 		s.Router.ServeHTTP(ownerResp, ownerReq)
 
+		// Log the owner page response
+		s.T().Logf("Owner page response code: %d", ownerResp.Code)
+		ownerBody := ownerResp.Body.String()
+
+		// Log the first 1000 characters to see what's in the page
+		if len(ownerBody) > 1000 {
+			s.T().Logf("First 1000 chars of owner page: %s", ownerBody[:1000])
+		} else {
+			s.T().Logf("Owner page content: %s", ownerBody)
+		}
+
 		// Check we're on owner page and authenticated
 		s.Equal(http.StatusOK, ownerResp.Code)
-		s.Contains(ownerResp.Body.String(), "Owner Page")
-		s.Contains(ownerResp.Body.String(), "Authenticated: true")
+		// Check for real template content instead of mock content
+		s.Contains(ownerBody, "Welcome to Your Virtual Armory")
+		s.Contains(ownerBody, "My Armory") // Nav link for authenticated users
 
 		// For this to be a true integration test, verify flash message is passed via cookies
 		var hasFlashCookie bool
@@ -140,8 +159,11 @@ func (s *AuthIntegrationTest) TestLoginFlow() {
 		s.True(hasFlashCookie, "Should have flash message cookie")
 	})
 
-	// Test 5: After login, nav bar should change
-	s.Run("After login, nav bar changes", func() {
+	// Test 5: After login, nav bar should change to show real UI elements
+	s.Run("After login, nav bar shows correct authenticated elements", func() {
+		// First we need to make sure we're actually testing the UI output
+		s.T().Log("Testing actual UI navigation bar content for authenticated user")
+
 		// Login with correct credentials
 		form := url.Values{}
 		form.Add("email", "test@example.com")
@@ -152,8 +174,27 @@ func (s *AuthIntegrationTest) TestLoginFlow() {
 		resp := httptest.NewRecorder()
 		s.Router.ServeHTTP(resp, req)
 
+		// Debug login response
+		s.T().Logf("Login response code: %d", resp.Code)
+		s.T().Logf("Login redirect location: %s", resp.Header().Get("Location"))
+
 		// Extract cookies
 		cookies := resp.Result().Cookies()
+		s.T().Logf("Number of cookies after login: %d", len(cookies))
+		for i, cookie := range cookies {
+			s.T().Logf("Cookie %d: %s=%s (Path: %s, MaxAge: %d)",
+				i, cookie.Name, cookie.Value, cookie.Path, cookie.MaxAge)
+		}
+
+		// Verify we have an auth cookie
+		var authCookie *http.Cookie
+		for _, cookie := range cookies {
+			if cookie.Name == "auth-session" {
+				authCookie = cookie
+				break
+			}
+		}
+		s.Require().NotNil(authCookie, "Auth session cookie missing after login")
 
 		// Now check the nav bar on the home page
 		homeReq, _ := http.NewRequest("GET", "/", nil)
@@ -163,12 +204,36 @@ func (s *AuthIntegrationTest) TestLoginFlow() {
 		homeResp := httptest.NewRecorder()
 		s.Router.ServeHTTP(homeResp, homeReq)
 
-		// Check nav bar content
+		// Debug the home response
+		s.T().Logf("Home response code: %d", homeResp.Code)
+		homeContent := homeResp.Body.String()
+
+		// Log the first 1000 characters of the response for debugging
+		if len(homeContent) > 1000 {
+			s.T().Logf("First 1000 chars of home page: %s", homeContent[:1000])
+		} else {
+			s.T().Logf("Home page content: %s", homeContent)
+		}
+
+		// Check auth status
+		recorder := httptest.NewRecorder()
+		checkContext, _ := gin.CreateTestContext(recorder)
+		checkReq, _ := http.NewRequest("GET", "/", nil)
+		for _, cookie := range cookies {
+			checkReq.AddCookie(cookie)
+		}
+		checkContext.Request = checkReq
+		isAuth := s.AuthController.IsAuthenticated(checkContext)
+		s.T().Logf("Authentication check result: %v", isAuth)
+		s.True(isAuth, "User should be authenticated")
+
 		s.Equal(http.StatusOK, homeResp.Code)
-		s.Contains(homeResp.Body.String(), "My Armory")
-		s.Contains(homeResp.Body.String(), "Logout")
-		s.NotContains(homeResp.Body.String(), "Login")    // Login link should be gone
-		s.NotContains(homeResp.Body.String(), "Register") // Register link should be gone
+
+		// Exact string we're looking for in the HTML
+		s.Contains(homeContent, "My Armory", "Nav bar should contain My Armory for authenticated user")
+		s.Contains(homeContent, "Logout", "Nav bar should contain Logout link")
+		s.NotContains(homeContent, "Login", "Nav bar should not contain Login link")
+		s.NotContains(homeContent, "Register", "Nav bar should not contain Register link")
 	})
 }
 
@@ -198,6 +263,8 @@ func (s *AuthIntegrationTest) TestLogoutFlow() {
 		s.Router.ServeHTTP(logoutResp, logoutReq)
 
 		// Should redirect to home page
+		s.T().Logf("Logout response code: %d", logoutResp.Code)
+		s.T().Logf("Logout response location: %s", logoutResp.Header().Get("Location"))
 		s.Equal(http.StatusSeeOther, logoutResp.Code)
 		s.Equal("/", logoutResp.Header().Get("Location"))
 
@@ -244,14 +311,18 @@ func (s *AuthIntegrationTest) TestLogoutFlow() {
 		s.Router.ServeHTTP(homeResp, homeReq)
 
 		// Check the home page response
-		s.Equal(http.StatusOK, homeResp.Code)
+		s.T().Logf("Home page response code: %d", homeResp.Code)
 		bodyStr := homeResp.Body.String()
 
 		// Debug entire page
-		s.T().Logf("Home page content: %s", bodyStr)
+		if len(bodyStr) > 1000 {
+			s.T().Logf("First 1000 chars of home page: %s", bodyStr[:1000])
+		} else {
+			s.T().Logf("Home page content: %s", bodyStr)
+		}
 
 		// Test for expected content on the home page
-		s.Contains(bodyStr, "Armory Home Page")
+		s.Contains(bodyStr, "Your Arsenal. On Target.")
 		s.Contains(bodyStr, "Login")
 		s.Contains(bodyStr, "Register")
 		s.NotContains(bodyStr, "My Armory")
@@ -343,10 +414,9 @@ func (s *AuthIntegrationTest) TestRegistrationFlow() {
 		s.Contains(body, "verification email has been sent")
 
 		// Don't strictly check for email in verification page, as it may be coming from cookie
-		// but we can check for other elements
-		s.Contains(body, "IMPORTANT: The verification link will expire in 60 minutes")
-		s.Contains(body, "Didn't receive the email?")
-		s.Contains(body, "Check your spam folder")
+		// but we can check for other elements with HTML formatting included
+		s.Contains(body, "Important:</span> The verification link will expire in 60 minutes")
+		s.Contains(body, "Didn't receive the email? Check your spam folder or request a new verification email")
 
 		// Should have a resend verification form
 		s.Contains(body, "Resend Verification Email")

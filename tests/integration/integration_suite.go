@@ -8,6 +8,7 @@ import (
 	"reflect"
 
 	"github.com/gin-gonic/gin"
+	"github.com/hail2skins/armory/cmd/web/views/auth"
 	"github.com/hail2skins/armory/cmd/web/views/data"
 	"github.com/hail2skins/armory/internal/controller"
 	"github.com/hail2skins/armory/internal/database"
@@ -66,11 +67,99 @@ func (s *IntegrationSuite) SetupTest() {
 	s.Router = gin.New()
 	s.Router.Use(gin.Recovery())
 
+	// We DON'T need to load HTML templates since we're using templ
+	// This line was causing the test to fail because the templates directory doesn't exist
+	// s.Router.LoadHTMLGlob(templatePath)
+
+	// Still set up static assets - this is needed for CSS/JS
+	s.Router.Static("/assets", "../../cmd/web/static")
+
+	// Log that we're using the real controllers
+	s.T().Log("Using REAL controllers and templates for integration tests - NO MOCKS")
+
 	// Set up flash middleware
 	s.setupFlashMiddleware()
 
-	// Configure the auth controller with render functions
-	s.setupRenderFunctions()
+	// Instead of overriding render functions with mocks, set them to use the real
+	// templ components from server/auth_routes.go setupAuthRenderFunctions
+	s.AuthController.RenderLogin = func(c *gin.Context, d interface{}) {
+		authData := d.(data.AuthData)
+		// Set authentication state
+		_, authenticated := s.AuthController.GetCurrentUser(c)
+		authData.Authenticated = authenticated
+		// Set default title if not set
+		if authData.Title == "" {
+			authData.Title = "Login"
+		}
+
+		// Handle flash messages
+		if flash, exists := c.Get("flash"); exists && flash != nil {
+			if flashStr, ok := flash.(string); ok && flashStr != "" {
+				authData = authData.WithSuccess(flashStr)
+			}
+		}
+
+		auth.Login(authData).Render(c.Request.Context(), c.Writer)
+	}
+
+	s.AuthController.RenderRegister = func(c *gin.Context, d interface{}) {
+		authData := d.(data.AuthData)
+		// Set authentication state
+		_, authenticated := s.AuthController.GetCurrentUser(c)
+		authData.Authenticated = authenticated
+		// Set default title if not set
+		if authData.Title == "" {
+			authData.Title = "Register"
+		}
+
+		// Handle flash messages
+		if flash, exists := c.Get("flash"); exists && flash != nil {
+			if flashStr, ok := flash.(string); ok && flashStr != "" {
+				authData = authData.WithSuccess(flashStr)
+			}
+		}
+
+		auth.Register(authData).Render(c.Request.Context(), c.Writer)
+	}
+
+	s.AuthController.RenderLogout = func(c *gin.Context, d interface{}) {
+		authData := d.(data.AuthData)
+		// Set authentication state - should be false after logout
+		authData.Authenticated = false
+		// Set default title if not set
+		if authData.Title == "" {
+			authData.Title = "Logout"
+		}
+
+		// Handle flash messages
+		if flash, exists := c.Get("flash"); exists && flash != nil {
+			if flashStr, ok := flash.(string); ok && flashStr != "" {
+				authData = authData.WithSuccess(flashStr)
+			}
+		}
+
+		auth.Logout(authData).Render(c.Request.Context(), c.Writer)
+	}
+
+	s.AuthController.RenderVerificationSent = func(c *gin.Context, d interface{}) {
+		authData := d.(data.AuthData)
+		// Set authentication state
+		_, authenticated := s.AuthController.GetCurrentUser(c)
+		authData.Authenticated = authenticated
+		// Set default title if not set
+		if authData.Title == "" {
+			authData.Title = "Verification Email Sent"
+		}
+
+		// Handle flash messages
+		if flash, exists := c.Get("flash"); exists && flash != nil {
+			if flashStr, ok := flash.(string); ok && flashStr != "" {
+				authData = authData.WithSuccess(flashStr)
+			}
+		}
+
+		auth.VerificationSent(authData).Render(c.Request.Context(), c.Writer)
+	}
 
 	// Set auth controller in context
 	s.Router.Use(func(c *gin.Context) {
@@ -79,43 +168,33 @@ func (s *IntegrationSuite) SetupTest() {
 		c.Next()
 	})
 
-	// Set up routes
-	s.setupHomeHandler() // Custom home handler for testing
+	// Set up auth routes
 	s.Router.GET("/login", s.AuthController.LoginHandler)
 	s.Router.POST("/login", s.AuthController.LoginHandler)
 	s.Router.GET("/register", s.AuthController.RegisterHandler)
 	s.Router.POST("/register", s.AuthController.RegisterHandler)
-	s.Router.GET("/verification-sent", func(c *gin.Context) {
-		// Get email from cookie
-		email := ""
-		if cookie, err := c.Cookie("verification_email"); err == nil {
-			decodedValue, decodeErr := url.QueryUnescape(cookie)
-			if decodeErr == nil {
-				email = decodedValue
-			} else {
-				email = cookie
-			}
-			s.T().Logf("Found verification_email cookie with value: %s", email)
-		}
-
-		// Create data with email
-		authData := data.NewAuthData().WithTitle("Verification Email Sent")
-		authData.Email = email
-
-		// Call the render function directly
-		s.AuthController.RenderVerificationSent(c, authData)
-	})
-	s.Router.GET("/resend-verification", s.AuthController.ResendVerificationHandler)
-	s.Router.POST("/resend-verification", s.AuthController.ResendVerificationHandler)
 	s.Router.GET("/logout", s.AuthController.LogoutHandler)
-	s.Router.GET("/owner", func(c *gin.Context) {
-		// Simple mock of the owner page
-		authenticated := s.AuthController.IsAuthenticated(c)
-		c.String(http.StatusOK, "Owner Page - Authenticated: %v", authenticated)
+	s.Router.GET("/verification-sent", func(c *gin.Context) {
+		s.AuthController.RenderVerificationSent(c, data.NewAuthData())
 	})
 
-	// Set up owner routes if needed for integration tests
-	s.Router.GET("/owner/guns/arsenal", s.OwnerController.Arsenal)
+	// Set up a home route for testing
+	s.Router.GET("/", func(c *gin.Context) {
+		// Call the real HomeController.HomeHandler
+		s.T().Log("Using the REAL HomeController.HomeHandler for integration tests")
+		s.HomeController.HomeHandler(c)
+	})
+
+	// Set up the owner page route with protection
+	protected := s.Router.Group("/")
+	protected.Use(s.AuthController.AuthMiddleware())
+	{
+		protected.GET("/owner", func(c *gin.Context) {
+			// Call the real OwnerController.LandingPage
+			s.T().Log("Using the REAL OwnerController.LandingPage for integration tests")
+			s.OwnerController.LandingPage(c)
+		})
+	}
 }
 
 // TearDownTest runs after each test
@@ -157,212 +236,12 @@ func (s *IntegrationSuite) setupFlashMiddleware() {
 	})
 }
 
-// setupRenderFunctions sets up render functions for testing
-func (s *IntegrationSuite) setupRenderFunctions() {
-	// Login render function
-	s.AuthController.RenderLogin = func(c *gin.Context, d interface{}) {
-		// Try to get the error message
-		var errorMsg string
-
-		// Try multiple ways to extract the error message
-		if authData, ok := d.(data.AuthData); ok && authData.Error != "" {
-			errorMsg = authData.Error
-		} else if data, ok := d.(interface{ GetError() string }); ok && data.GetError() != "" {
-			errorMsg = data.GetError()
-		} else {
-			// Try to access Error field using reflection
-			v := reflect.ValueOf(d)
-			if v.Kind() == reflect.Struct {
-				errorField := v.FieldByName("Error")
-				if errorField.IsValid() && errorField.Kind() == reflect.String {
-					errorMsg = errorField.String()
-				}
-			}
-		}
-
-		// Render a basic HTML page
-		c.Header("Content-Type", "text/html")
-		html := `<!DOCTYPE html><html><body><nav>`
-
-		// Add nav elements based on authentication status
-		if s.AuthController.IsAuthenticated(c) {
-			html += `<a href="/owner">My Armory</a> <a href="/logout">Logout</a>`
-		} else {
-			html += `<a href="/login">Login</a> <a href="/register">Register</a>`
-		}
-
-		html += `</nav><h1>Login</h1>`
-
-		// Add error message if there is one
-		if errorMsg != "" {
-			html += `<div class="error">` + errorMsg + `</div>`
-		}
-
-		// The login form
-		html += `<form method="post">
-			<label for="email">Email</label>
-			<input type="email" name="email" id="email" />
-			<label for="password">Password</label>
-			<input type="password" name="password" id="password" />
-			<button type="submit">Login</button>
-		</form>
-		<a href="/reset-password">Reset Password</a>
-		<p>Don't have an account? <a href="/register">Register</a></p>
-		</body></html>`
-
-		c.String(http.StatusOK, html)
-	}
-
-	// Register render function
-	s.AuthController.RenderRegister = func(c *gin.Context, d interface{}) {
-		// Extract error message if any
-		var errorMsg string
-		if authData, ok := d.(data.AuthData); ok && authData.Error != "" {
-			errorMsg = authData.Error
-		}
-
-		// Render a basic HTML page
-		c.Header("Content-Type", "text/html")
-		html := `<!DOCTYPE html><html><body><nav>`
-
-		// Add nav elements based on authentication status
-		if s.AuthController.IsAuthenticated(c) {
-			html += `<a href="/owner">My Armory</a> <a href="/logout">Logout</a>`
-		} else {
-			html += `<a href="/login">Login</a> <a href="/register">Register</a>`
-		}
-
-		html += `</nav><h1>Create Account</h1>`
-
-		// Add error message if there is one
-		if errorMsg != "" {
-			html += `<div class="error">` + errorMsg + `</div>`
-		}
-
-		// The registration form
-		html += `<form method="post">
-			<label for="email">Email</label>
-			<input type="email" name="email" id="email" />
-			<label for="password">Password</label>
-			<input type="password" name="password" id="password" />
-			<label for="password_confirm">Confirm Password</label>
-			<input type="password" name="password_confirm" id="password_confirm" />
-			<button type="submit">Register</button>
-		</form>
-		<p>Already have an account? <a href="/login">Login</a></p>
-		</body></html>`
-
-		c.String(http.StatusOK, html)
-	}
-
-	// Verification sent render function
-	s.AuthController.RenderVerificationSent = func(c *gin.Context, d interface{}) {
-		// Extract data if any
-		var email, errorMsg, successMsg string
-		if authData, ok := d.(data.AuthData); ok {
-			email = authData.Email
-			errorMsg = authData.Error
-			successMsg = authData.Success
-		}
-
-		// Render a basic HTML page
-		c.Header("Content-Type", "text/html")
-		html := `<!DOCTYPE html><html><body><nav>`
-
-		// Add nav elements based on authentication status
-		if s.AuthController.IsAuthenticated(c) {
-			html += `<a href="/owner">My Armory</a> <a href="/logout">Logout</a>`
-		} else {
-			html += `<a href="/login">Login</a> <a href="/register">Register</a>`
-		}
-
-		html += `</nav><h1>Verification Email Sent</h1>`
-
-		// Add error message if there is one
-		if errorMsg != "" {
-			html += `<div class="error">` + errorMsg + `</div>`
-		}
-
-		// Add success message if there is one
-		if successMsg != "" {
-			html += `<div class="success">` + successMsg + `</div>`
-		}
-
-		// The verification sent content
-		html += `<p>A verification email has been sent to ` + email + `</p>
-		<p>IMPORTANT: The verification link will expire in 60 minutes.</p>
-		<p>Didn't receive the email? Check your spam folder or request a new verification email.</p>
-		<form method="post" action="/resend-verification">
-			<input type="hidden" name="email" value="` + email + `" />
-			<button type="submit">Resend Verification Email</button>
-		</form>
-		<p><a href="/login">Return to Login</a></p>
-		</body></html>`
-
-		c.String(http.StatusOK, html)
-	}
-
-	// Logout render function (simplified)
-	s.AuthController.RenderLogout = func(c *gin.Context, d interface{}) {
-		c.Status(http.StatusOK)
-		c.String(http.StatusOK, "Logout Page")
-	}
-}
-
-// setupHomeHandler adds a custom home handler
+// setupHomeHandler configures the router to use the real home page template
 func (s *IntegrationSuite) setupHomeHandler() {
-	s.Router.GET("/", func(c *gin.Context) {
-		// Create a simple home page that changes based on auth status
-		c.Header("Content-Type", "text/html")
-		html := `<!DOCTYPE html><html><body><nav>`
+	// Use the REAL HomeHandler from the HomeController, not mocked HTML
+	s.Router.GET("/", s.HomeController.HomeHandler)
 
-		// Add nav elements based on authentication status
-		if s.AuthController.IsAuthenticated(c) {
-			html += `<a href="/owner">My Armory</a> <a href="/logout">Logout</a>`
-		} else {
-			html += `<a href="/login">Login</a> <a href="/register">Register</a>`
-		}
-
-		html += `</nav><h1>Armory Home Page</h1>`
-
-		// Handle flash messages with multiple approaches for reliability
-		flashMsg := ""
-
-		// Try getting from context first
-		if flash, exists := c.Get("flash"); exists {
-			if flashStr, ok := flash.(string); ok && flashStr != "" {
-				flashMsg = flashStr
-				s.T().Logf("Found flash in context: %s", flashMsg)
-			}
-		}
-
-		// If not in context, try from cookie
-		if flashMsg == "" {
-			if cookie, err := c.Cookie("flash"); err == nil && cookie != "" {
-				// Try to decode the cookie value
-				decodedValue, err := url.QueryUnescape(cookie)
-				if err == nil {
-					flashMsg = decodedValue
-				} else {
-					flashMsg = cookie
-				}
-				// Clear the flash cookie after using it
-				c.SetCookie("flash", "", -1, "/", "", false, false)
-				s.T().Logf("Found flash in cookie: %s", flashMsg)
-			}
-		}
-
-		// Add flash message to page if it exists
-		if flashMsg != "" {
-			html += `<div class="flash">` + flashMsg + `</div>`
-			s.T().Logf("Added flash message to page: %s", flashMsg)
-		} else {
-			s.T().Log("No flash message found to display")
-		}
-
-		html += `<p>Welcome to the Armory!</p></body></html>`
-		c.String(http.StatusOK, html)
-	})
+	s.T().Log("Using the REAL HomeController.HomeHandler for integration tests")
 }
 
 // setEmailService sets the email service in the auth controller using reflection
