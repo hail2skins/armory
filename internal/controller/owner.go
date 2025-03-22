@@ -819,7 +819,12 @@ func (o *OwnerController) Edit(c *gin.Context) {
 		ctx := context.Background()
 		user, err := o.db.GetUserByEmail(ctx, userInfo.GetUserName())
 		if err != nil {
-			c.HTML(http.StatusInternalServerError, "error.html", gin.H{"error": "Failed to get user"})
+			// Use session flash message instead of HTML rendering
+			session := sessions.Default(c)
+			session.AddFlash("An error occurred. Please try again.")
+			session.Save()
+
+			c.Redirect(http.StatusSeeOther, "/owner")
 			return
 		}
 
@@ -837,19 +842,34 @@ func (o *OwnerController) Edit(c *gin.Context) {
 		// Get all weapon types, calibers, and manufacturers
 		var weaponTypes []models.WeaponType
 		if err := db.Order("popularity DESC").Find(&weaponTypes).Error; err != nil {
-			c.HTML(http.StatusInternalServerError, "error.html", gin.H{"error": "Failed to get weapon types"})
+			// Use session flash message instead of HTML rendering
+			session := sessions.Default(c)
+			session.AddFlash("An error occurred loading weapon types. Please try again.")
+			session.Save()
+
+			c.Redirect(http.StatusSeeOther, "/owner")
 			return
 		}
 
 		var calibers []models.Caliber
 		if err := db.Order("popularity DESC").Find(&calibers).Error; err != nil {
-			c.HTML(http.StatusInternalServerError, "error.html", gin.H{"error": "Failed to get calibers"})
+			// Use session flash message instead of HTML rendering
+			session := sessions.Default(c)
+			session.AddFlash("An error occurred loading calibers. Please try again.")
+			session.Save()
+
+			c.Redirect(http.StatusSeeOther, "/owner")
 			return
 		}
 
 		var manufacturers []models.Manufacturer
 		if err := db.Order("popularity DESC").Find(&manufacturers).Error; err != nil {
-			c.HTML(http.StatusInternalServerError, "error.html", gin.H{"error": "Failed to get manufacturers"})
+			// Use session flash message instead of HTML rendering
+			session := sessions.Default(c)
+			session.AddFlash("An error occurred loading manufacturers. Please try again.")
+			session.Save()
+
+			c.Redirect(http.StatusSeeOther, "/owner")
 			return
 		}
 
@@ -904,7 +924,12 @@ func (o *OwnerController) Edit(c *gin.Context) {
 	ctx := context.Background()
 	user, err := o.db.GetUserByEmail(ctx, userInfo.GetUserName())
 	if err != nil {
-		c.HTML(http.StatusInternalServerError, "error.html", gin.H{"error": "Failed to get user"})
+		// Use session flash message instead of HTML rendering
+		session := sessions.Default(c)
+		session.AddFlash("An error occurred. Please try again.")
+		session.Save()
+
+		c.Redirect(http.StatusSeeOther, "/owner")
 		return
 	}
 
@@ -915,26 +940,46 @@ func (o *OwnerController) Edit(c *gin.Context) {
 	var gun models.Gun
 	db := o.db.GetDB()
 	if err := db.Preload("WeaponType").Preload("Caliber").Preload("Manufacturer").Where("id = ? AND owner_id = ?", gunID, user.ID).First(&gun).Error; err != nil {
-		c.HTML(http.StatusNotFound, "error.html", gin.H{"error": "Gun not found"})
+		// Use session flash message instead of HTML rendering
+		session := sessions.Default(c)
+		session.AddFlash("That's not your gun!")
+		session.Save()
+
+		c.Redirect(http.StatusSeeOther, "/owner")
 		return
 	}
 
 	// Get all weapon types, calibers, and manufacturers
 	var weaponTypes []models.WeaponType
 	if err := db.Order("popularity DESC").Find(&weaponTypes).Error; err != nil {
-		c.HTML(http.StatusInternalServerError, "error.html", gin.H{"error": "Failed to get weapon types"})
+		// Use session flash message instead of HTML rendering
+		session := sessions.Default(c)
+		session.AddFlash("An error occurred loading weapon types. Please try again.")
+		session.Save()
+
+		c.Redirect(http.StatusSeeOther, "/owner")
 		return
 	}
 
 	var calibers []models.Caliber
 	if err := db.Order("popularity DESC").Find(&calibers).Error; err != nil {
-		c.HTML(http.StatusInternalServerError, "error.html", gin.H{"error": "Failed to get calibers"})
+		// Use session flash message instead of HTML rendering
+		session := sessions.Default(c)
+		session.AddFlash("An error occurred loading calibers. Please try again.")
+		session.Save()
+
+		c.Redirect(http.StatusSeeOther, "/owner")
 		return
 	}
 
 	var manufacturers []models.Manufacturer
 	if err := db.Order("popularity DESC").Find(&manufacturers).Error; err != nil {
-		c.HTML(http.StatusInternalServerError, "error.html", gin.H{"error": "Failed to get manufacturers"})
+		// Use session flash message instead of HTML rendering
+		session := sessions.Default(c)
+		session.AddFlash("An error occurred loading manufacturers. Please try again.")
+		session.Save()
+
+		c.Redirect(http.StatusSeeOther, "/owner")
 		return
 	}
 
@@ -1203,7 +1248,12 @@ func (o *OwnerController) Update(c *gin.Context) {
 	var gun models.Gun
 	db := o.db.GetDB()
 	if err := db.Preload("WeaponType").Preload("Caliber").Preload("Manufacturer").Where("id = ? AND owner_id = ?", gunID, user.ID).First(&gun).Error; err != nil {
-		c.HTML(http.StatusNotFound, "error.html", gin.H{"error": "Gun not found"})
+		// Use session flash message instead of HTML rendering
+		session := sessions.Default(c)
+		session.AddFlash("That's not your gun!")
+		session.Save()
+
+		c.Redirect(http.StatusSeeOther, "/owner")
 		return
 	}
 
@@ -1646,6 +1696,7 @@ func (o *OwnerController) Arsenal(c *gin.Context) {
 		session := sessions.Default(c)
 		flashes := session.Flashes()
 		if len(flashes) > 0 {
+
 			session.Save()
 			for _, flash := range flashes {
 				if flashMsg, ok := flash.(string); ok {
@@ -1800,6 +1851,7 @@ func (o *OwnerController) Arsenal(c *gin.Context) {
 						"email": userInfo.GetUserName(),
 						"roles": roles,
 					})
+
 					ownerData.Auth = ownerData.Auth.WithRoles(roles)
 				}
 			}
@@ -1815,6 +1867,7 @@ func (o *OwnerController) Arsenal(c *gin.Context) {
 	session := sessions.Default(c)
 	flashes := session.Flashes()
 	if len(flashes) > 0 {
+
 		session.Save()
 		for _, flash := range flashes {
 			if flashMsg, ok := flash.(string); ok {
@@ -1897,6 +1950,7 @@ func (o *OwnerController) Profile(c *gin.Context) {
 		session := sessions.Default(c)
 		flashes := session.Flashes()
 		if len(flashes) > 0 {
+
 			session.Save()
 			for _, flash := range flashes {
 				if flashMsg, ok := flash.(string); ok {
@@ -1969,6 +2023,7 @@ func (o *OwnerController) Profile(c *gin.Context) {
 	session := sessions.Default(c)
 	flashes := session.Flashes()
 	if len(flashes) > 0 {
+
 		session.Save()
 		for _, flash := range flashes {
 			if flashMsg, ok := flash.(string); ok {
@@ -2039,6 +2094,7 @@ func (o *OwnerController) EditProfile(c *gin.Context) {
 		session := sessions.Default(c)
 		flashes := session.Flashes()
 		if len(flashes) > 0 {
+
 			session.Save()
 			for _, flash := range flashes {
 				if flashMsg, ok := flash.(string); ok {
@@ -2099,6 +2155,7 @@ func (o *OwnerController) EditProfile(c *gin.Context) {
 	session := sessions.Default(c)
 	flashes := session.Flashes()
 	if len(flashes) > 0 {
+
 		session.Save()
 		for _, flash := range flashes {
 			if flashMsg, ok := flash.(string); ok {
@@ -2466,6 +2523,7 @@ func (o *OwnerController) Subscription(c *gin.Context) {
 		session := sessions.Default(c)
 		flashes := session.Flashes()
 		if len(flashes) > 0 {
+
 			session.Save()
 			for _, flash := range flashes {
 				if flashMsg, ok := flash.(string); ok {
@@ -2545,6 +2603,7 @@ func (o *OwnerController) Subscription(c *gin.Context) {
 	session := sessions.Default(c)
 	flashes := session.Flashes()
 	if len(flashes) > 0 {
+
 		session.Save()
 		for _, flash := range flashes {
 			if flashMsg, ok := flash.(string); ok {
