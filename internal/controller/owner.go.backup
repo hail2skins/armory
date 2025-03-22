@@ -1056,11 +1056,7 @@ func (o *OwnerController) Update(c *gin.Context) {
 		ctx := context.Background()
 		user, err := o.db.GetUserByEmail(ctx, userInfo.GetUserName())
 		if err != nil {
-			// Use session flash message instead of HTML error
-			session := sessions.Default(c)
-			session.AddFlash("Failed to get user information")
-			session.Save()
-			c.Redirect(http.StatusSeeOther, "/login")
+			c.HTML(http.StatusInternalServerError, "error.html", gin.H{"error": "Failed to get user"})
 			return
 		}
 
@@ -1071,21 +1067,13 @@ func (o *OwnerController) Update(c *gin.Context) {
 		var gun models.Gun
 		db := o.db.GetDB()
 		if err := db.Preload("WeaponType").Preload("Caliber").Preload("Manufacturer").Where("id = ? AND owner_id = ?", gunID, user.ID).First(&gun).Error; err != nil {
-			// Use session flash message instead of HTML error
-			session := sessions.Default(c)
-			session.AddFlash("That's not your gun!")
-			session.Save()
-			c.Redirect(http.StatusSeeOther, "/owner")
+			c.HTML(http.StatusNotFound, "error.html", gin.H{"error": "Gun not found"})
 			return
 		}
 
 		// Parse the form
 		if err := c.Request.ParseForm(); err != nil {
-			// Use session flash message instead of HTML error
-			session := sessions.Default(c)
-			session.AddFlash("Invalid form data")
-			session.Save()
-			c.Redirect(http.StatusSeeOther, "/owner")
+			c.HTML(http.StatusBadRequest, "error.html", gin.H{"error": "Invalid form data"})
 			return
 		}
 
@@ -1122,31 +1110,19 @@ func (o *OwnerController) Update(c *gin.Context) {
 			// Get all weapon types, calibers, and manufacturers
 			var weaponTypes []models.WeaponType
 			if err := db.Order("popularity DESC").Find(&weaponTypes).Error; err != nil {
-				// Use session flash message instead of HTML error
-				session := sessions.Default(c)
-				session.AddFlash("Failed to get weapon types")
-				session.Save()
-				c.Redirect(http.StatusSeeOther, "/owner")
+				c.HTML(http.StatusInternalServerError, "error.html", gin.H{"error": "Failed to get weapon types"})
 				return
 			}
 
 			var calibers []models.Caliber
 			if err := db.Order("popularity DESC").Find(&calibers).Error; err != nil {
-				// Use session flash message instead of HTML error
-				session := sessions.Default(c)
-				session.AddFlash("Failed to get calibers")
-				session.Save()
-				c.Redirect(http.StatusSeeOther, "/owner")
+				c.HTML(http.StatusInternalServerError, "error.html", gin.H{"error": "Failed to get calibers"})
 				return
 			}
 
 			var manufacturers []models.Manufacturer
 			if err := db.Order("popularity DESC").Find(&manufacturers).Error; err != nil {
-				// Use session flash message instead of HTML error
-				session := sessions.Default(c)
-				session.AddFlash("Failed to get manufacturers")
-				session.Save()
-				c.Redirect(http.StatusSeeOther, "/owner")
+				c.HTML(http.StatusInternalServerError, "error.html", gin.H{"error": "Failed to get manufacturers"})
 				return
 			}
 
@@ -1170,31 +1146,19 @@ func (o *OwnerController) Update(c *gin.Context) {
 		// Parse the IDs
 		weaponTypeID, err := strconv.ParseUint(weaponTypeIDStr, 10, 64)
 		if err != nil {
-			// Use session flash message instead of HTML error
-			session := sessions.Default(c)
-			session.AddFlash("Invalid weapon type ID")
-			session.Save()
-			c.Redirect(http.StatusSeeOther, fmt.Sprintf("/owner/guns/%s/edit", gunID))
+			c.HTML(http.StatusBadRequest, "error.html", gin.H{"error": "Invalid weapon type ID"})
 			return
 		}
 
 		caliberID, err := strconv.ParseUint(caliberIDStr, 10, 64)
 		if err != nil {
-			// Use session flash message instead of HTML error
-			session := sessions.Default(c)
-			session.AddFlash("Invalid caliber ID")
-			session.Save()
-			c.Redirect(http.StatusSeeOther, fmt.Sprintf("/owner/guns/%s/edit", gunID))
+			c.HTML(http.StatusBadRequest, "error.html", gin.H{"error": "Invalid caliber ID"})
 			return
 		}
 
 		manufacturerID, err := strconv.ParseUint(manufacturerIDStr, 10, 64)
 		if err != nil {
-			// Use session flash message instead of HTML error
-			session := sessions.Default(c)
-			session.AddFlash("Invalid manufacturer ID")
-			session.Save()
-			c.Redirect(http.StatusSeeOther, fmt.Sprintf("/owner/guns/%s/edit", gunID))
+			c.HTML(http.StatusBadRequest, "error.html", gin.H{"error": "Invalid manufacturer ID"})
 			return
 		}
 
@@ -1203,11 +1167,7 @@ func (o *OwnerController) Update(c *gin.Context) {
 		if acquiredDateStr != "" {
 			parsedDate, err := time.Parse("2006-01-02", acquiredDateStr)
 			if err != nil {
-				// Use session flash message instead of HTML error
-				session := sessions.Default(c)
-				session.AddFlash("Invalid acquired date")
-				session.Save()
-				c.Redirect(http.StatusSeeOther, fmt.Sprintf("/owner/guns/%s/edit", gunID))
+				c.HTML(http.StatusBadRequest, "error.html", gin.H{"error": "Invalid acquired date"})
 				return
 			}
 			acquiredDate = &parsedDate
@@ -1220,11 +1180,7 @@ func (o *OwnerController) Update(c *gin.Context) {
 		if paidStr != "" {
 			paid, err := strconv.ParseFloat(paidStr, 64)
 			if err != nil {
-				// Use session flash message instead of HTML error
-				session := sessions.Default(c)
-				session.AddFlash("Invalid paid amount")
-				session.Save()
-				c.Redirect(http.StatusSeeOther, fmt.Sprintf("/owner/guns/%s/edit", gunID))
+				c.HTML(http.StatusBadRequest, "error.html", gin.H{"error": "Invalid paid amount"})
 				return
 			}
 			paidAmount = &paid
@@ -1247,28 +1203,20 @@ func (o *OwnerController) Update(c *gin.Context) {
 
 		// Save the gun
 		if err := models.UpdateGun(db, updatedGun); err != nil {
-			// Use session flash message instead of HTML error
-			session := sessions.Default(c)
-			session.AddFlash("Failed to update gun")
-			session.Save()
-			c.Redirect(http.StatusSeeOther, fmt.Sprintf("/owner/guns/%s/edit", gunID))
+			c.HTML(http.StatusInternalServerError, "error.html", gin.H{"error": "Failed to update gun"})
 			return
 		}
 
 		// Reload the gun with its relationships to ensure they're updated
 		if err := db.Preload("WeaponType").Preload("Caliber").Preload("Manufacturer").First(&updatedGun, updatedGun.ID).Error; err != nil {
-			// Use session flash message instead of HTML error
-			session := sessions.Default(c)
-			session.AddFlash("Failed to reload gun")
-			session.Save()
-			c.Redirect(http.StatusSeeOther, "/owner")
+			c.HTML(http.StatusInternalServerError, "error.html", gin.H{"error": "Failed to reload gun"})
 			return
 		}
 
-		// Set flash message for success
-		session := sessions.Default(c)
-		session.AddFlash("Your gun has been updated successfully")
-		session.Save()
+		// Set flash message
+		if setFlash, exists := c.Get("setFlash"); exists {
+			setFlash.(func(string))("Your gun has been updated.")
+		}
 
 		// Redirect to the owner page
 		c.Redirect(http.StatusSeeOther, "/owner")
@@ -1289,11 +1237,7 @@ func (o *OwnerController) Update(c *gin.Context) {
 	ctx := context.Background()
 	user, err := o.db.GetUserByEmail(ctx, userInfo.GetUserName())
 	if err != nil {
-		// Use session flash message instead of HTML error
-		session := sessions.Default(c)
-		session.AddFlash("Failed to get user information")
-		session.Save()
-		c.Redirect(http.StatusSeeOther, "/login")
+		c.HTML(http.StatusInternalServerError, "error.html", gin.H{"error": "Failed to get user"})
 		return
 	}
 
@@ -1304,7 +1248,7 @@ func (o *OwnerController) Update(c *gin.Context) {
 	var gun models.Gun
 	db := o.db.GetDB()
 	if err := db.Preload("WeaponType").Preload("Caliber").Preload("Manufacturer").Where("id = ? AND owner_id = ?", gunID, user.ID).First(&gun).Error; err != nil {
-		// Use session flash message instead of HTML error
+		// Use session flash message instead of HTML rendering
 		session := sessions.Default(c)
 		session.AddFlash("That's not your gun!")
 		session.Save()
@@ -1315,11 +1259,7 @@ func (o *OwnerController) Update(c *gin.Context) {
 
 	// Parse the form
 	if err := c.Request.ParseForm(); err != nil {
-		// Use session flash message instead of HTML error
-		session := sessions.Default(c)
-		session.AddFlash("Invalid form data")
-		session.Save()
-		c.Redirect(http.StatusSeeOther, "/owner")
+		c.HTML(http.StatusBadRequest, "error.html", gin.H{"error": "Invalid form data"})
 		return
 	}
 
@@ -1356,31 +1296,19 @@ func (o *OwnerController) Update(c *gin.Context) {
 		// Get all weapon types, calibers, and manufacturers
 		var weaponTypes []models.WeaponType
 		if err := db.Order("popularity DESC").Find(&weaponTypes).Error; err != nil {
-			// Use session flash message instead of HTML error
-			session := sessions.Default(c)
-			session.AddFlash("Failed to get weapon types")
-			session.Save()
-			c.Redirect(http.StatusSeeOther, "/owner")
+			c.HTML(http.StatusInternalServerError, "error.html", gin.H{"error": "Failed to get weapon types"})
 			return
 		}
 
 		var calibers []models.Caliber
 		if err := db.Order("popularity DESC").Find(&calibers).Error; err != nil {
-			// Use session flash message instead of HTML error
-			session := sessions.Default(c)
-			session.AddFlash("Failed to get calibers")
-			session.Save()
-			c.Redirect(http.StatusSeeOther, "/owner")
+			c.HTML(http.StatusInternalServerError, "error.html", gin.H{"error": "Failed to get calibers"})
 			return
 		}
 
 		var manufacturers []models.Manufacturer
 		if err := db.Order("popularity DESC").Find(&manufacturers).Error; err != nil {
-			// Use session flash message instead of HTML error
-			session := sessions.Default(c)
-			session.AddFlash("Failed to get manufacturers")
-			session.Save()
-			c.Redirect(http.StatusSeeOther, "/owner")
+			c.HTML(http.StatusInternalServerError, "error.html", gin.H{"error": "Failed to get manufacturers"})
 			return
 		}
 
@@ -1404,31 +1332,19 @@ func (o *OwnerController) Update(c *gin.Context) {
 	// Parse the IDs
 	weaponTypeID, err := strconv.ParseUint(weaponTypeIDStr, 10, 64)
 	if err != nil {
-		// Use session flash message instead of HTML error
-		session := sessions.Default(c)
-		session.AddFlash("Invalid weapon type ID")
-		session.Save()
-		c.Redirect(http.StatusSeeOther, fmt.Sprintf("/owner/guns/%s/edit", gunID))
+		c.HTML(http.StatusBadRequest, "error.html", gin.H{"error": "Invalid weapon type ID"})
 		return
 	}
 
 	caliberID, err := strconv.ParseUint(caliberIDStr, 10, 64)
 	if err != nil {
-		// Use session flash message instead of HTML error
-		session := sessions.Default(c)
-		session.AddFlash("Invalid caliber ID")
-		session.Save()
-		c.Redirect(http.StatusSeeOther, fmt.Sprintf("/owner/guns/%s/edit", gunID))
+		c.HTML(http.StatusBadRequest, "error.html", gin.H{"error": "Invalid caliber ID"})
 		return
 	}
 
 	manufacturerID, err := strconv.ParseUint(manufacturerIDStr, 10, 64)
 	if err != nil {
-		// Use session flash message instead of HTML error
-		session := sessions.Default(c)
-		session.AddFlash("Invalid manufacturer ID")
-		session.Save()
-		c.Redirect(http.StatusSeeOther, fmt.Sprintf("/owner/guns/%s/edit", gunID))
+		c.HTML(http.StatusBadRequest, "error.html", gin.H{"error": "Invalid manufacturer ID"})
 		return
 	}
 
@@ -1437,11 +1353,7 @@ func (o *OwnerController) Update(c *gin.Context) {
 	if acquiredDateStr != "" {
 		parsedDate, err := time.Parse("2006-01-02", acquiredDateStr)
 		if err != nil {
-			// Use session flash message instead of HTML error
-			session := sessions.Default(c)
-			session.AddFlash("Invalid acquired date")
-			session.Save()
-			c.Redirect(http.StatusSeeOther, fmt.Sprintf("/owner/guns/%s/edit", gunID))
+			c.HTML(http.StatusBadRequest, "error.html", gin.H{"error": "Invalid acquired date"})
 			return
 		}
 		acquiredDate = &parsedDate
@@ -1454,11 +1366,7 @@ func (o *OwnerController) Update(c *gin.Context) {
 	if paidStr != "" {
 		paid, err := strconv.ParseFloat(paidStr, 64)
 		if err != nil {
-			// Use session flash message instead of HTML error
-			session := sessions.Default(c)
-			session.AddFlash("Invalid paid amount")
-			session.Save()
-			c.Redirect(http.StatusSeeOther, fmt.Sprintf("/owner/guns/%s/edit", gunID))
+			c.HTML(http.StatusBadRequest, "error.html", gin.H{"error": "Invalid paid amount"})
 			return
 		}
 		paidAmount = &paid
@@ -1481,28 +1389,20 @@ func (o *OwnerController) Update(c *gin.Context) {
 
 	// Save the gun
 	if err := models.UpdateGun(db, updatedGun); err != nil {
-		// Use session flash message instead of HTML error
-		session := sessions.Default(c)
-		session.AddFlash("Failed to update gun")
-		session.Save()
-		c.Redirect(http.StatusSeeOther, fmt.Sprintf("/owner/guns/%s/edit", gunID))
+		c.HTML(http.StatusInternalServerError, "error.html", gin.H{"error": "Failed to update gun"})
 		return
 	}
 
 	// Reload the gun with its relationships to ensure they're updated
 	if err := db.Preload("WeaponType").Preload("Caliber").Preload("Manufacturer").First(&updatedGun, updatedGun.ID).Error; err != nil {
-		// Use session flash message instead of HTML error
-		session := sessions.Default(c)
-		session.AddFlash("Failed to reload gun")
-		session.Save()
-		c.Redirect(http.StatusSeeOther, "/owner")
+		c.HTML(http.StatusInternalServerError, "error.html", gin.H{"error": "Failed to reload gun"})
 		return
 	}
 
-	// Set flash message for success
-	session := sessions.Default(c)
-	session.AddFlash("Your gun has been updated successfully")
-	session.Save()
+	// Set flash message
+	if setFlash, exists := c.Get("setFlash"); exists {
+		setFlash.(func(string))("Your gun has been updated.")
+	}
 
 	// Redirect to the owner page
 	c.Redirect(http.StatusSeeOther, "/owner")
