@@ -3,6 +3,8 @@ package tests
 import (
 	"reflect"
 
+	"github.com/gin-contrib/sessions"
+	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
 	"github.com/hail2skins/armory/internal/controller"
 	"github.com/hail2skins/armory/internal/testutils/mocks"
@@ -58,6 +60,10 @@ func (s *ControllerTestSuite) SetupTest() {
 
 	// Create a router
 	s.Router = gin.New()
+
+	// Set up session middleware for tests
+	store := cookie.NewStore([]byte("test-secret-key"))
+	s.Router.Use(sessions.Sessions("auth-session", store))
 
 	// Set up middleware - include both 'auth' and 'authController' keys since different controllers use different keys
 	s.Router.Use(func(c *gin.Context) {

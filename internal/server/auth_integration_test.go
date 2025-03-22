@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/gin-contrib/sessions"
+	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
 	authviews "github.com/hail2skins/armory/cmd/web/views/auth"
 	"github.com/hail2skins/armory/cmd/web/views/data"
@@ -283,6 +285,10 @@ func setupTestRouter(t *testing.T) (*gin.Engine, *MockDBWithContext, *mocks.Mock
 
 	// Configure Gin for tests
 	gin.SetMode(gin.TestMode)
+
+	// Add session middleware
+	store := cookie.NewStore([]byte("test-secret-key"))
+	router.Use(sessions.Sessions("auth-session", store))
 
 	// Create mock database
 	mockDB := new(MockDBWithContext)

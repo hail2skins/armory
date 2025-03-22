@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/gin-contrib/sessions"
+	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
 	"github.com/hail2skins/armory/internal/controller"
 	"github.com/hail2skins/armory/internal/database"
@@ -338,6 +340,10 @@ func TestRedirectGuestToLogin(t *testing.T) {
 	// Create a new router
 	r := gin.New()
 
+	// Add session middleware required for flash messages
+	store := cookie.NewStore([]byte("test-secret-key"))
+	r.Use(sessions.Sessions("auth-session", store))
+
 	// Create controllers
 	authController := controller.NewAuthController(mockDB)
 	paymentController := controller.NewPaymentController(mockDB)
@@ -586,6 +592,10 @@ func TestGuestRedirectToLoginFromPricingPage(t *testing.T) {
 
 	// Create a new router
 	r := gin.New()
+
+	// Add session middleware required for flash messages
+	store := cookie.NewStore([]byte("test-secret-key"))
+	r.Use(sessions.Sessions("auth-session", store))
 
 	// Create controllers
 	authController := controller.NewAuthController(mockDB)

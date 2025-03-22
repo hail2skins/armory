@@ -1,9 +1,9 @@
 package tests
 
 import (
-	"bytes"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/hail2skins/armory/internal/database"
@@ -52,18 +52,15 @@ func (s *AuthControllerTestSuite) TestSuccessfulLogin() {
 		Verified: true, // Important: User must be verified for successful login
 	}
 
-	// Set up mock expectations for AuthenticateUser
+	// Set up mock expectations for AuthenticateUser with context.Background()
 	s.MockDB.On("AuthenticateUser", mock.Anything, "test@example.com", "password123").Return(mockUser, nil)
 
-	// For successful login tests, let's skip the LoginUser expectation since it might be replaced
-	// with a direct redirect in the controller
+	// Create form data instead of JSON
+	formData := "email=test@example.com&password=password123"
 
-	// Create login request body with JSON content type
-	loginJSON := `{"email":"test@example.com","password":"password123"}`
-
-	// Create a test request
-	req, _ := http.NewRequest("POST", "/login", bytes.NewBufferString(loginJSON))
-	req.Header.Set("Content-Type", "application/json")
+	// Create a test request with form data
+	req, _ := http.NewRequest("POST", "/login", strings.NewReader(formData))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	resp := httptest.NewRecorder()
 
 	// Serve the request
@@ -82,7 +79,7 @@ func (s *AuthControllerTestSuite) TestSuccessfulLogin() {
 			"Expected redirect to / or /owner, got %s", resp.Header().Get("Location"))
 	}
 
-	// Verify DB mock expectations (don't check auth mock since we're not setting up expectations for it)
+	// Verify DB mock expectations
 	s.MockDB.AssertExpectations(s.T())
 }
 
@@ -97,12 +94,12 @@ func (s *AuthControllerTestSuite) TestFailedLogin() {
 	// Set up mock expectations for AuthenticateUser to return nil user with error
 	s.MockDB.On("AuthenticateUser", mock.Anything, "test@example.com", "wrongpassword").Return(nil, database.ErrInvalidCredentials)
 
-	// Create login request body
-	loginJSON := `{"email":"test@example.com","password":"wrongpassword"}`
+	// Create form data instead of JSON
+	formData := "email=test@example.com&password=wrongpassword"
 
 	// Create a test request
-	req, _ := http.NewRequest("POST", "/login", bytes.NewBufferString(loginJSON))
-	req.Header.Set("Content-Type", "application/json")
+	req, _ := http.NewRequest("POST", "/login", strings.NewReader(formData))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	resp := httptest.NewRecorder()
 
 	// Serve the request

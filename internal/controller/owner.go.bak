@@ -384,16 +384,12 @@ func (o *OwnerController) New(c *gin.Context) {
 		}
 	}
 
-	// Check for flash messages from session
-	session := sessions.Default(c)
-	flashes := session.Flashes()
-	if len(flashes) > 0 {
-		session.Save()
-		for _, flash := range flashes {
-			if flashMsg, ok := flash.(string); ok {
-				ownerData.WithSuccess(flashMsg)
-			}
-		}
+	// Check for flash message from cookie
+	if flashCookie, err := c.Cookie("flash"); err == nil && flashCookie != "" {
+		// Add flash message to success messages
+		ownerData.WithSuccess(flashCookie)
+		// Clear the flash cookie
+		c.SetCookie("flash", "", -1, "/", "", false, false)
 	}
 
 	// Render the new gun form with the data
@@ -689,16 +685,11 @@ func (o *OwnerController) Show(c *gin.Context) {
 			}
 		}
 
-		// Check for flash messages from session
-		session := sessions.Default(c)
-		flashes := session.Flashes()
-		if len(flashes) > 0 {
-			session.Save()
-			for _, flash := range flashes {
-				if flashMsg, ok := flash.(string); ok {
-					ownerData.WithSuccess(flashMsg)
-				}
-			}
+		// Check for flash message from cookie
+		if flashCookie, err := c.Cookie("flash"); err == nil && flashCookie != "" {
+			// Clear the flash cookie
+			c.SetCookie("flash", "", -1, "/", "", false, true)
+			ownerData.WithSuccess(flashCookie)
 		}
 
 		// Render the gun show page
@@ -769,16 +760,11 @@ func (o *OwnerController) Show(c *gin.Context) {
 		}
 	}
 
-	// Check for flash messages from session
-	session := sessions.Default(c)
-	flashes := session.Flashes()
-	if len(flashes) > 0 {
-		session.Save()
-		for _, flash := range flashes {
-			if flashMsg, ok := flash.(string); ok {
-				ownerData.WithSuccess(flashMsg)
-			}
-		}
+	// Check for flash message from cookie
+	if flashCookie, err := c.Cookie("flash"); err == nil && flashCookie != "" {
+		// Clear the flash cookie
+		c.SetCookie("flash", "", -1, "/", "", false, true)
+		ownerData.WithSuccess(flashCookie)
 	}
 
 	// Render the gun show page
@@ -1883,16 +1869,12 @@ func (o *OwnerController) Profile(c *gin.Context) {
 			}
 		}
 
-		// Check for flash messages from session
-		session := sessions.Default(c)
-		flashes := session.Flashes()
-		if len(flashes) > 0 {
-			session.Save()
-			for _, flash := range flashes {
-				if flashMsg, ok := flash.(string); ok {
-					ownerData.WithSuccess(flashMsg)
-				}
-			}
+		// Check for flash message from cookie
+		if flashCookie, err := c.Cookie("flash"); err == nil && flashCookie != "" {
+			// Add flash message to success messages
+			ownerData.WithSuccess(flashCookie)
+			// Clear the flash cookie
+			c.SetCookie("flash", "", -1, "/", "", false, false)
 		}
 
 		// Render the profile page with the data
@@ -1955,16 +1937,12 @@ func (o *OwnerController) Profile(c *gin.Context) {
 		}
 	}
 
-	// Check for flash messages from session
-	session := sessions.Default(c)
-	flashes := session.Flashes()
-	if len(flashes) > 0 {
-		session.Save()
-		for _, flash := range flashes {
-			if flashMsg, ok := flash.(string); ok {
-				ownerData.WithSuccess(flashMsg)
-			}
-		}
+	// Check for flash message from cookie
+	if flashCookie, err := c.Cookie("flash"); err == nil && flashCookie != "" {
+		// Add flash message to success messages
+		ownerData.WithSuccess(flashCookie)
+		// Clear the flash cookie
+		c.SetCookie("flash", "", -1, "/", "", false, false)
 	}
 
 	// Render the profile page with the data
@@ -2025,16 +2003,12 @@ func (o *OwnerController) EditProfile(c *gin.Context) {
 			}
 		}
 
-		// Check for flash messages from session
-		session := sessions.Default(c)
-		flashes := session.Flashes()
-		if len(flashes) > 0 {
-			session.Save()
-			for _, flash := range flashes {
-				if flashMsg, ok := flash.(string); ok {
-					ownerData.WithSuccess(flashMsg)
-				}
-			}
+		// Check for flash message from cookie
+		if flashCookie, err := c.Cookie("flash"); err == nil && flashCookie != "" {
+			// Add flash message to success messages
+			ownerData.WithSuccess(flashCookie)
+			// Clear the flash cookie
+			c.SetCookie("flash", "", -1, "/", "", false, false)
 		}
 
 		// Render the profile edit page
@@ -2085,16 +2059,12 @@ func (o *OwnerController) EditProfile(c *gin.Context) {
 		}
 	}
 
-	// Check for flash messages from session
-	session := sessions.Default(c)
-	flashes := session.Flashes()
-	if len(flashes) > 0 {
-		session.Save()
-		for _, flash := range flashes {
-			if flashMsg, ok := flash.(string); ok {
-				ownerData.WithSuccess(flashMsg)
-			}
-		}
+	// Check for flash message from cookie
+	if flashCookie, err := c.Cookie("flash"); err == nil && flashCookie != "" {
+		// Add flash message to success messages
+		ownerData.WithSuccess(flashCookie)
+		// Clear the flash cookie
+		c.SetCookie("flash", "", -1, "/", "", false, false)
 	}
 
 	// Render the profile edit page
@@ -2452,16 +2422,12 @@ func (o *OwnerController) Subscription(c *gin.Context) {
 			}
 		}
 
-		// Check for flash messages from session
-		session := sessions.Default(c)
-		flashes := session.Flashes()
-		if len(flashes) > 0 {
-			session.Save()
-			for _, flash := range flashes {
-				if flashMsg, ok := flash.(string); ok {
-					ownerData.WithSuccess(flashMsg)
-				}
-			}
+		// Check for flash message from cookie
+		if flashCookie, err := c.Cookie("flash"); err == nil && flashCookie != "" {
+			// Add flash message to success messages
+			ownerData.WithSuccess(flashCookie)
+			// Clear the flash cookie
+			c.SetCookie("flash", "", -1, "/", "", false, false)
 		}
 
 		// Render the subscription management page with the data
@@ -2531,16 +2497,12 @@ func (o *OwnerController) Subscription(c *gin.Context) {
 		}
 	}
 
-	// Check for flash messages from session
-	session := sessions.Default(c)
-	flashes := session.Flashes()
-	if len(flashes) > 0 {
-		session.Save()
-		for _, flash := range flashes {
-			if flashMsg, ok := flash.(string); ok {
-				ownerData.WithSuccess(flashMsg)
-			}
-		}
+	// Check for flash message from cookie
+	if flashCookie, err := c.Cookie("flash"); err == nil && flashCookie != "" {
+		// Add flash message to success messages
+		ownerData.WithSuccess(flashCookie)
+		// Clear the flash cookie
+		c.SetCookie("flash", "", -1, "/", "", false, false)
 	}
 
 	// Render the subscription management page with the data

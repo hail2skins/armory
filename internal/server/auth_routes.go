@@ -59,16 +59,10 @@ func (s *Server) RegisterAuthRoutes(r *gin.Engine, authController *controller.Au
 	r.POST("/reset-password/new", authController.ForgotPasswordHandler)
 }
 
-// handleAuthFlashMessage checks for a flash message cookie and adds it to the AuthData
+// handleAuthFlashMessage checks for flash messages in the session and adds them to the AuthData
 func handleAuthFlashMessage(c *gin.Context, authData data.AuthData) data.AuthData {
-	// Check for flash message
-	if flashCookie, err := c.Cookie("flash"); err == nil && flashCookie != "" {
-		// Add flash message to success messages
-		authData.Success = flashCookie
-		// Clear the flash cookie
-		c.SetCookie("flash", "", -1, "/", "", false, false)
-	}
-	return authData
+	// Use the new session-based flash helper
+	return handleSessionFlash(c, authData)
 }
 
 // setupAuthRenderFunctions configures the render functions for auth views

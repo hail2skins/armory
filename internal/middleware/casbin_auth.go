@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/casbin/casbin/v2"
+	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"github.com/hail2skins/armory/internal/logger"
 	"github.com/shaj13/go-guardian/v2/auth"
@@ -33,6 +34,12 @@ func (ca *CasbinAuth) Authorize(obj string, act ...string) gin.HandlerFunc {
 		// Get the current user from the context (set by authentication middleware)
 		authInfo, exists := c.Get("auth_info")
 		if !exists {
+			// Log the missing auth info
+			logger.Warn("Missing auth_info in context during Casbin authorization", map[string]interface{}{
+				"path": c.Request.URL.Path,
+				"keys": fmt.Sprintf("%v", c.Keys),
+			})
+
 			// User is not authenticated, redirect to home page
 			setFlashMessage(c, "You must log in to access that resource")
 			c.Redirect(http.StatusSeeOther, "/")
@@ -45,6 +52,7 @@ func (ca *CasbinAuth) Authorize(obj string, act ...string) gin.HandlerFunc {
 		if !ok {
 			logger.Error("Invalid auth info in context", nil, map[string]interface{}{
 				"auth_info_type": fmt.Sprintf("%T", authInfo),
+				"path":           c.Request.URL.Path,
 			})
 			setFlashMessage(c, "An error occurred. Please try again later.")
 			c.Redirect(http.StatusSeeOther, "/")
@@ -53,6 +61,11 @@ func (ca *CasbinAuth) Authorize(obj string, act ...string) gin.HandlerFunc {
 		}
 
 		sub := userInfo.GetUserName()
+		logger.Info("Checking authorization", map[string]interface{}{
+			"user":   sub,
+			"path":   c.Request.URL.Path,
+			"object": obj,
+		})
 
 		// Default action is wildcard if none provided
 		action := "*"
@@ -67,6 +80,7 @@ func (ca *CasbinAuth) Authorize(obj string, act ...string) gin.HandlerFunc {
 				"subject": sub,
 				"object":  obj,
 				"action":  action,
+				"path":    c.Request.URL.Path,
 			})
 			setFlashMessage(c, "An error occurred. Please try again later.")
 			c.Redirect(http.StatusSeeOther, "/")
@@ -80,6 +94,7 @@ func (ca *CasbinAuth) Authorize(obj string, act ...string) gin.HandlerFunc {
 				"subject": sub,
 				"object":  obj,
 				"action":  action,
+				"path":    c.Request.URL.Path,
 			})
 			setFlashMessage(c, "You do not have authorization for that resource")
 			c.Redirect(http.StatusSeeOther, "/")
@@ -87,6 +102,13 @@ func (ca *CasbinAuth) Authorize(obj string, act ...string) gin.HandlerFunc {
 			return
 		}
 
+		// User is authorized, continue to the next handler
+		logger.Info("Authorization granted", map[string]interface{}{
+			"subject": sub,
+			"object":  obj,
+			"action":  action,
+			"path":    c.Request.URL.Path,
+		})
 		c.Next()
 	}
 }
@@ -100,8 +122,10 @@ func setFlashMessage(c *gin.Context, message string) {
 			flashFunc(message)
 		}
 	} else {
-		// Fallback to cookie if setFlash function is not available
-		c.SetCookie("flash", message, 10, "/", "", false, false)
+		// Fallback to using the session directly
+		session := sessions.Default(c)
+		session.AddFlash(message)
+		session.Save()
 	}
 }
 

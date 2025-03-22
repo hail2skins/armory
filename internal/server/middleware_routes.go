@@ -1,77 +1,52 @@
 package server
 
 import (
+	"log"
 	"os"
 	"strings"
 
 	"github.com/gin-contrib/cors"
+	"github.com/gin-contrib/sessions"
+	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
 	"github.com/hail2skins/armory/internal/controller"
 	"github.com/hail2skins/armory/internal/logger"
 	"github.com/hail2skins/armory/internal/middleware"
 )
 
-// Add security headers middleware
+// securityHeaders applies security headers to all responses
 func securityHeaders() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Protection against clickjacking
-		c.Header("X-Frame-Options", "DENY")
+		// Content Security Policy
+		c.Header("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com; style-src 'self' 'unsafe-inline' https://unpkg.com; img-src 'self' data:;")
 
-		// Protection against MIME-type confusion attacks
+		// X-Content-Type-Options
 		c.Header("X-Content-Type-Options", "nosniff")
 
-		// Protection against XSS attacks (for older browsers)
+		// X-Frame-Options
+		c.Header("X-Frame-Options", "DENY")
+
+		// X-XSS-Protection
 		c.Header("X-XSS-Protection", "1; mode=block")
 
-		// Enforce HTTPS (only in production)
-		if os.Getenv("GO_ENV") == "production" {
-			c.Header("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
-		}
+		// Referrer-Policy
+		c.Header("Referrer-Policy", "strict-origin-when-cross-origin")
 
-		// Content Security Policy
-		// Updated to allow Tailwind CDN and other necessary resources
-		csp := []string{
-			"default-src 'self'",
-			"script-src 'self' https://cdn.tailwindcss.com https://cdn.jsdelivr.net 'unsafe-inline'",
-			"style-src 'self' https://cdn.tailwindcss.com https://fonts.googleapis.com 'unsafe-inline'",
-			"img-src 'self' data: https:",
-			"font-src 'self' https://fonts.gstatic.com",
-			"connect-src 'self'",
-			"frame-src 'self' https://buy.stripe.com",
-		}
-
-		c.Header("Content-Security-Policy", strings.Join(csp, "; "))
+		// Permissions-Policy
+		c.Header("Permissions-Policy", "camera=(), microphone=(), geolocation=(), interest-cohort=()")
 
 		c.Next()
 	}
 }
 
-// getCorsOrigins returns the allowed origins for CORS based on environment
+// getCorsOrigins returns the list of allowed origins for CORS
 func getCorsOrigins() []string {
-	// Check for a specific environment variable for CORS origins
 	corsOrigins := os.Getenv("CORS_ORIGINS")
 	if corsOrigins != "" {
-		// Split the origins by comma
-		origins := strings.Split(corsOrigins, ",")
-		// Trim whitespace
-		for i, origin := range origins {
-			origins[i] = strings.TrimSpace(origin)
-		}
-		return origins
+		return strings.Split(corsOrigins, ",")
 	}
 
-	// Environment-specific defaults
-	env := os.Getenv("APP_ENV")
-	if env == "production" {
-		// Default for production - should be overridden with CORS_ORIGINS in actual production
-		logger.Warn("CORS_ORIGINS not set in production environment. Using default configuration.", nil)
-		return []string{"https://armory.example.com"}
-	} else if env == "test" {
-		// For tests, allow any origin
-		return []string{"*"}
-	}
-
-	// Default for development
+	// Default local development origins
 	return []string{"http://localhost:5173", "http://localhost:3000", "http://localhost:8080"}
 }
 
@@ -94,15 +69,16 @@ func (s *Server) RegisterMiddleware(r *gin.Engine, authController *controller.Au
 	// Apply security headers
 	r.Use(securityHeaders())
 
+	// Set up sessions middleware with a cookie store
+	store := cookie.NewStore([]byte(os.Getenv("SESSION_SECRET")))
+	if os.Getenv("SESSION_SECRET") == "" {
+		log.Println("Warning: Using default session secret. This is not secure for production.")
+		store = cookie.NewStore([]byte("armory-session-secret"))
+	}
+	r.Use(sessions.Sessions("armory-session", store))
+
 	// Set up flash message middleware - moved before rate limiting
-	r.Use(func(c *gin.Context) {
-		// Set up a function to set flash messages
-		c.Set("setFlash", func(message string) {
-			// Set the flash message in a cookie
-			c.SetCookie("flash", message, 10, "/", "", false, false)
-		})
-		c.Next()
-	})
+	r.Use(FlashMiddleware())
 
 	// Set up rate limiting middleware - moved after flash middleware
 	middleware.SetupRateLimiting(r)

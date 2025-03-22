@@ -5,6 +5,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/gin-contrib/sessions"
+	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
 	"github.com/hail2skins/armory/internal/controller"
 	"github.com/hail2skins/armory/internal/testutils/mocks"
@@ -19,6 +21,10 @@ func TestHomeControllerWithAuthService(t *testing.T) {
 	t.Run("HomeController uses AuthService correctly", func(t *testing.T) {
 		// Create a new router
 		router := gin.New()
+
+		// Set up session middleware
+		store := cookie.NewStore([]byte("test-secret-key"))
+		router.Use(sessions.Sessions("auth-session", store))
 
 		// Create a mock auth service using the implementation from routes_test.go
 		mockAuth := &MockAuthService{
@@ -53,6 +59,10 @@ func TestHomeControllerWithAuthService(t *testing.T) {
 	t.Run("HomeController handles unauthenticated state", func(t *testing.T) {
 		// Create a new router
 		router := gin.New()
+
+		// Set up session middleware
+		store := cookie.NewStore([]byte("test-secret-key"))
+		router.Use(sessions.Sessions("auth-session", store))
 
 		// Create a mock auth service with unauthenticated state
 		mockAuth := &MockAuthService{

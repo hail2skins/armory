@@ -7,6 +7,8 @@ import (
 	"net/url"
 	"reflect"
 
+	"github.com/gin-contrib/sessions"
+	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
 	"github.com/hail2skins/armory/cmd/web/views/auth"
 	"github.com/hail2skins/armory/cmd/web/views/data"
@@ -78,6 +80,10 @@ func (s *IntegrationSuite) SetupTest() {
 
 	// Log that we're using the real controllers
 	s.T().Log("Using REAL controllers and templates for integration tests - NO MOCKS")
+
+	// Set up the sessions middleware - THIS IS CRITICAL FOR TESTS
+	store := cookie.NewStore([]byte("test-secret-key"))
+	s.Router.Use(sessions.Sessions("auth-session", store))
 
 	// Set up flash middleware
 	s.setupFlashMiddleware()
@@ -339,28 +345,81 @@ func (s *IntegrationSuite) TearDownTest() {
 
 // Helper methods
 
-// setupFlashMiddleware sets up middleware for flash messages
+// setupFlashMiddleware sets up the flash middleware for testing
 func (s *IntegrationSuite) setupFlashMiddleware() {
 	s.Router.Use(func(c *gin.Context) {
-		// Set flash function
+		// Set flash function that uses session
 		c.Set("setFlash", func(msg string) {
-			c.SetCookie("flash", msg, 10, "/", "", false, false)
-		})
-
-		// Get flash message from cookie
-		if flash, err := c.Cookie("flash"); err == nil && flash != "" {
-			// Decode cookie value
-			decodedFlash, err := url.QueryUnescape(flash)
-			if err == nil {
-				flash = decodedFlash
+			// Set in session
+			session := sessions.Default(c)
+			session.AddFlash(msg)
+			if err := session.Save(); err != nil {
+				s.T().Logf("Error saving session flash: %v", err)
 			}
 
-			// Set in context and clear cookie
-			c.Set("flash", flash)
-			c.SetCookie("flash", "", -1, "/", "", false, false)
+			// Always set as a cookie for test compatibility
+			encodedMsg := url.QueryEscape(msg)
+			http.SetCookie(c.Writer, &http.Cookie{
+				Name:     "flash",
+				Value:    encodedMsg,
+				Path:     "/",
+				MaxAge:   3600,
+				HttpOnly: true,
+			})
 
-			// Log for debugging
-			s.T().Logf("Found flash cookie: %s", flash)
+			s.T().Logf("Flash middleware: Set flash cookie '%s=%s'", "flash", encodedMsg)
+		})
+
+		// Check for flash cookies first (test priority)
+		for _, cookie := range c.Request.Cookies() {
+			if cookie.Name == "flash" && cookie.Value != "" {
+				// URL-decode the cookie value
+				decodedValue, err := url.QueryUnescape(cookie.Value)
+				if err == nil {
+					// Set flash value in context
+					c.Set("flash", decodedValue)
+					s.T().Logf("Flash middleware: Found flash cookie: %s=%s (decoded: %s)",
+						cookie.Name, cookie.Value, decodedValue)
+
+					// Clear the cookie after reading it
+					http.SetCookie(c.Writer, &http.Cookie{
+						Name:     "flash",
+						Value:    "",
+						Path:     "/",
+						MaxAge:   -1,
+						HttpOnly: true,
+					})
+				}
+				break
+			}
+		}
+
+		// Extract flash messages from the session as backup
+		session := sessions.Default(c)
+		if flashes := session.Flashes(); len(flashes) > 0 {
+			if err := session.Save(); err != nil {
+				s.T().Logf("Error saving session after reading flashes: %v", err)
+			}
+
+			// Set in context and cookie
+			if len(flashes) > 0 {
+				if flashMsg, ok := flashes[0].(string); ok {
+					// Set in context
+					c.Set("flash", flashMsg)
+
+					// Also set as cookie
+					encodedMsg := url.QueryEscape(flashMsg)
+					http.SetCookie(c.Writer, &http.Cookie{
+						Name:     "flash",
+						Value:    encodedMsg,
+						Path:     "/",
+						MaxAge:   3600,
+						HttpOnly: true,
+					})
+
+					s.T().Logf("Flash middleware: Set flash from session: %s", flashMsg)
+				}
+			}
 		}
 
 		c.Next()

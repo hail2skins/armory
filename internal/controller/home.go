@@ -3,6 +3,7 @@ package controller
 import (
 	"fmt"
 
+	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"github.com/hail2skins/armory/cmd/web/views/data"
 	"github.com/hail2skins/armory/cmd/web/views/home"
@@ -66,12 +67,13 @@ func (h *HomeController) HomeHandler(c *gin.Context) {
 				"hasActivePromotion": homeData.AuthData.ActivePromotion != nil,
 			})
 
-			// Check for flash messages
-			if flashCookie, err := c.Cookie("flash"); err == nil && flashCookie != "" {
-				// Add flash message to success messages
-				homeData.AuthData = homeData.AuthData.WithSuccess(flashCookie)
-				// Clear the flash cookie
-				c.SetCookie("flash", "", -1, "/", "", false, false)
+			// Check for flash messages directly from session
+			session := sessions.Default(c)
+			if flashes := session.Flashes(); len(flashes) > 0 {
+				session.Save()
+				if msg, ok := flashes[0].(string); ok {
+					homeData.AuthData = homeData.AuthData.WithSuccess(msg)
+				}
 			}
 
 			// Make sure RBAC information is correctly passed
@@ -102,12 +104,13 @@ func (h *HomeController) HomeHandler(c *gin.Context) {
 		authData.Authenticated = authenticated
 		authData.Title = "Home"
 
-		// Check for flash messages
-		if flashCookie, err := c.Cookie("flash"); err == nil && flashCookie != "" {
-			// Add flash message to success messages
-			authData.Success = flashCookie
-			// Clear the flash cookie
-			c.SetCookie("flash", "", -1, "/", "", false, false)
+		// Check for flash messages directly from session
+		session := sessions.Default(c)
+		if flashes := session.Flashes(); len(flashes) > 0 {
+			session.Save()
+			if msg, ok := flashes[0].(string); ok {
+				authData = authData.WithSuccess(msg)
+			}
 		}
 
 		// Set email if authenticated
@@ -170,12 +173,13 @@ func (h *HomeController) AboutHandler(c *gin.Context) {
 				}
 			}
 
-			// Check for flash messages
-			if flashCookie, err := c.Cookie("flash"); err == nil && flashCookie != "" {
-				// Add flash message to success messages
-				aboutData.AuthData = aboutData.AuthData.WithSuccess(flashCookie)
-				// Clear the flash cookie
-				c.SetCookie("flash", "", -1, "/", "", false, false)
+			// Check for flash messages directly from session
+			session := sessions.Default(c)
+			if flashes := session.Flashes(); len(flashes) > 0 {
+				session.Save()
+				if msg, ok := flashes[0].(string); ok {
+					aboutData.AuthData = aboutData.AuthData.WithSuccess(msg)
+				}
 			}
 		}
 	}
@@ -189,6 +193,15 @@ func (h *HomeController) AboutHandler(c *gin.Context) {
 		authData := data.NewAuthData()
 		authData.Title = "About"
 		authData.Authenticated = authenticated
+
+		// Check for flash messages directly from session
+		session := sessions.Default(c)
+		if flashes := session.Flashes(); len(flashes) > 0 {
+			session.Save()
+			if msg, ok := flashes[0].(string); ok {
+				authData = authData.WithSuccess(msg)
+			}
+		}
 
 		// Set email if authenticated
 		if authenticated {
@@ -246,12 +259,13 @@ func (h *HomeController) ContactHandler(c *gin.Context) {
 				}
 			}
 
-			// Check for flash messages
-			if flashCookie, err := c.Cookie("flash"); err == nil && flashCookie != "" {
-				// Add flash message to success messages
-				contactData.AuthData = contactData.AuthData.WithSuccess(flashCookie)
-				// Clear the flash cookie
-				c.SetCookie("flash", "", -1, "/", "", false, false)
+			// Check for flash messages directly from session
+			session := sessions.Default(c)
+			if flashes := session.Flashes(); len(flashes) > 0 {
+				session.Save()
+				if msg, ok := flashes[0].(string); ok {
+					contactData.AuthData = contactData.AuthData.WithSuccess(msg)
+				}
 			}
 		}
 	}
@@ -265,6 +279,15 @@ func (h *HomeController) ContactHandler(c *gin.Context) {
 		authData := data.NewAuthData()
 		authData.Title = "Contact"
 		authData.Authenticated = authenticated
+
+		// Check for flash messages directly from session
+		session := sessions.Default(c)
+		if flashes := session.Flashes(); len(flashes) > 0 {
+			session.Save()
+			if msg, ok := flashes[0].(string); ok {
+				authData = authData.WithSuccess(msg)
+			}
+		}
 
 		// Set email if authenticated
 		if authenticated {

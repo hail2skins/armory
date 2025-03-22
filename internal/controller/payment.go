@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"github.com/hail2skins/armory/cmd/web/views/data"
 	"github.com/hail2skins/armory/cmd/web/views/payment"
@@ -56,7 +57,7 @@ func (p *PaymentController) canSubscribeToTier(currentTier string, targetTier st
 	}
 }
 
-// PricingHandler handles the pricing page route
+// PricingHandler handles the GET request to /pricing
 func (p *PaymentController) PricingHandler(c *gin.Context) {
 	// Get the current user's authentication status and email
 	var userInfo interface{ GetUserName() string }
@@ -139,12 +140,15 @@ func (p *PaymentController) PricingHandler(c *gin.Context) {
 		CurrentPlan: "free",
 	}
 
-	// Check for flash message from cookie
-	if flashCookie, err := c.Cookie("flash"); err == nil && flashCookie != "" {
-		// Add flash message to success messages
-		pricingData.Success = flashCookie
-		// Clear the flash cookie
-		c.SetCookie("flash", "", -1, "/", "", false, false)
+	// Process flash messages using session directly
+	session := sessions.Default(c)
+	if flashes := session.Flashes(); len(flashes) > 0 {
+		session.Save()
+		for _, flash := range flashes {
+			if flashMsg, ok := flash.(string); ok {
+				pricingData.Success = flashMsg
+			}
+		}
 	}
 
 	// If authenticated, get the user's subscription tier
@@ -258,8 +262,10 @@ func (p *PaymentController) HandlePaymentSuccess(c *gin.Context) {
 
 // HandlePaymentCancellation handles the cancellation callback from Stripe
 func (p *PaymentController) HandlePaymentCancellation(c *gin.Context) {
-	// Set a flash message
-	c.SetCookie("flash", "Payment cancelled", 10, "/", "", false, true)
+	// Set a flash message using the session
+	session := sessions.Default(c)
+	session.AddFlash("Payment cancelled")
+	session.Save()
 
 	// Redirect to the pricing page
 	c.Redirect(http.StatusSeeOther, "/pricing")
@@ -469,8 +475,10 @@ func (p *PaymentController) CancelSubscription(c *gin.Context) {
 		expiresMessage = "Your subscription has been cancelled."
 	}
 
-	// Set a flash message
-	c.SetCookie("flash", expiresMessage, 10, "/", "", false, true)
+	// Set a flash message using the session
+	session := sessions.Default(c)
+	session.AddFlash(expiresMessage)
+	session.Save()
 
 	// Redirect to the owner dashboard
 	c.Redirect(http.StatusSeeOther, "/owner")

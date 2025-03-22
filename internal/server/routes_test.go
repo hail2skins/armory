@@ -5,6 +5,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/gin-contrib/sessions"
+	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
 	"github.com/hail2skins/armory/internal/controller"
 	"github.com/hail2skins/armory/internal/testutils/mocks"
@@ -119,6 +121,10 @@ func TestSimplifiedRoutes(t *testing.T) {
 	// Setup
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
+
+	// Add session middleware
+	store := cookie.NewStore([]byte("test-secret-key"))
+	router.Use(sessions.Sessions("auth-session", store))
 
 	// Create mock DB
 	mockDB := new(mocks.MockDB)

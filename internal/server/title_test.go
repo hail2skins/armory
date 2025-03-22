@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/gin-contrib/sessions"
+	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
 	"github.com/hail2skins/armory/internal/controller"
 	"github.com/hail2skins/armory/internal/testutils/mocks"
@@ -19,6 +21,10 @@ func TestPageTitles(t *testing.T) {
 	// Setup
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
+
+	// Setup session middleware
+	store := cookie.NewStore([]byte("test-secret-key"))
+	router.Use(sessions.Sessions("auth-session", store))
 
 	// Create mock DB
 	mockDB := new(mocks.MockDB)
