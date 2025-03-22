@@ -647,6 +647,11 @@ func (o *OwnerController) Show(c *gin.Context) {
 		var gun models.Gun
 		db := o.db.GetDB()
 		if err := db.Preload("WeaponType").Preload("Caliber").Preload("Manufacturer").Where("id = ? AND owner_id = ?", gunID, dbUser.ID).First(&gun).Error; err != nil {
+			// Use session flash message instead of HTML rendering
+			session := sessions.Default(c)
+			session.AddFlash("That's not your gun!")
+			session.Save()
+
 			c.Redirect(http.StatusSeeOther, "/owner")
 			return
 		}
@@ -727,6 +732,11 @@ func (o *OwnerController) Show(c *gin.Context) {
 	var gun models.Gun
 	db := o.db.GetDB()
 	if err := db.Preload("WeaponType").Preload("Caliber").Preload("Manufacturer").Where("id = ? AND owner_id = ?", gunID, dbUser.ID).First(&gun).Error; err != nil {
+		// Use session flash message instead of HTML rendering
+		session := sessions.Default(c)
+		session.AddFlash("That's not your gun!")
+		session.Save()
+
 		c.Redirect(http.StatusSeeOther, "/owner")
 		return
 	}
