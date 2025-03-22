@@ -22,14 +22,15 @@ import (
 // IntegrationSuite provides a base test suite for integration tests
 type IntegrationSuite struct {
 	suite.Suite
-	DB              *gorm.DB
-	Service         database.Service
-	Helper          *testhelper.ControllerTestHelper
-	Router          *gin.Engine
-	MockEmail       *mocks.MockEmailService
-	AuthController  *controller.AuthController
-	HomeController  *controller.HomeController
-	OwnerController *controller.OwnerController
+	DB                *gorm.DB
+	Service           database.Service
+	Helper            *testhelper.ControllerTestHelper
+	Router            *gin.Engine
+	MockEmail         *mocks.MockEmailService
+	AuthController    *controller.AuthController
+	HomeController    *controller.HomeController
+	OwnerController   *controller.OwnerController
+	PaymentController *controller.PaymentController
 }
 
 // SetupSuite runs once before all tests in the suite
@@ -48,6 +49,7 @@ func (s *IntegrationSuite) SetupSuite() {
 	s.AuthController = controller.NewAuthController(s.Service)
 	s.HomeController = controller.NewHomeController(s.Service)
 	s.OwnerController = controller.NewOwnerController(s.Service)
+	s.PaymentController = controller.NewPaymentController(s.Service)
 
 	// Set up email service in auth controller using reflection
 	s.setEmailService(s.AuthController, s.MockEmail)
@@ -161,6 +163,47 @@ func (s *IntegrationSuite) SetupTest() {
 		auth.VerificationSent(authData).Render(c.Request.Context(), c.Writer)
 	}
 
+	// Add rendering functions for password reset
+	s.AuthController.RenderForgotPassword = func(c *gin.Context, d interface{}) {
+		authData := d.(data.AuthData)
+		// Set authentication state
+		_, authenticated := s.AuthController.GetCurrentUser(c)
+		authData.Authenticated = authenticated
+		// Set default title if not set
+		if authData.Title == "" {
+			authData.Title = "Reset Password"
+		}
+
+		// Handle flash messages
+		if flash, exists := c.Get("flash"); exists && flash != nil {
+			if flashStr, ok := flash.(string); ok && flashStr != "" {
+				authData = authData.WithSuccess(flashStr)
+			}
+		}
+
+		auth.ResetPasswordRequest(authData).Render(c.Request.Context(), c.Writer)
+	}
+
+	s.AuthController.RenderResetPassword = func(c *gin.Context, d interface{}) {
+		authData := d.(data.AuthData)
+		// Set authentication state
+		_, authenticated := s.AuthController.GetCurrentUser(c)
+		authData.Authenticated = authenticated
+		// Set default title if not set
+		if authData.Title == "" {
+			authData.Title = "Set New Password"
+		}
+
+		// Handle flash messages
+		if flash, exists := c.Get("flash"); exists && flash != nil {
+			if flashStr, ok := flash.(string); ok && flashStr != "" {
+				authData = authData.WithSuccess(flashStr)
+			}
+		}
+
+		auth.ResetPassword(authData).Render(c.Request.Context(), c.Writer)
+	}
+
 	// Set auth controller in context
 	s.Router.Use(func(c *gin.Context) {
 		c.Set("auth", s.AuthController)
@@ -177,6 +220,11 @@ func (s *IntegrationSuite) SetupTest() {
 	s.Router.GET("/verification-sent", func(c *gin.Context) {
 		s.AuthController.RenderVerificationSent(c, data.NewAuthData())
 	})
+	// Add password reset routes
+	s.Router.GET("/reset-password/new", s.AuthController.ForgotPasswordHandler)
+	s.Router.POST("/reset-password/new", s.AuthController.ForgotPasswordHandler)
+	s.Router.GET("/reset-password", s.AuthController.ResetPasswordHandler)
+	s.Router.POST("/reset-password", s.AuthController.ResetPasswordHandler)
 
 	// Set up a home route for testing
 	s.Router.GET("/", func(c *gin.Context) {
@@ -195,7 +243,44 @@ func (s *IntegrationSuite) SetupTest() {
 			s.OwnerController.LandingPage(c)
 		})
 
-		// Add owner/guns routes
+		// Add profile routes
+		protected.GET("/owner/profile", func(c *gin.Context) {
+			s.T().Log("Using the REAL OwnerController.Profile for integration tests")
+			s.OwnerController.Profile(c)
+		})
+
+		protected.GET("/owner/profile/edit", func(c *gin.Context) {
+			s.T().Log("Using the REAL OwnerController.EditProfile for integration tests")
+			s.OwnerController.EditProfile(c)
+		})
+
+		protected.POST("/owner/profile/update", func(c *gin.Context) {
+			s.T().Log("Using the REAL OwnerController.UpdateProfile for integration tests")
+			s.OwnerController.UpdateProfile(c)
+		})
+
+		protected.GET("/owner/profile/delete", func(c *gin.Context) {
+			s.T().Log("Using the REAL OwnerController.DeleteAccountConfirm for integration tests")
+			s.OwnerController.DeleteAccountConfirm(c)
+		})
+
+		protected.POST("/owner/profile/delete", func(c *gin.Context) {
+			s.T().Log("Using the REAL OwnerController.DeleteAccountHandler for integration tests")
+			s.OwnerController.DeleteAccountHandler(c)
+		})
+
+		protected.GET("/owner/profile/subscription", func(c *gin.Context) {
+			s.T().Log("Using the REAL OwnerController.Subscription for integration tests")
+			s.OwnerController.Subscription(c)
+		})
+
+		// Add the payment history route with the real controller
+		protected.GET("/owner/payment-history", func(c *gin.Context) {
+			s.T().Log("Using the REAL PaymentController.ShowPaymentHistory for integration tests")
+			s.PaymentController.ShowPaymentHistory(c)
+		})
+
+		// Gun routes nested under owner
 		ownerGuns := protected.Group("/owner/guns")
 		{
 			// Arsenal view - shows all guns with sorting and searching

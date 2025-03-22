@@ -70,6 +70,15 @@ templ PaymentHistory(data PaymentHistoryData) {
 templ paymentHistoryContent(data PaymentHistoryData) {
 	<div class="bg-white py-12">
 		<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+			<div class="mb-6">
+				<a href="/owner" class="text-brass-400 hover:text-brass-300 inline-flex items-center">
+					<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+					</svg>
+					Back to Dashboard
+				</a>
+			</div>
+			
 			<h1 class="text-3xl font-extrabold text-gray-900 mb-8">Payment History</h1>
 			
 			if len(data.Payments) == 0 {
