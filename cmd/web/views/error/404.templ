@@ -1,0 +1,35 @@
+package error
+
+import (
+	"github.com/hail2skins/armory/cmd/web/views/partials"
+	"github.com/hail2skins/armory/cmd/web/views/data"
+)
+
+templ NotFound(errorMsg string) {
+	@partials.Base(data.AuthData{Title: "404 - Page Not Found"}, notFoundContent(errorMsg))
+}
+
+templ notFoundContent(errorMsg string) {
+	<div class="min-h-screen flex items-center justify-center">
+		<div class="max-w-3xl mx-auto px-4 py-8 text-center">
+			<div class="mb-8">
+				<img src="/assets/virtualarmory.jpg" alt="The Virtual Armory" class="w-64 h-64 mx-auto rounded-full object-cover border-4 border-gray-800 shadow-lg" />
+			</div>
+			<h1 class="text-6xl font-bold text-red-600 mb-4">404</h1>
+			<h2 class="text-3xl font-semibold mb-6">Page Not Found</h2>
+			<p class="text-xl mb-8">
+				{ errorMsg }
+				<br />
+				The page you're looking for doesn't exist or has been moved.
+			</p>
+			<div class="flex justify-center space-x-4">
+				<a href="/" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-colors duration-200">
+					Go Home
+				</a>
+				<button onclick="window.history.back()" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-6 rounded-lg transition-colors duration-200">
+					Go Back
+				</button>
+			</div>
+		</div>
+	</div>
+} 

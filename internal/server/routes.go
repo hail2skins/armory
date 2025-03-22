@@ -38,6 +38,9 @@ func (s *Server) RegisterRoutes() http.Handler {
 		r.Use(s.ipFilterService.Middleware())
 	}
 
+	// Register error routes (must be before other routes to ensure proper HTML rendering)
+	s.RegisterErrorRoutes(r)
+
 	// Register static routes
 	s.RegisterStaticRoutes(r)
 

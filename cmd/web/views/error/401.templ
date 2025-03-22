@@ -1,0 +1,38 @@
+package error
+
+import (
+	"github.com/hail2skins/armory/cmd/web/views/partials"
+	"github.com/hail2skins/armory/cmd/web/views/data"
+)
+
+templ Unauthorized(errorMsg string) {
+	@partials.Base(data.AuthData{Title: "401 - Unauthorized"}, unauthorizedContent(errorMsg))
+}
+
+templ unauthorizedContent(errorMsg string) {
+	<div class="min-h-screen flex items-center justify-center">
+		<div class="max-w-3xl mx-auto px-4 py-8 text-center">
+			<div class="mb-8">
+				<img src="/assets/virtualarmory.jpg" alt="The Virtual Armory" class="w-64 h-64 mx-auto rounded-full object-cover border-4 border-gray-800 shadow-lg" />
+			</div>
+			<h1 class="text-6xl font-bold text-amber-600 mb-4">401</h1>
+			<h2 class="text-3xl font-semibold mb-6">Unauthorized</h2>
+			<p class="text-xl mb-8">
+				{ errorMsg }
+				<br />
+				You need to be logged in to access this page.
+			</p>
+			<div class="flex justify-center space-x-4">
+				<a href="/login" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-colors duration-200">
+					Log In
+				</a>
+				<a href="/register" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition-colors duration-200">
+					Register
+				</a>
+				<button onclick="window.history.back()" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-6 rounded-lg transition-colors duration-200">
+					Go Back
+				</button>
+			</div>
+		</div>
+	</div>
+} 

@@ -7,20 +7,13 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/hail2skins/armory/internal/errors"
 	"github.com/hail2skins/armory/internal/logger"
 )
 
 // SetupErrorHandling configures all error handling middleware for a Gin router
 func SetupErrorHandling(router *gin.Engine) {
-	// Set up 404 handler for undefined routes
-	router.NoRoute(errors.NoRouteHandler())
-
-	// Set up 405 handler for method not allowed
-	router.NoMethod(errors.NoMethodHandler())
-
-	// Set up panic recovery middleware
-	router.Use(errors.RecoveryHandler())
+	// Set up the custom error handlers with templates
+	SetupErrorHandlers(router)
 
 	// Set up error handling middleware
 	router.Use(ErrorHandler())

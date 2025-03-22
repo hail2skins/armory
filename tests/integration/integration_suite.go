@@ -71,10 +71,6 @@ func (s *IntegrationSuite) SetupTest() {
 	s.Router = gin.New()
 	s.Router.Use(gin.Recovery())
 
-	// We DON'T need to load HTML templates since we're using templ
-	// This line was causing the test to fail because the templates directory doesn't exist
-	// s.Router.LoadHTMLGlob(templatePath)
-
 	// Still set up static assets - this is needed for CSS/JS
 	s.Router.Static("/assets", "../../cmd/web/static")
 

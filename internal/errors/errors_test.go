@@ -137,9 +137,14 @@ func TestNoRouteHandler(t *testing.T) {
 func TestNoMethodHandler(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	// Create a test context
+	// Create a test context with a recorder
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
+
+	// Set up a request with headers
+	req, _ := http.NewRequest("POST", "/test-method", nil)
+	req.Header.Set("Accept", "application/json")
+	c.Request = req
 
 	// Call the handler directly
 	handler := NoMethodHandler()
@@ -160,11 +165,11 @@ func TestNoMethodHandler(t *testing.T) {
 func TestRecoveryHandler(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	// Create a test router with the recovery middleware
+	// Create a router with the recovery middleware
 	router := gin.New()
 	router.Use(RecoveryHandler())
 
-	// Add a route that will panic
+	// Add a handler that will panic
 	router.GET("/panic", func(c *gin.Context) {
 		panic("test panic")
 	})
@@ -172,6 +177,7 @@ func TestRecoveryHandler(t *testing.T) {
 	// Create a test request
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest("GET", "/panic", nil)
+	req.Header.Set("Accept", "application/json") // Set Accept header
 
 	// Serve the request
 	router.ServeHTTP(w, req)
