@@ -79,7 +79,12 @@ func (s *IntegrationSuite) SetupTest() {
 
 	// Set up the sessions middleware - THIS IS CRITICAL FOR TESTS
 	store := cookie.NewStore([]byte("test-secret-key"))
-	s.Router.Use(sessions.Sessions("auth-session", store))
+	store.Options(sessions.Options{
+		Path:     "/",
+		MaxAge:   86400, // 1 day
+		HttpOnly: true,
+	})
+	s.Router.Use(sessions.Sessions("armory-session", store))
 
 	// Set up flash middleware
 	s.setupFlashMiddleware()
@@ -97,9 +102,13 @@ func (s *IntegrationSuite) SetupTest() {
 		}
 
 		// Handle flash messages
-		if flash, exists := c.Get("flash"); exists && flash != nil {
-			if flashStr, ok := flash.(string); ok && flashStr != "" {
-				authData = authData.WithSuccess(flashStr)
+		session := sessions.Default(c)
+		if flashes := session.Flashes(); len(flashes) > 0 {
+			session.Save()
+			for _, flash := range flashes {
+				if flashMsg, ok := flash.(string); ok {
+					authData = authData.WithSuccess(flashMsg)
+				}
 			}
 		}
 

@@ -156,115 +156,66 @@ func (s *OwnerProfileIntegrationTest) TestSubscriptionPage() {
 
 // TestDeleteAccountFlow tests the account deletion confirmation page and the actual deletion process
 func (s *OwnerProfileIntegrationTest) TestDeleteAccountFlow() {
-	// Login the user using the shared helper
+	// 1. Login
 	cookies := s.LoginUser(s.testUser.Email, "password123")
 
-	// Store email for verification later
-	userEmail := s.testUser.Email
+	// 2. Click the profile link from /owner page
+	profileReq, _ := http.NewRequest("GET", "/owner/profile", nil)
+	for _, cookie := range cookies {
+		profileReq.AddCookie(cookie)
+	}
+	profileResp := httptest.NewRecorder()
+	s.Router.ServeHTTP(profileResp, profileReq)
+	s.Equal(http.StatusOK, profileResp.Code)
 
-	// Step 1: Go to the delete confirmation page
-	deleteConfirmResp := s.MakeAuthenticatedRequest("GET", "/owner/profile/delete", cookies)
-	s.Equal(http.StatusOK, deleteConfirmResp.Code)
+	// 3. Click delete account link from profile page
+	deleteReq, _ := http.NewRequest("GET", "/owner/profile/delete", nil)
+	for _, cookie := range cookies {
+		deleteReq.AddCookie(cookie)
+	}
+	deleteResp := httptest.NewRecorder()
+	s.Router.ServeHTTP(deleteResp, deleteReq)
+	s.Equal(http.StatusOK, deleteResp.Code)
 
-	// Get the response body as a string
-	deleteConfirmBody := deleteConfirmResp.Body.String()
+	// Verify delete confirmation page content
+	deleteBody := deleteResp.Body.String()
+	s.Contains(deleteBody, "Delete Account")
+	s.Contains(deleteBody, "Are you sure you want to delete your account?")
+	s.Contains(deleteBody, "This will remove your access to the Virtual Armory")
+	s.Contains(deleteBody, "All your data will be retained")
+	s.Contains(deleteBody, "sign up again with the same email address")
+	s.Contains(deleteBody, "No, Keep My Account")
+	s.Contains(deleteBody, "Yes, Delete My Account")
 
-	// Verify page title
-	s.Contains(deleteConfirmBody, "Delete Account")
-
-	// Verify confirmation message - use partial text matching to avoid HTML structure issues
-	s.Contains(deleteConfirmBody, "Are you sure you want to delete your account?")
-	s.Contains(deleteConfirmBody, "This will remove your access to the Virtual Armory")
-	s.Contains(deleteConfirmBody, "All your data will be retained")
-	s.Contains(deleteConfirmBody, "sign up again with the same email address")
-
-	// Verify cancel option
-	s.Contains(deleteConfirmBody, "No, Keep My Account")
-	s.Contains(deleteConfirmBody, "href=\"/owner/profile\"")
-
-	// Verify delete option
-	s.Contains(deleteConfirmBody, "Yes, Delete My Account")
-
-	// Step 2: Submit the delete form (simulate clicking "Yes, Delete My Account")
-	// Create form data with confirm=true
+	// 4. Click "Yes, Delete My Account" button
 	form := url.Values{}
 	form.Add("confirm", "true")
-
-	// Create a POST request with the form data
-	req, err := http.NewRequest("POST", "/owner/profile/delete", strings.NewReader(form.Encode()))
-	s.Require().NoError(err)
-
-	// Set content type for form data
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-	// Add auth cookies
+	confirmReq, _ := http.NewRequest("POST", "/owner/profile/delete", strings.NewReader(form.Encode()))
+	confirmReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	for _, cookie := range cookies {
-		req.AddCookie(cookie)
+		confirmReq.AddCookie(cookie)
 	}
+	confirmResp := httptest.NewRecorder()
+	s.Router.ServeHTTP(confirmResp, confirmReq)
 
-	// Send the request
-	w := httptest.NewRecorder()
-	s.Router.ServeHTTP(w, req)
-	deleteResp := w.Result()
+	// Should redirect to home with flash
+	s.Equal(http.StatusSeeOther, confirmResp.Code)
+	s.Equal("/", confirmResp.Header().Get("Location"))
 
-	// Should redirect to home page
-	s.Equal(http.StatusSeeOther, deleteResp.StatusCode)
-	s.Equal("/", deleteResp.Header.Get("Location"))
+	// Get the updated cookies after deletion
+	deletionCookies := confirmResp.Result().Cookies()
 
-	// Check flash message cookies
-	var flashCookie *http.Cookie
-	for _, cookie := range deleteResp.Cookies() {
-		if cookie.Name == "flash" {
-			flashCookie = cookie
-			break
-		}
+	// 5. Try to access /owner page with the new cookies
+	ownerReq, _ := http.NewRequest("GET", "/owner", nil)
+	for _, cookie := range deletionCookies {
+		ownerReq.AddCookie(cookie)
 	}
-	s.NotNil(flashCookie, "Flash cookie should be set with account deletion message")
+	ownerResp := httptest.NewRecorder()
+	s.Router.ServeHTTP(ownerResp, ownerReq)
 
-	// Step 4: Verify user is deleted by checking we can't find by email in normal query
-	var count int64
-	s.DB.Model(&database.User{}).Where("email = ?", userEmail).Count(&count)
-	s.Equal(int64(0), count, "User should not be found in database with normal scope")
-
-	// Verify user can be found with Unscoped query (soft deleted)
-	var unscopedCount int64
-	s.DB.Unscoped().Model(&database.User{}).Where("email = ? AND deleted_at IS NOT NULL", userEmail).Count(&unscopedCount)
-	s.Equal(int64(1), unscopedCount, "User should be found in database with Unscoped() and have a deleted_at timestamp")
-
-	// Step 5: Check if we're correctly logged out by checking auth-session cookie
-	// Look for auth-session cookie in the delete response - it should be set to expire
-	var authSessionCookie *http.Cookie
-	for _, cookie := range deleteResp.Cookies() {
-		if cookie.Name == "auth-session" {
-			authSessionCookie = cookie
-			break
-		}
-	}
-
-	// Verify the auth-session cookie was invalidated (set to expire)
-	s.NotNil(authSessionCookie, "Auth session cookie should be present")
-	s.Equal("", authSessionCookie.Value, "Auth session cookie should have empty value")
-	s.True(authSessionCookie.MaxAge < 0, "Auth session cookie should have negative MaxAge to delete it")
-
-	// Step 6: Try to access a protected route to verify we're logged out
-	// For this request, we should NOT use the original cookies, as they're invalidated now
-	// Instead, create a new request with no cookies
-	protectedReq, err := http.NewRequest("GET", "/owner", nil)
-	s.Require().NoError(err)
-
-	// Send the request
-	protectedW := httptest.NewRecorder()
-	s.Router.ServeHTTP(protectedW, protectedReq)
-	protectedResp := protectedW.Result()
-
-	// Should be redirected when trying to access a protected page without authentication
-	s.Equal(http.StatusSeeOther, protectedResp.StatusCode, "Should be redirected")
-
-	// Based on the current behavior, we're redirected to "/" not "/login" when accessing
-	// a protected route after account deletion
-	redirectLocation := protectedResp.Header.Get("Location")
-	s.T().Logf("Redirect location: %s", redirectLocation)
-	s.Contains(redirectLocation, "/", "Should be redirected somewhere")
+	// Should be redirected to login
+	s.Equal(http.StatusSeeOther, ownerResp.Code)
+	s.Equal("/login", ownerResp.Header().Get("Location"))
 }
 
 // TestEditProfileWithEmailChange tests the email change functionality

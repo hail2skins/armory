@@ -63,7 +63,13 @@ func (s *ControllerTestSuite) SetupTest() {
 
 	// Set up session middleware for tests
 	store := cookie.NewStore([]byte("test-secret-key"))
-	s.Router.Use(sessions.Sessions("auth-session", store))
+	store.Options(sessions.Options{
+		Path:     "/",
+		MaxAge:   86400, // 1 day
+		HttpOnly: true,
+		Secure:   false, // Set to true in production
+	})
+	s.Router.Use(sessions.Sessions("armory-session", store))
 
 	// Set up middleware - include both 'auth' and 'authController' keys since different controllers use different keys
 	s.Router.Use(func(c *gin.Context) {

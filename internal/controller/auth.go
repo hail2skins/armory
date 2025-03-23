@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"net/url"
 	"strconv"
 	"time"
 
@@ -195,37 +194,21 @@ func (a *AuthController) LoginHandler(c *gin.Context) {
 		// Note: This would normally use a db.SaveUser method, but we'll use the existing methods
 		// in the controller instead
 
-		// Store user info in cache and set cookie
+		// Store user info in cache and session
 		userInfo := auth.NewUserInfo(email, strconv.FormatUint(uint64(user.ID), 10), nil, nil)
 		a.cache.Store(strconv.FormatUint(uint64(user.ID), 10), userInfo)
 
-		// Set the session cookie
-		http.SetCookie(c.Writer, &http.Cookie{
-			Name:     "auth-session",
-			Value:    strconv.FormatUint(uint64(user.ID), 10),
-			Path:     "/",
-			HttpOnly: true,
-			MaxAge:   int(24 * time.Hour.Seconds()),
-		})
+		// Store user info in session
+		session := sessions.Default(c)
+		session.Set("user_id", strconv.FormatUint(uint64(user.ID), 10))
+		session.Set("user_email", email)
+		session.AddFlash("Enjoy adding to your armory!")
+		session.Save()
 
 		// Log successful login
 		logger.Info("User logged in", map[string]interface{}{
 			"user_id": user.ID,
 			"email":   email,
-		})
-
-		// Set success message using session
-		session := sessions.Default(c)
-		session.AddFlash("Enjoy adding to your armory!")
-		session.Save()
-
-		// Also set a flash cookie for test compatibility
-		http.SetCookie(c.Writer, &http.Cookie{
-			Name:     "flash",
-			Value:    url.QueryEscape("Enjoy adding to your armory!"),
-			Path:     "/",
-			MaxAge:   3600,
-			HttpOnly: true,
 		})
 
 		// Redirect to the owner page
@@ -386,6 +369,17 @@ func (a *AuthController) RegisterHandler(c *gin.Context) {
 	// Set the verification email in a cookie so it can be displayed on the verification page
 	c.SetCookie("verification_email", user.Email, 3600, "/", "", false, false)
 
+	// Set up session for the newly registered user
+	session := sessions.Default(c)
+	session.Set("user_id", strconv.FormatUint(uint64(user.ID), 10))
+	session.Set("user_email", user.Email)
+	if err := session.Save(); err != nil {
+		logger.Error("Failed to save session during registration", err, map[string]interface{}{
+			"email": user.Email,
+			"path":  c.Request.URL.Path,
+		})
+	}
+
 	// Redirect to verification sent page or home page based on test environment
 	if c.Request.Header.Get("X-Test") == "true" {
 		c.Redirect(http.StatusSeeOther, "/")
@@ -424,32 +418,9 @@ func (a *AuthController) LogoutHandler(c *gin.Context) {
 		logger.Error("Failed to save session during logout", err, nil)
 	}
 
-	// Set flash cookie for test compatibility - IMPORTANT: do this before clearing auth cookie
-	http.SetCookie(c.Writer, &http.Cookie{
-		Name:     "flash",
-		Value:    url.QueryEscape("Come back soon!"),
-		Path:     "/",
-		MaxAge:   3600,
-		HttpOnly: true,
-	})
-
-	// Log for debugging
-	logger.Info("Setting flash cookie during logout", map[string]interface{}{
-		"cookie_name":  "flash",
-		"cookie_value": url.QueryEscape("Come back soon!"),
-	})
-
-	// Clear the auth cookie
-	http.SetCookie(c.Writer, &http.Cookie{
-		Name:     "auth-session",
-		Value:    "",
-		Path:     "/",
-		HttpOnly: true,
-		MaxAge:   -1,
-	})
-
-	// Redirect to home page
-	c.Redirect(http.StatusSeeOther, "/")
+	// Redirect to login page
+	c.Redirect(http.StatusSeeOther, "/login")
+	c.Abort() // Stop further processing
 }
 
 // AuthMiddleware is a middleware that checks if the user is authenticated
@@ -476,8 +447,8 @@ func (a *AuthController) AuthMiddleware() gin.HandlerFunc {
 				session.Save()
 			}
 
-			// Redirect to home
-			c.Redirect(http.StatusSeeOther, "/")
+			// Redirect to login
+			c.Redirect(http.StatusSeeOther, "/login")
 			c.Abort()
 			return
 		}
@@ -506,14 +477,15 @@ func (a *AuthController) AuthMiddleware() gin.HandlerFunc {
 
 // isAuthenticated checks if the current request is authenticated
 func (a *AuthController) isAuthenticated(c *gin.Context) bool {
-	// Get the session cookie
-	cookie, err := c.Request.Cookie("auth-session")
-	if err != nil {
+	// Get the user ID from session
+	session := sessions.Default(c)
+	userID := session.Get("user_id")
+	if userID == nil {
 		return false
 	}
 
 	// Check if the user info exists in the cache
-	_, found := a.cache.Load(cookie.Value)
+	_, found := a.cache.Load(userID.(string))
 	return found
 }
 
@@ -529,14 +501,15 @@ func (a *AuthController) GetCurrentUser(c *gin.Context) (auth.Info, bool) {
 		return userInfo.(auth.Info), true
 	}
 
-	// Get the session cookie
-	cookie, err := c.Request.Cookie("auth-session")
-	if err != nil {
+	// Get the user ID from session
+	session := sessions.Default(c)
+	userID := session.Get("user_id")
+	if userID == nil {
 		return nil, false
 	}
 
 	// Get the user info from the cache
-	userInfo, found := a.cache.Load(cookie.Value)
+	userInfo, found := a.cache.Load(userID.(string))
 	if !found {
 		return nil, false
 	}

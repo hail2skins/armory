@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gin-contrib/sessions"
+	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
 	"github.com/hail2skins/armory/internal/controller"
 	"github.com/hail2skins/armory/internal/database"
@@ -57,8 +59,10 @@ func (s *PromotionAuthTestSuite) SetupTest() {
 		c.Redirect(http.StatusSeeOther, "/verification-sent")
 	}
 
-	// Set up router
+	// Set up router with session middleware
 	s.Router = gin.New()
+	store := cookie.NewStore([]byte("secret"))
+	s.Router.Use(sessions.Sessions("mysession", store))
 
 	// Create test promotion
 	now := time.Now()

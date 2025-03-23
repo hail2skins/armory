@@ -2853,23 +2853,13 @@ func (o *OwnerController) DeleteAccountHandler(c *gin.Context) {
 			return
 		}
 
-		// Invalidate the user's session - use the correct cookie name "auth-session"
-		http.SetCookie(c.Writer, &http.Cookie{
-			Name:     "auth-session",
-			Value:    "",
-			Path:     "/",
-			HttpOnly: true,
-			MaxAge:   -1, // Delete the cookie
-		})
-
-		// Set flash message
-		if setFlash, exists := c.Get("setFlash"); exists {
-			setFlash.(func(string))("Your account has been deleted. Please come back any time!")
-		} else {
-			// Fallback to session directly if context function not available
-			session := sessions.Default(c)
-			session.AddFlash("Your account has been deleted. Please come back any time!")
-			session.Save()
+		// Clear the session
+		session := sessions.Default(c)
+		session.Clear()
+		session.AddFlash("Your account has been deleted. Please come back any time!")
+		if err := session.Save(); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save session"})
+			return
 		}
 
 		// Redirect to home page
@@ -2913,23 +2903,13 @@ func (o *OwnerController) DeleteAccountHandler(c *gin.Context) {
 		return
 	}
 
-	// Invalidate the user's session - use the correct cookie name "auth-session"
-	http.SetCookie(c.Writer, &http.Cookie{
-		Name:     "auth-session",
-		Value:    "",
-		Path:     "/",
-		HttpOnly: true,
-		MaxAge:   -1, // Delete the cookie
-	})
-
-	// Set flash message
-	if setFlash, exists := c.Get("setFlash"); exists {
-		setFlash.(func(string))("Your account has been deleted. Please come back any time!")
-	} else {
-		// Fallback to session directly if context function not available
-		session := sessions.Default(c)
-		session.AddFlash("Your account has been deleted. Please come back any time!")
-		session.Save()
+	// Clear the session
+	session := sessions.Default(c)
+	session.Clear()
+	session.AddFlash("Your account has been deleted. Please come back any time!")
+	if err := session.Save(); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save session"})
+		return
 	}
 
 	// Redirect to home page

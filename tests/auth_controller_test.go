@@ -66,18 +66,9 @@ func (s *AuthControllerTestSuite) TestSuccessfulLogin() {
 	// Serve the request
 	s.Router.ServeHTTP(resp, req)
 
-	// The successful login should result in a redirect (303) or an OK response with success message
-	s.True(resp.Code == http.StatusOK || resp.Code == http.StatusSeeOther,
-		"Expected status code 200 OK or 303 SeeOther, got %d", resp.Code)
-
-	// The response might contain either a redirect to home or owner, or a success message
-	if resp.Code == http.StatusOK {
-		s.Contains(resp.Body.String(), "success")
-	} else {
-		// For redirects, check the Location header points to either "/" or "/owner"
-		s.True(resp.Header().Get("Location") == "/" || resp.Header().Get("Location") == "/owner",
-			"Expected redirect to / or /owner, got %s", resp.Header().Get("Location"))
-	}
+	// The successful login should result in a redirect to /owner
+	s.Equal(http.StatusSeeOther, resp.Code)
+	s.Equal("/owner", resp.Header().Get("Location"))
 
 	// Verify DB mock expectations
 	s.MockDB.AssertExpectations(s.T())

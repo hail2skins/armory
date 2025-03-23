@@ -384,6 +384,15 @@ func TestPaymentSuccessFunctionality(t *testing.T) {
 	// Create a new router
 	r := gin.New()
 
+	// Setup session middleware
+	store := cookie.NewStore([]byte("test-secret-key"))
+	store.Options(sessions.Options{
+		Path:     "/",
+		MaxAge:   86400,
+		HttpOnly: true,
+	})
+	r.Use(sessions.Sessions("armory-session", store))
+
 	// Create controllers
 	authController := controller.NewAuthController(mockDB)
 	paymentController := controller.NewPaymentController(mockDB)
@@ -524,6 +533,15 @@ func TestGuestSubscriptionRedirectToLogin(t *testing.T) {
 
 	// Create a new router
 	r := gin.New()
+
+	// Setup session middleware
+	store := cookie.NewStore([]byte("test-secret-key"))
+	store.Options(sessions.Options{
+		Path:     "/",
+		MaxAge:   86400,
+		HttpOnly: true,
+	})
+	r.Use(sessions.Sessions("armory-session", store))
 
 	// Create controllers
 	authController := controller.NewAuthController(mockDB)
@@ -1114,6 +1132,15 @@ func TestPaymentSuccessPageRedirectsToOwner(t *testing.T) {
 
 	// Create a router with middleware first
 	r := gin.New()
+
+	// Setup session middleware
+	store := cookie.NewStore([]byte("test-secret-key"))
+	store.Options(sessions.Options{
+		Path:     "/",
+		MaxAge:   86400,
+		HttpOnly: true,
+	})
+	r.Use(sessions.Sessions("armory-session", store))
 
 	// Create a real AuthController for the test
 	authController := controller.NewAuthController(testDB)

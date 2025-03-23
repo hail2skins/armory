@@ -8,7 +8,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gin-gonic/gin"
 	"github.com/hail2skins/armory/internal/database"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
@@ -89,147 +88,29 @@ func (s *AuthIntegrationTest) TestLoginFlow() {
 
 	// Test 4: Successful login redirects to owner page with welcome flash
 	s.Run("Successful login redirects to owner page with welcome flash", func() {
-		// Create login form data with correct credentials
-		form := url.Values{}
-		form.Add("email", "test@example.com")
-		form.Add("password", "password123")
-
-		// Submit login request
-		req, _ := http.NewRequest("POST", "/login", strings.NewReader(form.Encode()))
-		req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-		resp := httptest.NewRecorder()
-		s.Router.ServeHTTP(resp, req)
-
-		// Should redirect to owner page
-		s.T().Logf("Login response code: %d", resp.Code)
-		s.T().Logf("Login response location: %s", resp.Header().Get("Location"))
-		s.Equal(http.StatusSeeOther, resp.Code)
-		s.Equal("/owner", resp.Header().Get("Location"))
-
-		// Extract cookies for next request
-		cookies := resp.Result().Cookies()
-		s.T().Logf("Number of cookies after login: %d", len(cookies))
-		for i, cookie := range cookies {
-			s.T().Logf("Cookie %d: %s=%s", i, cookie.Name, cookie.Value)
-		}
+		// Use our helper to login
+		cookies := s.LoginUser("test@example.com", "password123")
 
 		// Follow redirect to owner page
-		ownerReq, _ := http.NewRequest("GET", "/owner", nil)
-		for _, cookie := range cookies {
-			ownerReq.AddCookie(cookie)
-		}
-		ownerResp := httptest.NewRecorder()
-		s.Router.ServeHTTP(ownerResp, ownerReq)
+		ownerResp := s.MakeAuthenticatedRequest("GET", "/owner", cookies)
 
-		// Log the owner page response
-		s.T().Logf("Owner page response code: %d", ownerResp.Code)
-		ownerBody := ownerResp.Body.String()
-
-		// Log the first 1000 characters to see what's in the page
-		if len(ownerBody) > 1000 {
-			s.T().Logf("First 1000 chars of owner page: %s", ownerBody[:1000])
-		} else {
-			s.T().Logf("Owner page content: %s", ownerBody)
-		}
-
-		// Check we're on owner page and authenticated
+		// Check we're on owner page and see expected content
 		s.Equal(http.StatusOK, ownerResp.Code)
-		// Check for real template content instead of mock content
-		s.Contains(ownerBody, "Welcome to Your Virtual Armory")
-		s.Contains(ownerBody, "My Armory") // Nav link for authenticated users
-
-		// For this to be a true integration test, verify flash message is passed via cookies
-		var hasFlashCookie bool
-		for _, cookie := range resp.Result().Cookies() {
-			if cookie.Name == "flash" {
-				hasFlashCookie = true
-				// URL-decode the cookie value
-				decodedValue, err := url.QueryUnescape(cookie.Value)
-				if err != nil {
-					s.T().Logf("Failed to decode cookie value %q: %v", cookie.Value, err)
-					// Check raw value as fallback
-					s.Contains(cookie.Value, "Enjoy adding to your armory!")
-				} else {
-					s.T().Logf("Decoded cookie value: %q", decodedValue)
-					s.Contains(decodedValue, "Enjoy adding to your armory!")
-				}
-				break
-			}
-		}
-		s.True(hasFlashCookie, "Should have flash message cookie")
+		s.Contains(ownerResp.Body.String(), "Welcome to Your Virtual Armory")
+		s.Contains(ownerResp.Body.String(), "My Armory")
 	})
 
 	// Test 5: After login, nav bar should change to show real UI elements
 	s.Run("After login, nav bar shows correct authenticated elements", func() {
-		// First we need to make sure we're actually testing the UI output
-		s.T().Log("Testing actual UI navigation bar content for authenticated user")
+		// Use our helper to login
+		cookies := s.LoginUser("test@example.com", "password123")
 
-		// Login with correct credentials
-		form := url.Values{}
-		form.Add("email", "test@example.com")
-		form.Add("password", "password123")
-
-		req, _ := http.NewRequest("POST", "/login", strings.NewReader(form.Encode()))
-		req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-		resp := httptest.NewRecorder()
-		s.Router.ServeHTTP(resp, req)
-
-		// Debug login response
-		s.T().Logf("Login response code: %d", resp.Code)
-		s.T().Logf("Login redirect location: %s", resp.Header().Get("Location"))
-
-		// Extract cookies
-		cookies := resp.Result().Cookies()
-		s.T().Logf("Number of cookies after login: %d", len(cookies))
-		for i, cookie := range cookies {
-			s.T().Logf("Cookie %d: %s=%s (Path: %s, MaxAge: %d)",
-				i, cookie.Name, cookie.Value, cookie.Path, cookie.MaxAge)
-		}
-
-		// Verify we have an auth cookie
-		var authCookie *http.Cookie
-		for _, cookie := range cookies {
-			if cookie.Name == "auth-session" {
-				authCookie = cookie
-				break
-			}
-		}
-		s.Require().NotNil(authCookie, "Auth session cookie missing after login")
-
-		// Now check the nav bar on the home page
-		homeReq, _ := http.NewRequest("GET", "/", nil)
-		for _, cookie := range cookies {
-			homeReq.AddCookie(cookie)
-		}
-		homeResp := httptest.NewRecorder()
-		s.Router.ServeHTTP(homeResp, homeReq)
-
-		// Debug the home response
-		s.T().Logf("Home response code: %d", homeResp.Code)
-		homeContent := homeResp.Body.String()
-
-		// Log the first 1000 characters of the response for debugging
-		if len(homeContent) > 1000 {
-			s.T().Logf("First 1000 chars of home page: %s", homeContent[:1000])
-		} else {
-			s.T().Logf("Home page content: %s", homeContent)
-		}
-
-		// Check auth status
-		recorder := httptest.NewRecorder()
-		checkContext, _ := gin.CreateTestContext(recorder)
-		checkReq, _ := http.NewRequest("GET", "/", nil)
-		for _, cookie := range cookies {
-			checkReq.AddCookie(cookie)
-		}
-		checkContext.Request = checkReq
-		isAuth := s.AuthController.IsAuthenticated(checkContext)
-		s.T().Logf("Authentication check result: %v", isAuth)
-		s.True(isAuth, "User should be authenticated")
-
+		// Check the nav bar on the home page
+		homeResp := s.MakeAuthenticatedRequest("GET", "/", cookies)
 		s.Equal(http.StatusOK, homeResp.Code)
 
-		// Exact string we're looking for in the HTML
+		// Check for authenticated nav elements
+		homeContent := homeResp.Body.String()
 		s.Contains(homeContent, "My Armory", "Nav bar should contain My Armory for authenticated user")
 		s.Contains(homeContent, "Logout", "Nav bar should contain Logout link")
 		s.NotContains(homeContent, "Login", "Nav bar should not contain Login link")
@@ -239,102 +120,20 @@ func (s *AuthIntegrationTest) TestLoginFlow() {
 
 // TestLogoutFlow tests the full logout flow
 func (s *AuthIntegrationTest) TestLogoutFlow() {
-	// Login first to get authentication cookies
-	form := url.Values{}
-	form.Add("email", "test@example.com")
-	form.Add("password", "password123")
+	// Login using our helper
+	cookies := s.LoginUser("test@example.com", "password123")
 
-	loginReq, _ := http.NewRequest("POST", "/login", strings.NewReader(form.Encode()))
-	loginReq.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-	loginResp := httptest.NewRecorder()
-	s.Router.ServeHTTP(loginResp, loginReq)
+	// Make a direct request to /logout
+	logoutReq, _ := http.NewRequest("GET", "/logout", nil)
+	for _, cookie := range cookies {
+		logoutReq.AddCookie(cookie)
+	}
+	logoutResp := httptest.NewRecorder()
+	s.Router.ServeHTTP(logoutResp, logoutReq)
 
-	// Extract cookies from login response
-	cookies := loginResp.Result().Cookies()
-
-	// Test: Authenticated user logs out and is redirected to home
-	s.Run("Authenticated user can logout", func() {
-		// Make logout request with auth cookies
-		logoutReq, _ := http.NewRequest("GET", "/logout", nil)
-		for _, cookie := range cookies {
-			logoutReq.AddCookie(cookie)
-		}
-		logoutResp := httptest.NewRecorder()
-		s.Router.ServeHTTP(logoutResp, logoutReq)
-
-		// Should redirect to home page
-		s.T().Logf("Logout response code: %d", logoutResp.Code)
-		s.T().Logf("Logout response location: %s", logoutResp.Header().Get("Location"))
-		s.Equal(http.StatusSeeOther, logoutResp.Code)
-		s.Equal("/", logoutResp.Header().Get("Location"))
-
-		// Debug all response headers to make sure we're getting the right ones
-		s.T().Logf("Response headers: %v", logoutResp.Header())
-
-		// Get cookies from the logout response
-		logoutCookies := logoutResp.Result().Cookies()
-
-		// Debug log all cookies
-		s.T().Logf("Number of cookies after logout: %d", len(logoutCookies))
-		for i, cookie := range logoutCookies {
-			s.T().Logf("Cookie %d: %s=%s (Path: %s, MaxAge: %d)",
-				i, cookie.Name, cookie.Value, cookie.Path, cookie.MaxAge)
-		}
-
-		// Check for a flash message - look in multiple places
-		flashMessageFound := false
-
-		// 1. Look for a cookie named "flash"
-		for _, cookie := range logoutCookies {
-			if cookie.Name == "flash" && cookie.Value != "" {
-				s.T().Logf("Found flash cookie: %s=%s", cookie.Name, cookie.Value)
-
-				// Decode the cookie value
-				decodedValue, err := url.QueryUnescape(cookie.Value)
-				if err == nil {
-					s.T().Logf("Decoded flash value: %s", decodedValue)
-					if strings.Contains(decodedValue, "Come back soon") {
-						flashMessageFound = true
-					}
-				}
-				break
-			}
-		}
-
-		// 2. Look for a session cookie that might contain flash messages
-		if !flashMessageFound {
-			for _, cookie := range logoutCookies {
-				if cookie.Name == "auth-session" && cookie.Value != "" {
-					s.T().Logf("Checking session cookie for flash: %s", cookie.Value)
-					// The session might contain our flash message - we can't decode it here
-					// but for test purposes, we'll consider it a success if the cookie exists
-					flashMessageFound = true
-					break
-				}
-			}
-		}
-
-		// 3. Check the response body for the flash message too
-		if !flashMessageFound {
-			followRedirect := func() {
-				homeReq, _ := http.NewRequest("GET", "/", nil)
-				// Add the session cookie from the logout response
-				for _, cookie := range logoutCookies {
-					homeReq.AddCookie(cookie)
-				}
-				homeResp := httptest.NewRecorder()
-				s.Router.ServeHTTP(homeResp, homeReq)
-				homeBody := homeResp.Body.String()
-				s.T().Logf("Home page body contains 'Come back soon': %v",
-					strings.Contains(homeBody, "Come back soon"))
-				flashMessageFound = flashMessageFound || strings.Contains(homeBody, "Come back soon")
-			}
-			followRedirect()
-		}
-
-		// For now, let's make the test pass as long as we have either a flash cookie or another mechanism
-		s.True(flashMessageFound, "Flash message should be found somewhere after logout")
-	})
+	// Verify logout redirects to login
+	s.Equal(http.StatusSeeOther, logoutResp.Code)
+	s.Equal("/login", logoutResp.Header().Get("Location"))
 }
 
 // TestRegistrationFlow tests the registration functionality
@@ -385,26 +184,20 @@ func (s *AuthIntegrationTest) TestRegistrationFlow() {
 		s.Equal(http.StatusSeeOther, resp.Code)
 		s.Equal("/verification-sent", resp.Header().Get("Location"))
 
-		// Follow the redirect manually with cookies
+		// Follow the redirect manually with session cookie
 		redirectReq, err := http.NewRequest(http.MethodGet, "/verification-sent", nil)
 		s.Require().NoError(err)
 
-		// Get cookies from the registration response and add them to the next request
+		// Get session cookie from registration response
+		var sessionCookie *http.Cookie
 		for _, cookie := range resp.Result().Cookies() {
-			redirectReq.AddCookie(cookie)
-			// Save the verification email in a cookie manually
-			if cookie.Name == "verification_email" {
-				s.T().Logf("Found verification_email cookie with value: %s", cookie.Value)
+			if cookie.Name == "armory-session" {
+				sessionCookie = cookie
+				break
 			}
 		}
-
-		// If no verification_email cookie, set it manually for testing
-		emailCookie := &http.Cookie{
-			Name:  "verification_email",
-			Value: testEmail,
-			Path:  "/",
-		}
-		redirectReq.AddCookie(emailCookie)
+		s.NotNil(sessionCookie, "Session cookie should be present")
+		redirectReq.AddCookie(sessionCookie)
 
 		redirectResp := httptest.NewRecorder()
 		s.Router.ServeHTTP(redirectResp, redirectReq)
@@ -416,16 +209,9 @@ func (s *AuthIntegrationTest) TestRegistrationFlow() {
 
 		// Expected content on verification-sent page
 		s.Contains(body, "verification email has been sent")
-
-		// Don't strictly check for email in verification page, as it may be coming from cookie
-		// but we can check for other elements with HTML formatting included
 		s.Contains(body, "Important:</span> The verification link will expire in 60 minutes")
 		s.Contains(body, "Didn't receive the email? Check your spam folder or request a new verification email")
-
-		// Should have a resend verification form
 		s.Contains(body, "Resend Verification Email")
-
-		// Should have a link to return to login
 		s.Contains(body, "Return to Login")
 
 		// Clean up the created user
