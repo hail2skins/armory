@@ -21,6 +21,9 @@ templ registerContent(data data.AuthData) {
 			}
 			
 			<form action="/register" method="POST">
+				<!-- CSRF Protection -->
+				<input type="hidden" name="csrf_token" value={ data.CSRFToken } />
+				
 				<div class="mb-4">
 					<label for="email" class="block text-gunmetal-700 text-sm font-bold mb-2">Email</label>
 					<input 

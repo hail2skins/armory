@@ -77,6 +77,9 @@ func (s *Server) RegisterMiddleware(r *gin.Engine, authController *controller.Au
 	}
 	r.Use(sessions.Sessions("armory-session", store))
 
+	// Set up CSRF protection middleware
+	r.Use(middleware.CSRFMiddleware())
+
 	// Set up flash message middleware - moved before rate limiting
 	r.Use(FlashMiddleware())
 

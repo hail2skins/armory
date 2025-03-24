@@ -13,6 +13,7 @@ type AuthData struct {
 	AlwaysTrue      bool        // Test property that is always true
 	CurrentPath     string      // Current route path for navigation highlighting
 	ActivePromotion interface{} // Active promotion data
+	CSRFToken       string      // CSRF token for form protection
 }
 
 // NewAuthData creates a new AuthData with default values
@@ -89,5 +90,11 @@ func (a AuthData) HasRole(role string) bool {
 // WithActivePromotion returns a copy of the AuthData with an active promotion
 func (a AuthData) WithActivePromotion(promotion interface{}) AuthData {
 	a.ActivePromotion = promotion
+	return a
+}
+
+// WithCSRFToken returns a copy of the AuthData with a CSRF token
+func (a AuthData) WithCSRFToken(token string) AuthData {
+	a.CSRFToken = token
 	return a
 }

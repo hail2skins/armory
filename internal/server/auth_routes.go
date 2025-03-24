@@ -8,6 +8,7 @@ import (
 	"github.com/hail2skins/armory/cmd/web/views/auth"
 	"github.com/hail2skins/armory/cmd/web/views/data"
 	"github.com/hail2skins/armory/internal/controller"
+	"github.com/hail2skins/armory/internal/middleware"
 )
 
 // RegisterAuthRoutes registers all authentication related routes
@@ -26,6 +27,10 @@ func (s *Server) RegisterAuthRoutes(r *gin.Engine, authController *controller.Au
 		// Set authentication state
 		_, authenticated := authController.GetCurrentUser(c)
 		authData.Authenticated = authenticated
+
+		// Add CSRF token for form protection
+		csrfToken := middleware.GetCSRFToken(c)
+		authData = authData.WithCSRFToken(csrfToken)
 
 		// Get email from cookie if it exists
 		if cookie, err := c.Cookie("verification_email"); err == nil && cookie != "" {
@@ -78,6 +83,10 @@ func setupAuthRenderFunctions(authController *controller.AuthController) {
 			authData.Title = "Login"
 		}
 
+		// Add CSRF token for form protection
+		csrfToken := middleware.GetCSRFToken(c)
+		authData = authData.WithCSRFToken(csrfToken)
+
 		// Handle flash messages
 		authData = handleAuthFlashMessage(c, authData)
 
@@ -95,6 +104,10 @@ func setupAuthRenderFunctions(authController *controller.AuthController) {
 			authData.Title = "Register"
 		}
 
+		// Add CSRF token for form protection
+		csrfToken := middleware.GetCSRFToken(c)
+		authData = authData.WithCSRFToken(csrfToken)
+
 		// Handle flash messages
 		authData = handleAuthFlashMessage(c, authData)
 
@@ -110,6 +123,10 @@ func setupAuthRenderFunctions(authController *controller.AuthController) {
 		if authData.Title == "" {
 			authData.Title = "Logout"
 		}
+
+		// Add CSRF token for form protection
+		csrfToken := middleware.GetCSRFToken(c)
+		authData = authData.WithCSRFToken(csrfToken)
 
 		// Handle flash messages
 		authData = handleAuthFlashMessage(c, authData)
@@ -128,6 +145,10 @@ func setupAuthRenderFunctions(authController *controller.AuthController) {
 			authData.Title = "Verification Email Sent"
 		}
 
+		// Add CSRF token for form protection
+		csrfToken := middleware.GetCSRFToken(c)
+		authData = authData.WithCSRFToken(csrfToken)
+
 		// Handle flash messages
 		authData = handleAuthFlashMessage(c, authData)
 
@@ -145,6 +166,10 @@ func setupAuthRenderFunctions(authController *controller.AuthController) {
 			authData.Title = "Reset Password"
 		}
 
+		// Add CSRF token for form protection
+		csrfToken := middleware.GetCSRFToken(c)
+		authData = authData.WithCSRFToken(csrfToken)
+
 		// Handle flash messages
 		authData = handleAuthFlashMessage(c, authData)
 
@@ -161,6 +186,10 @@ func setupAuthRenderFunctions(authController *controller.AuthController) {
 		if authData.Title == "" {
 			authData.Title = "Reset Password"
 		}
+
+		// Add CSRF token for form protection
+		csrfToken := middleware.GetCSRFToken(c)
+		authData = authData.WithCSRFToken(csrfToken)
 
 		// Handle flash messages
 		authData = handleAuthFlashMessage(c, authData)

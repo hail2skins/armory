@@ -8,6 +8,7 @@ import (
 	"github.com/hail2skins/armory/internal/controller"
 	"github.com/hail2skins/armory/internal/logger"
 	"github.com/hail2skins/armory/internal/models"
+	"github.com/justinas/nosurf"
 )
 
 // AuthMiddleware adds authentication data to the Gin context
@@ -83,6 +84,21 @@ func AuthMiddleware(authService controller.AuthService) gin.HandlerFunc {
 		if flash, exists := c.Get("success"); exists {
 			if flashStr, ok := flash.(string); ok && flashStr != "" {
 				authData = authData.WithSuccess(flashStr)
+			}
+		}
+
+		// Get CSRF token directly from nosurf
+		token := nosurf.Token(c.Request)
+		if token != "" {
+			authData = authData.WithCSRFToken(token)
+			// Also set it in the context for other middleware
+			c.Set("csrf_token", token)
+		} else {
+			// Try to get it from context as fallback
+			if csrfToken, exists := c.Get("csrf_token"); exists {
+				if tokenStr, ok := csrfToken.(string); ok && tokenStr != "" {
+					authData = authData.WithCSRFToken(tokenStr)
+				}
 			}
 		}
 
