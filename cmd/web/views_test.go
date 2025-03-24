@@ -35,7 +35,7 @@ func TestBaseTemplateAndNavigation(t *testing.T) {
 		assert.Contains(t, html, `href="/"`)
 		assert.Contains(t, html, `href="/login"`)
 		assert.Contains(t, html, `href="/register"`)
-		assert.NotContains(t, html, `href="/logout"`)
+		assert.NotContains(t, html, `action="/logout"`)
 	})
 
 	t.Run("Base template shows correct navigation for authenticated users", func(t *testing.T) {
@@ -57,7 +57,7 @@ func TestBaseTemplateAndNavigation(t *testing.T) {
 		assert.Contains(t, html, `class="fixed w-full z-30 top-0 text-white bg-gunmetal-800"`)
 		// Check for navigation links
 		assert.Contains(t, html, `href="/"`)
-		assert.Contains(t, html, `href="/logout"`)
+		assert.Contains(t, html, `action="/logout"`)
 		assert.NotContains(t, html, `href="/login"`)
 		assert.NotContains(t, html, `href="/register"`)
 	})
