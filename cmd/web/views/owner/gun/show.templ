@@ -107,6 +107,7 @@ templ Show(data *data.OwnerData) {
 							Edit Firearm
 						</a>
 						<form method="POST" action="/owner/guns/`+strconv.FormatUint(uint64(data.Gun.ID), 10)+`/delete" class="inline">
+							<input type="hidden" name="csrf_token" value="` + data.Auth.CSRFToken + `">
 							<button type="submit" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded" onclick="return confirm('Are you sure you want to delete this firearm?')">
 								Delete Firearm
 							</button>

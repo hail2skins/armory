@@ -38,6 +38,7 @@ templ New(data *data.OwnerData) {
 		_, err = io.WriteString(w, `
 		<div class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
 			<form action="/owner/guns" method="post">
+				<input type="hidden" name="csrf_token" value="` + data.Auth.CSRFToken + `">
 				<div class="mb-4">
 					<label class="block text-gunmetal-700 text-sm font-bold mb-2" for="name">
 						Name
