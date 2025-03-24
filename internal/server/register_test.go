@@ -130,7 +130,7 @@ func TestRegistrationValidation(t *testing.T) {
 			password:      "Password123!",
 			confirmPass:   "Password123!",
 			expectedCode:  http.StatusOK, // Form renders with error
-			expectedError: "Invalid form data",
+			expectedError: "Invalid email format",
 		},
 		{
 			name:          "Invalid email format",
@@ -138,7 +138,7 @@ func TestRegistrationValidation(t *testing.T) {
 			password:      "Password123!",
 			confirmPass:   "Password123!",
 			expectedCode:  http.StatusOK,
-			expectedError: "Invalid form data",
+			expectedError: "Invalid email format",
 		},
 		{
 			name:          "Password too short",
@@ -146,7 +146,7 @@ func TestRegistrationValidation(t *testing.T) {
 			password:      "pass",
 			confirmPass:   "pass",
 			expectedCode:  http.StatusOK,
-			expectedError: "Invalid form data",
+			expectedError: "Password must be at least 8 characters",
 		},
 		{
 			name:          "Passwords don't match",
@@ -154,7 +154,7 @@ func TestRegistrationValidation(t *testing.T) {
 			password:      "Password123!",
 			confirmPass:   "password456",
 			expectedCode:  http.StatusOK,
-			expectedError: "Invalid form data",
+			expectedError: "Passwords do not match",
 		},
 		{
 			name:          "Duplicate email",

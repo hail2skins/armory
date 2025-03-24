@@ -14,6 +14,7 @@ import (
 	"github.com/hail2skins/armory/internal/logger"
 	"github.com/hail2skins/armory/internal/models"
 	"github.com/hail2skins/armory/internal/services/email"
+	"github.com/hail2skins/armory/internal/validation"
 	"github.com/shaj13/go-guardian/v2/auth"
 	"github.com/shaj13/go-guardian/v2/auth/strategies/basic"
 	"github.com/shaj13/libcache"
@@ -51,7 +52,7 @@ type LoginRequest struct {
 // RegisterRequest represents the registration form data
 type RegisterRequest struct {
 	Email           string `form:"email" binding:"required,email"`
-	Password        string `form:"password" binding:"required,min=6"`
+	Password        string `form:"password" binding:"required,min=8"`
 	ConfirmPassword string `form:"password_confirm" binding:"required,eqfield=Password"`
 }
 
@@ -63,7 +64,7 @@ type ForgotPasswordRequest struct {
 // ResetPasswordRequest represents the reset password form data
 type ResetPasswordRequest struct {
 	Token           string `form:"token" binding:"required"`
-	Password        string `form:"password" binding:"required,min=6"`
+	Password        string `form:"password" binding:"required,min=8"`
 	ConfirmPassword string `form:"confirm_password" binding:"required,eqfield=Password"`
 }
 
@@ -138,9 +139,27 @@ func (a *AuthController) LoginHandler(c *gin.Context) {
 
 	// Handle form submission
 	if c.Request.Method == http.MethodPost {
+		// Parse the form data
+		if err := c.Request.ParseForm(); err != nil {
+			authData = authData.WithError("Error processing form data")
+			a.RenderLogin(c, authData)
+			return
+		}
+
 		// Get form values
-		email := c.PostForm("email")
-		password := c.PostForm("password")
+		email := c.Request.FormValue("email")
+		password := c.Request.FormValue("password")
+
+		// Add email to auth data for form repopulation
+		authData.Email = email
+
+		// Validate email format using the validation service
+		if err := validation.ValidateEmail(email); err != nil {
+			errorMsg := "Invalid email format. Please enter a valid email address."
+			authData = authData.WithError(errorMsg)
+			a.RenderLogin(c, authData)
+			return
+		}
 
 		// Authenticate user
 		user, err := a.db.AuthenticateUser(c.Request.Context(), email, password)
@@ -247,18 +266,63 @@ func (a *AuthController) RegisterHandler(c *gin.Context) {
 
 	// For POST requests, process the registration form
 	var req RegisterRequest
-	if err := c.ShouldBind(&req); err != nil {
-		authData := data.NewAuthData().WithTitle("Register").WithError("Invalid form data")
-		authData.Email = req.Email
+	if err := c.Request.ParseForm(); err != nil {
+		authData := data.NewAuthData().WithTitle("Register").WithError("Error processing form data")
+		a.RenderRegister(c, authData)
+		return
+	}
+
+	// Manually extract form values to avoid gin's validation
+	email := c.Request.FormValue("email")
+	password := c.Request.FormValue("password")
+	confirmPassword := c.Request.FormValue("password_confirm")
+
+	// Fill the request struct manually
+	req.Email = email
+	req.Password = password
+	req.ConfirmPassword = confirmPassword
+
+	// Step 1: Validate email format
+	if err := validation.ValidateEmail(email); err != nil {
+		authData := data.NewAuthData().WithTitle("Register").WithError("Invalid email format. Please enter a valid email address.")
+		authData.Email = email
+		a.RenderRegister(c, authData)
+		return
+	}
+
+	// Step 2: Validate password requirements
+	if err := validation.ValidatePassword(password); err != nil {
+		var errorMsg string
+		switch err {
+		case validation.ErrPasswordTooShort:
+			errorMsg = "Password must be at least 8 characters long."
+		case validation.ErrPasswordNoUppercase:
+			errorMsg = "Password must contain at least one uppercase letter."
+		case validation.ErrPasswordNoSpecialChar:
+			errorMsg = "Password must contain at least one special character."
+		default:
+			errorMsg = "Password does not meet requirements."
+		}
+
+		authData := data.NewAuthData().WithTitle("Register").WithError(errorMsg)
+		authData.Email = email
+		a.RenderRegister(c, authData)
+		return
+	}
+
+	// Step 3: Check if passwords match
+	if password != confirmPassword {
+		authData := data.NewAuthData().WithTitle("Register").WithError("Passwords do not match")
+		authData.Email = email
 		a.RenderRegister(c, authData)
 		return
 	}
 
 	// Check if the user already exists (including soft-deleted)
-	existingUser, err := a.db.GetUserByEmail(c.Request.Context(), req.Email)
+	existingUser, err := a.db.GetUserByEmail(c.Request.Context(), email)
 	if err != nil {
 		authData := data.NewAuthData().WithTitle("Register").WithError("An error occurred")
-		authData.Email = req.Email
+		authData.Email = email
 		a.RenderRegister(c, authData)
 		return
 	}
@@ -268,20 +332,20 @@ func (a *AuthController) RegisterHandler(c *gin.Context) {
 
 	// Skip the unscoped check in tests
 	if !a.SkipUnscopedChecks {
-		if err := a.db.GetDB().Unscoped().Where("email = ? AND deleted_at IS NOT NULL", req.Email).First(&softDeletedUser).Error; err == nil {
+		if err := a.db.GetDB().Unscoped().Where("email = ? AND deleted_at IS NOT NULL", email).First(&softDeletedUser).Error; err == nil {
 			// User exists but was soft-deleted - restore it
 			if err := a.db.GetDB().Unscoped().Model(&softDeletedUser).Update("deleted_at", nil).Error; err != nil {
 				// Error restoring user
 				authData := data.NewAuthData().WithTitle("Register").WithError("An error occurred restoring your account")
-				authData.Email = req.Email
+				authData.Email = email
 				a.RenderRegister(c, authData)
 				return
 			}
 
 			// Update password
-			if err := softDeletedUser.SetPassword(req.Password); err != nil {
+			if err := softDeletedUser.SetPassword(password); err != nil {
 				authData := data.NewAuthData().WithTitle("Register").WithError("Failed to update password")
-				authData.Email = req.Email
+				authData.Email = email
 				a.RenderRegister(c, authData)
 				return
 			}
@@ -289,7 +353,7 @@ func (a *AuthController) RegisterHandler(c *gin.Context) {
 			// Save the updated user
 			if err := a.db.UpdateUser(c.Request.Context(), &softDeletedUser); err != nil {
 				authData := data.NewAuthData().WithTitle("Register").WithError("Failed to update account")
-				authData.Email = req.Email
+				authData.Email = email
 				a.RenderRegister(c, authData)
 				return
 			}
@@ -307,16 +371,16 @@ func (a *AuthController) RegisterHandler(c *gin.Context) {
 
 	if existingUser != nil {
 		authData := data.NewAuthData().WithTitle("Register").WithError("Email already registered")
-		authData.Email = req.Email
+		authData.Email = email
 		a.RenderRegister(c, authData)
 		return
 	}
 
 	// Create the user
-	user, err := a.db.CreateUser(c.Request.Context(), req.Email, req.Password)
+	user, err := a.db.CreateUser(c.Request.Context(), email, password)
 	if err != nil {
 		authData := data.NewAuthData().WithTitle("Register").WithError("Failed to create user")
-		authData.Email = req.Email
+		authData.Email = email
 		a.RenderRegister(c, authData)
 		return
 	}
@@ -333,7 +397,7 @@ func (a *AuthController) RegisterHandler(c *gin.Context) {
 	token := user.GenerateVerificationToken()
 	if err := a.db.UpdateUser(c.Request.Context(), user); err != nil {
 		authData := data.NewAuthData().WithTitle("Register").WithError("Failed to generate verification token")
-		authData.Email = req.Email
+		authData.Email = email
 		a.RenderRegister(c, authData)
 		return
 	}
@@ -661,16 +725,52 @@ func (a *AuthController) ResetPasswordHandler(c *gin.Context) {
 	}
 
 	// For POST requests, process the reset password form
-	var req ResetPasswordRequest
-	if err := c.ShouldBind(&req); err != nil {
-		authData := data.NewAuthData().WithTitle("Reset Password").WithError("Invalid form data")
-		authData.Token = req.Token
+	// Parse the form data
+	if err := c.Request.ParseForm(); err != nil {
+		authData := data.NewAuthData().WithTitle("Reset Password").WithError("Error processing form data")
+		token := c.Request.FormValue("token")
+		authData.Token = token
+		a.RenderResetPassword(c, authData)
+		return
+	}
+
+	// Get form values
+	token := c.Request.FormValue("token")
+	password := c.Request.FormValue("password")
+	confirmPassword := c.Request.FormValue("confirm_password")
+
+	// Create auth data with token
+	authData := data.NewAuthData().WithTitle("Reset Password")
+	authData.Token = token
+
+	// Validate password using the validation service
+	if err := validation.ValidatePassword(password); err != nil {
+		var errorMsg string
+		switch err {
+		case validation.ErrPasswordTooShort:
+			errorMsg = "Password must be at least 8 characters long."
+		case validation.ErrPasswordNoUppercase:
+			errorMsg = "Password must contain at least one uppercase letter."
+		case validation.ErrPasswordNoSpecialChar:
+			errorMsg = "Password must contain at least one special character."
+		default:
+			errorMsg = "Password validation failed. Please check your password."
+		}
+
+		authData = authData.WithError(errorMsg)
+		a.RenderResetPassword(c, authData)
+		return
+	}
+
+	// Check if passwords match
+	if password != confirmPassword {
+		authData = authData.WithError("Passwords do not match")
 		a.RenderResetPassword(c, authData)
 		return
 	}
 
 	// First get the user directly by token
-	user, err := a.db.GetUserByRecoveryToken(c.Request.Context(), req.Token)
+	user, err := a.db.GetUserByRecoveryToken(c.Request.Context(), token)
 	if err != nil || user == nil {
 		// For test purposes, check for X-Test header
 		if c.Request.Header.Get("X-Test") == "true" {
@@ -679,8 +779,7 @@ func (a *AuthController) ResetPasswordHandler(c *gin.Context) {
 		}
 
 		// For normal operation, render the form with an error
-		authData := data.NewAuthData().WithTitle("Reset Password").WithError("Invalid recovery token")
-		authData.Token = req.Token
+		authData = authData.WithError("Invalid recovery token")
 		a.RenderResetPassword(c, authData)
 		return
 	}
@@ -695,16 +794,16 @@ func (a *AuthController) ResetPasswordHandler(c *gin.Context) {
 
 		// For normal operation, render the form with an error
 		authData := data.NewAuthData().WithTitle("Reset Password").WithError("Recovery token has expired")
-		authData.Token = req.Token
+		authData.Token = token
 		a.RenderResetPassword(c, authData)
 		return
 	}
 
 	// Now that we've validated the token, reset the password
-	hashedPassword, err := database.HashPassword(req.Password)
+	hashedPassword, err := database.HashPassword(password)
 	if err != nil {
 		authData := data.NewAuthData().WithTitle("Reset Password").WithError("An error occurred while resetting your password")
-		authData.Token = req.Token
+		authData.Token = token
 		a.RenderResetPassword(c, authData)
 		return
 	}
@@ -717,7 +816,7 @@ func (a *AuthController) ResetPasswordHandler(c *gin.Context) {
 
 	if err := a.db.UpdateUser(c.Request.Context(), user); err != nil {
 		authData := data.NewAuthData().WithTitle("Reset Password").WithError("An error occurred while updating your password")
-		authData.Token = req.Token
+		authData.Token = token
 		a.RenderResetPassword(c, authData)
 		return
 	}
