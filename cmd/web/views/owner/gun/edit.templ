@@ -38,7 +38,7 @@ templ Edit(data *data.OwnerData) {
 
 		_, err = io.WriteString(w, `
 		<div class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
-			<form action="/owner/guns/`+strconv.FormatUint(uint64(data.Gun.ID), 10)+`" method="post">
+			<form action="/owner/guns/`+strconv.FormatUint(uint64(data.Gun.ID), 10)+`" method="post" id="edit-gun-form">
 				<input type="hidden" name="csrf_token" value="` + data.Auth.CSRFToken + `">
 				<div class="mb-4">
 					<label class="block text-gunmetal-700 text-sm font-bold mb-2" for="name">
@@ -100,6 +100,21 @@ templ Edit(data *data.OwnerData) {
 						}() +`"
 						class="block w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-brass-500 focus:border-brass-500"
 					/>
+					`)
+		if err != nil {
+			return err
+		}
+
+		if acquiredDateError, ok := data.FormErrors["acquired_date"]; ok {
+			_, err = io.WriteString(w, `
+					<p class="text-red-500 text-xs italic">`+acquiredDateError+`</p>
+					`)
+			if err != nil {
+				return err
+			}
+		}
+
+		_, err = io.WriteString(w, `
 				</div>
 				<div class="mb-4">
 					<label for="paid" class="block text-gunmetal-700 font-medium mb-1">Paid (USD)</label>
@@ -314,6 +329,44 @@ templ Edit(data *data.OwnerData) {
 			</script>
 		</div>
 		`)
-		return err
+		if err != nil {
+			return err
+		}
+
+		// Add date validation for acquired date
+		_, err = io.WriteString(w, `
+		<script>
+			// Add date validation for acquired date
+			document.addEventListener('DOMContentLoaded', function() {
+				const dateField = document.getElementById('acquired_date');
+				
+				dateField.addEventListener('input', function() {
+					const selectedDate = new Date(this.value);
+					const today = new Date();
+					today.setHours(0, 0, 0, 0); // Reset time part for date comparison
+					
+					if (selectedDate > today) {
+						// Show client-side warning but allow submission
+						if (!this.nextElementSibling || !this.nextElementSibling.classList.contains('date-warning')) {
+							const warning = document.createElement('p');
+							warning.textContent = 'Warning: Date is in the future';
+							warning.className = 'text-yellow-500 text-xs italic date-warning';
+							this.parentNode.insertBefore(warning, this.nextElementSibling);
+						}
+					} else {
+						// Remove warning if date is valid
+						const warning = this.nextElementSibling;
+						if (warning && warning.classList.contains('date-warning')) {
+							warning.remove();
+						}
+					}
+				});
+			});
+		</script>
+		`)
+		if err != nil {
+			return err
+		}
+		return nil
 	}))
 } 

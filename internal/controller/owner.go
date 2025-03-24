@@ -465,39 +465,41 @@ func (o *OwnerController) Create(c *gin.Context) {
 		}
 	}
 
-	// Validate form data
+	// Initialize error map for form validation
 	errors := make(map[string]string)
 
-	// Name is required
-	if name == "" {
-		errors["name"] = "Name is required"
+	// Parse weapon type ID
+	weaponTypeID, err := strconv.Atoi(weaponTypeIDStr)
+	if err != nil {
+		errors["weapon_type_id"] = "Valid weapon type is required"
 	}
 
-	// Parse date if provided
+	// Parse caliber ID
+	caliberID, err := strconv.Atoi(caliberIDStr)
+	if err != nil {
+		errors["caliber_id"] = "Valid caliber is required"
+	}
+
+	// Parse manufacturer ID
+	manufacturerID, err := strconv.Atoi(manufacturerIDStr)
+	if err != nil {
+		errors["manufacturer_id"] = "Valid manufacturer is required"
+	}
+
+	// Parse acquired date if provided
 	var acquiredDate *time.Time
 	if acquiredDateStr != "" {
 		parsedDate, err := time.Parse("2006-01-02", acquiredDateStr)
 		if err != nil {
 			errors["acquired"] = "Invalid date format, use YYYY-MM-DD"
 		} else {
-			acquiredDate = &parsedDate
+			// Check if date is in the future
+			if parsedDate.After(time.Now()) {
+				errors["acquired"] = "Acquisition date cannot be in the future"
+			} else {
+				acquiredDate = &parsedDate
+			}
 		}
-	}
-
-	// Parse IDs
-	weaponTypeID, err := strconv.Atoi(weaponTypeIDStr)
-	if err != nil || weaponTypeID <= 0 {
-		errors["weapon_type_id"] = "Valid weapon type is required"
-	}
-
-	caliberID, err := strconv.Atoi(caliberIDStr)
-	if err != nil || caliberID <= 0 {
-		errors["caliber_id"] = "Valid caliber is required"
-	}
-
-	manufacturerID, err := strconv.Atoi(manufacturerIDStr)
-	if err != nil || manufacturerID <= 0 {
-		errors["manufacturer_id"] = "Valid manufacturer is required"
 	}
 
 	// Parse paid amount if provided
@@ -511,9 +513,9 @@ func (o *OwnerController) Create(c *gin.Context) {
 		}
 	}
 
-	// If there are validation errors, re-render the form
+	// If there are parsing errors, re-render the form with errors
 	if len(errors) > 0 {
-		logger.Info("Validation errors found", map[string]interface{}{"errors": errors})
+		logger.Info("Parsing errors found", map[string]interface{}{"errors": errors})
 
 		// Get reference data for the form
 		weaponTypes, _ := o.db.FindAllWeaponTypes()
@@ -537,6 +539,15 @@ func (o *OwnerController) Create(c *gin.Context) {
 			}
 		}
 
+		// Add CSRF token to view data if not already provided by authData
+		if ownerData.Auth.CSRFToken == "" {
+			if csrfTokenInterface, exists := c.Get("csrf_token"); exists {
+				if csrfToken, ok := csrfTokenInterface.(string); ok {
+					ownerData.Auth = ownerData.Auth.WithCSRFToken(csrfToken)
+				}
+			}
+		}
+
 		// Render the form with errors
 		gunView.New(ownerData).Render(c.Request.Context(), c.Writer)
 		return
@@ -554,7 +565,7 @@ func (o *OwnerController) Create(c *gin.Context) {
 		Paid:           paidAmount,
 	}
 
-	logger.Info("About to create gun in DB", map[string]interface{}{
+	logger.Info("About to create gun with validation", map[string]interface{}{
 		"gun": map[string]interface{}{
 			"name":            newGun.Name,
 			"owner_id":        newGun.OwnerID,
@@ -564,21 +575,39 @@ func (o *OwnerController) Create(c *gin.Context) {
 		},
 	})
 
-	// Use direct database insert (this is what works)
+	// Use the new validation-enabled create function
 	db := o.db.GetDB()
-	result := db.Create(newGun)
-
-	if result.Error != nil {
-		logger.Error("Gun creation failed", result.Error, map[string]interface{}{
-			"error_details": result.Error.Error(),
+	err = models.CreateGunWithValidation(db, newGun)
+	if err != nil {
+		logger.Error("Gun validation or creation failed", err, map[string]interface{}{
+			"error_details": err.Error(),
 		})
+
+		// Map model validation errors to form errors
+		switch err {
+		case models.ErrGunNameTooLong:
+			errors["name"] = "Name cannot exceed 100 characters"
+		case models.ErrNegativePrice:
+			errors["paid"] = "Price cannot be negative"
+		case models.ErrFutureDate:
+			errors["acquired"] = "Acquisition date cannot be in the future"
+		case models.ErrInvalidWeaponType:
+			errors["weapon_type_id"] = "Selected weapon type doesn't exist"
+		case models.ErrInvalidCaliber:
+			errors["caliber_id"] = "Selected caliber doesn't exist"
+		case models.ErrInvalidManufacturer:
+			errors["manufacturer_id"] = "Selected manufacturer doesn't exist"
+		default:
+			// Generic database error
+			errors["general"] = "Failed to create gun: " + err.Error()
+		}
 
 		// Get reference data for the form
 		weaponTypes, _ := o.db.FindAllWeaponTypes()
 		calibers, _ := o.db.FindAllCalibers()
 		manufacturers, _ := o.db.FindAllManufacturers()
 
-		// Create owner data with error
+		// Create owner data with errors
 		ownerData := data.NewOwnerData().
 			WithTitle("Add New Firearm").
 			WithAuthenticated(true).
@@ -586,12 +615,21 @@ func (o *OwnerController) Create(c *gin.Context) {
 			WithWeaponTypes(weaponTypes).
 			WithCalibers(calibers).
 			WithManufacturers(manufacturers).
-			WithError("Failed to create gun: " + result.Error.Error())
+			WithFormErrors(errors)
 
 		// Add auth data if available
 		if authDataInterface, exists := c.Get("authData"); exists {
 			if authData, ok := authDataInterface.(data.AuthData); ok {
 				ownerData.Auth = authData.WithTitle("Add New Firearm")
+			}
+		}
+
+		// Add CSRF token to view data if not already provided by authData
+		if ownerData.Auth.CSRFToken == "" {
+			if csrfTokenInterface, exists := c.Get("csrf_token"); exists {
+				if csrfToken, ok := csrfTokenInterface.(string); ok {
+					ownerData.Auth = ownerData.Auth.WithCSRFToken(csrfToken)
+				}
 			}
 		}
 
@@ -1032,7 +1070,7 @@ func (o *OwnerController) Edit(c *gin.Context) {
 	gunView.Edit(viewData).Render(context.Background(), c.Writer)
 }
 
-// Update handles the update gun form submission
+// Update handles the update gun route
 func (o *OwnerController) Update(c *gin.Context) {
 	// Get the current user's authentication status and email
 	authController, ok := c.MustGet("authController").(AuthControllerInterface)
@@ -1098,31 +1136,57 @@ func (o *OwnerController) Update(c *gin.Context) {
 		manufacturerIDStr := c.PostForm("manufacturer_id")
 		paidStr := c.PostForm("paid")
 
-		// Validate the form
+		// Initialize form errors map
 		formErrors := make(map[string]string)
 
-		if name == "" {
-			formErrors["name"] = "Name is required"
+		// Parse IDs with basic format validation
+		weaponTypeID, err := strconv.ParseUint(weaponTypeIDStr, 10, 64)
+		if err != nil {
+			formErrors["weapon_type_id"] = "Invalid weapon type format"
 		}
 
-		if weaponTypeIDStr == "" {
-			formErrors["weapon_type_id"] = "Weapon type is required"
+		caliberID, err := strconv.ParseUint(caliberIDStr, 10, 64)
+		if err != nil {
+			formErrors["caliber_id"] = "Invalid caliber format"
 		}
 
-		if caliberIDStr == "" {
-			formErrors["caliber_id"] = "Caliber is required"
+		manufacturerID, err := strconv.ParseUint(manufacturerIDStr, 10, 64)
+		if err != nil {
+			formErrors["manufacturer_id"] = "Invalid manufacturer format"
 		}
 
-		if manufacturerIDStr == "" {
-			formErrors["manufacturer_id"] = "Manufacturer is required"
+		// Parse acquired date if provided
+		var acquiredDate *time.Time
+		if acquiredDateStr != "" {
+			parsedDate, err := time.Parse("2006-01-02", acquiredDateStr)
+			if err != nil {
+				formErrors["acquired_date"] = "Invalid date format, use YYYY-MM-DD"
+			} else {
+				// Check if date is in the future
+				if parsedDate.After(time.Now()) {
+					formErrors["acquired_date"] = "Acquisition date cannot be in the future"
+				} else {
+					acquiredDate = &parsedDate
+				}
+			}
 		}
 
-		// If there are validation errors, re-render the form with errors
+		// Parse paid amount if provided
+		var paidAmount *float64
+		if paidStr != "" {
+			paid, err := strconv.ParseFloat(paidStr, 64)
+			if err != nil {
+				formErrors["paid"] = "Invalid amount format"
+			} else {
+				paidAmount = &paid
+			}
+		}
+
+		// If there are basic parsing errors, return to the form
 		if len(formErrors) > 0 {
 			// Get all weapon types, calibers, and manufacturers
 			var weaponTypes []models.WeaponType
 			if err := db.Order("popularity DESC").Find(&weaponTypes).Error; err != nil {
-				// Use session flash message instead of HTML error
 				session := sessions.Default(c)
 				session.AddFlash("Failed to get weapon types")
 				session.Save()
@@ -1132,7 +1196,6 @@ func (o *OwnerController) Update(c *gin.Context) {
 
 			var calibers []models.Caliber
 			if err := db.Order("popularity DESC").Find(&calibers).Error; err != nil {
-				// Use session flash message instead of HTML error
 				session := sessions.Default(c)
 				session.AddFlash("Failed to get calibers")
 				session.Save()
@@ -1142,7 +1205,6 @@ func (o *OwnerController) Update(c *gin.Context) {
 
 			var manufacturers []models.Manufacturer
 			if err := db.Order("popularity DESC").Find(&manufacturers).Error; err != nil {
-				// Use session flash message instead of HTML error
 				session := sessions.Default(c)
 				session.AddFlash("Failed to get manufacturers")
 				session.Save()
@@ -1161,78 +1223,20 @@ func (o *OwnerController) Update(c *gin.Context) {
 				WithManufacturers(manufacturers).
 				WithFormErrors(formErrors)
 
+			// Add CSRF token to view data
+			if csrfTokenInterface, exists := c.Get("csrf_token"); exists {
+				if csrfToken, ok := csrfTokenInterface.(string); ok {
+					viewData.Auth = viewData.Auth.WithCSRFToken(csrfToken)
+				}
+			}
+
 			// Render the edit form
 			c.Status(http.StatusOK)
 			gunView.Edit(viewData).Render(context.Background(), c.Writer)
 			return
 		}
 
-		// Parse the IDs
-		weaponTypeID, err := strconv.ParseUint(weaponTypeIDStr, 10, 64)
-		if err != nil {
-			// Use session flash message instead of HTML error
-			session := sessions.Default(c)
-			session.AddFlash("Invalid weapon type ID")
-			session.Save()
-			c.Redirect(http.StatusSeeOther, fmt.Sprintf("/owner/guns/%s/edit", gunID))
-			return
-		}
-
-		caliberID, err := strconv.ParseUint(caliberIDStr, 10, 64)
-		if err != nil {
-			// Use session flash message instead of HTML error
-			session := sessions.Default(c)
-			session.AddFlash("Invalid caliber ID")
-			session.Save()
-			c.Redirect(http.StatusSeeOther, fmt.Sprintf("/owner/guns/%s/edit", gunID))
-			return
-		}
-
-		manufacturerID, err := strconv.ParseUint(manufacturerIDStr, 10, 64)
-		if err != nil {
-			// Use session flash message instead of HTML error
-			session := sessions.Default(c)
-			session.AddFlash("Invalid manufacturer ID")
-			session.Save()
-			c.Redirect(http.StatusSeeOther, fmt.Sprintf("/owner/guns/%s/edit", gunID))
-			return
-		}
-
-		// Parse acquired date if provided
-		var acquiredDate *time.Time
-		if acquiredDateStr != "" {
-			parsedDate, err := time.Parse("2006-01-02", acquiredDateStr)
-			if err != nil {
-				// Use session flash message instead of HTML error
-				session := sessions.Default(c)
-				session.AddFlash("Invalid acquired date")
-				session.Save()
-				c.Redirect(http.StatusSeeOther, fmt.Sprintf("/owner/guns/%s/edit", gunID))
-				return
-			}
-			acquiredDate = &parsedDate
-		} else {
-			acquiredDate = nil
-		}
-
-		// Parse paid amount if provided
-		var paidAmount *float64
-		if paidStr != "" {
-			paid, err := strconv.ParseFloat(paidStr, 64)
-			if err != nil {
-				// Use session flash message instead of HTML error
-				session := sessions.Default(c)
-				session.AddFlash("Invalid paid amount")
-				session.Save()
-				c.Redirect(http.StatusSeeOther, fmt.Sprintf("/owner/guns/%s/edit", gunID))
-				return
-			}
-			paidAmount = &paid
-		} else {
-			paidAmount = nil
-		}
-
-		// Update the gun
+		// Create updated gun object
 		updatedGun := &models.Gun{
 			Name:           name,
 			SerialNumber:   serialNumber,
@@ -1245,24 +1249,85 @@ func (o *OwnerController) Update(c *gin.Context) {
 		}
 		updatedGun.ID = gun.ID
 
-		// Save the gun
-		if err := models.UpdateGun(db, updatedGun); err != nil {
-			// Use session flash message instead of HTML error
-			session := sessions.Default(c)
-			session.AddFlash("Failed to update gun")
-			session.Save()
-			c.Redirect(http.StatusSeeOther, fmt.Sprintf("/owner/guns/%s/edit", gunID))
-			return
-		}
+		// Use the validation-enabled update function
+		err = models.UpdateGunWithValidation(db, updatedGun)
+		if err != nil {
+			// Map validation errors to form errors
+			switch err {
+			case models.ErrGunNameTooLong:
+				formErrors["name"] = "Name cannot exceed 100 characters"
+			case models.ErrNegativePrice:
+				formErrors["paid"] = "Price cannot be negative"
+			case models.ErrFutureDate:
+				formErrors["acquired_date"] = "Acquisition date cannot be in the future"
+			case models.ErrInvalidWeaponType:
+				formErrors["weapon_type_id"] = "Selected weapon type doesn't exist"
+			case models.ErrInvalidCaliber:
+				formErrors["caliber_id"] = "Selected caliber doesn't exist"
+			case models.ErrInvalidManufacturer:
+				formErrors["manufacturer_id"] = "Selected manufacturer doesn't exist"
+			default:
+				// Set generic flash message
+				session := sessions.Default(c)
+				session.AddFlash("Failed to update gun: " + err.Error())
+				session.Save()
+				c.Redirect(http.StatusSeeOther, fmt.Sprintf("/owner/guns/%s/edit", gunID))
+				return
+			}
 
-		// Reload the gun with its relationships to ensure they're updated
-		if err := db.Preload("WeaponType").Preload("Caliber").Preload("Manufacturer").First(&updatedGun, updatedGun.ID).Error; err != nil {
-			// Use session flash message instead of HTML error
-			session := sessions.Default(c)
-			session.AddFlash("Failed to reload gun")
-			session.Save()
-			c.Redirect(http.StatusSeeOther, "/owner")
-			return
+			// If we got specific validation errors, show them in the form
+			if len(formErrors) > 0 {
+				// Get reference data for the form
+				var weaponTypes []models.WeaponType
+				if err := db.Order("popularity DESC").Find(&weaponTypes).Error; err != nil {
+					session := sessions.Default(c)
+					session.AddFlash("Failed to get weapon types")
+					session.Save()
+					c.Redirect(http.StatusSeeOther, "/owner")
+					return
+				}
+
+				var calibers []models.Caliber
+				if err := db.Order("popularity DESC").Find(&calibers).Error; err != nil {
+					session := sessions.Default(c)
+					session.AddFlash("Failed to get calibers")
+					session.Save()
+					c.Redirect(http.StatusSeeOther, "/owner")
+					return
+				}
+
+				var manufacturers []models.Manufacturer
+				if err := db.Order("popularity DESC").Find(&manufacturers).Error; err != nil {
+					session := sessions.Default(c)
+					session.AddFlash("Failed to get manufacturers")
+					session.Save()
+					c.Redirect(http.StatusSeeOther, "/owner")
+					return
+				}
+
+				// Create the data for the view with validation errors
+				viewData := data.NewOwnerData().
+					WithTitle("Edit Firearm").
+					WithAuthenticated(true).
+					WithUser(user).
+					WithGun(&gun).
+					WithWeaponTypes(weaponTypes).
+					WithCalibers(calibers).
+					WithManufacturers(manufacturers).
+					WithFormErrors(formErrors)
+
+				// Add CSRF token to view data
+				if csrfTokenInterface, exists := c.Get("csrf_token"); exists {
+					if csrfToken, ok := csrfTokenInterface.(string); ok {
+						viewData.Auth = viewData.Auth.WithCSRFToken(csrfToken)
+					}
+				}
+
+				// Render the edit form with validation errors
+				c.Status(http.StatusOK)
+				gunView.Edit(viewData).Render(context.Background(), c.Writer)
+				return
+			}
 		}
 
 		// Set flash message for success
@@ -1332,31 +1397,57 @@ func (o *OwnerController) Update(c *gin.Context) {
 	manufacturerIDStr := c.PostForm("manufacturer_id")
 	paidStr := c.PostForm("paid")
 
-	// Validate the form
+	// Initialize form errors map
 	formErrors := make(map[string]string)
 
-	if name == "" {
-		formErrors["name"] = "Name is required"
+	// Parse IDs with basic format validation
+	weaponTypeID, err := strconv.ParseUint(weaponTypeIDStr, 10, 64)
+	if err != nil {
+		formErrors["weapon_type_id"] = "Invalid weapon type format"
 	}
 
-	if weaponTypeIDStr == "" {
-		formErrors["weapon_type_id"] = "Weapon type is required"
+	caliberID, err := strconv.ParseUint(caliberIDStr, 10, 64)
+	if err != nil {
+		formErrors["caliber_id"] = "Invalid caliber format"
 	}
 
-	if caliberIDStr == "" {
-		formErrors["caliber_id"] = "Caliber is required"
+	manufacturerID, err := strconv.ParseUint(manufacturerIDStr, 10, 64)
+	if err != nil {
+		formErrors["manufacturer_id"] = "Invalid manufacturer format"
 	}
 
-	if manufacturerIDStr == "" {
-		formErrors["manufacturer_id"] = "Manufacturer is required"
+	// Parse acquired date if provided
+	var acquiredDate *time.Time
+	if acquiredDateStr != "" {
+		parsedDate, err := time.Parse("2006-01-02", acquiredDateStr)
+		if err != nil {
+			formErrors["acquired_date"] = "Invalid date format, use YYYY-MM-DD"
+		} else {
+			// Check if date is in the future
+			if parsedDate.After(time.Now()) {
+				formErrors["acquired_date"] = "Acquisition date cannot be in the future"
+			} else {
+				acquiredDate = &parsedDate
+			}
+		}
 	}
 
-	// If there are validation errors, re-render the form with errors
+	// Parse paid amount if provided
+	var paidAmount *float64
+	if paidStr != "" {
+		paid, err := strconv.ParseFloat(paidStr, 64)
+		if err != nil {
+			formErrors["paid"] = "Invalid amount format"
+		} else {
+			paidAmount = &paid
+		}
+	}
+
+	// If there are basic parsing errors, return to the form
 	if len(formErrors) > 0 {
 		// Get all weapon types, calibers, and manufacturers
 		var weaponTypes []models.WeaponType
 		if err := db.Order("popularity DESC").Find(&weaponTypes).Error; err != nil {
-			// Use session flash message instead of HTML error
 			session := sessions.Default(c)
 			session.AddFlash("Failed to get weapon types")
 			session.Save()
@@ -1366,7 +1457,6 @@ func (o *OwnerController) Update(c *gin.Context) {
 
 		var calibers []models.Caliber
 		if err := db.Order("popularity DESC").Find(&calibers).Error; err != nil {
-			// Use session flash message instead of HTML error
 			session := sessions.Default(c)
 			session.AddFlash("Failed to get calibers")
 			session.Save()
@@ -1376,7 +1466,6 @@ func (o *OwnerController) Update(c *gin.Context) {
 
 		var manufacturers []models.Manufacturer
 		if err := db.Order("popularity DESC").Find(&manufacturers).Error; err != nil {
-			// Use session flash message instead of HTML error
 			session := sessions.Default(c)
 			session.AddFlash("Failed to get manufacturers")
 			session.Save()
@@ -1395,78 +1484,20 @@ func (o *OwnerController) Update(c *gin.Context) {
 			WithManufacturers(manufacturers).
 			WithFormErrors(formErrors)
 
+		// Add CSRF token to view data
+		if csrfTokenInterface, exists := c.Get("csrf_token"); exists {
+			if csrfToken, ok := csrfTokenInterface.(string); ok {
+				viewData.Auth = viewData.Auth.WithCSRFToken(csrfToken)
+			}
+		}
+
 		// Render the edit form
 		c.Status(http.StatusOK)
 		gunView.Edit(viewData).Render(context.Background(), c.Writer)
 		return
 	}
 
-	// Parse the IDs
-	weaponTypeID, err := strconv.ParseUint(weaponTypeIDStr, 10, 64)
-	if err != nil {
-		// Use session flash message instead of HTML error
-		session := sessions.Default(c)
-		session.AddFlash("Invalid weapon type ID")
-		session.Save()
-		c.Redirect(http.StatusSeeOther, fmt.Sprintf("/owner/guns/%s/edit", gunID))
-		return
-	}
-
-	caliberID, err := strconv.ParseUint(caliberIDStr, 10, 64)
-	if err != nil {
-		// Use session flash message instead of HTML error
-		session := sessions.Default(c)
-		session.AddFlash("Invalid caliber ID")
-		session.Save()
-		c.Redirect(http.StatusSeeOther, fmt.Sprintf("/owner/guns/%s/edit", gunID))
-		return
-	}
-
-	manufacturerID, err := strconv.ParseUint(manufacturerIDStr, 10, 64)
-	if err != nil {
-		// Use session flash message instead of HTML error
-		session := sessions.Default(c)
-		session.AddFlash("Invalid manufacturer ID")
-		session.Save()
-		c.Redirect(http.StatusSeeOther, fmt.Sprintf("/owner/guns/%s/edit", gunID))
-		return
-	}
-
-	// Parse acquired date if provided
-	var acquiredDate *time.Time
-	if acquiredDateStr != "" {
-		parsedDate, err := time.Parse("2006-01-02", acquiredDateStr)
-		if err != nil {
-			// Use session flash message instead of HTML error
-			session := sessions.Default(c)
-			session.AddFlash("Invalid acquired date")
-			session.Save()
-			c.Redirect(http.StatusSeeOther, fmt.Sprintf("/owner/guns/%s/edit", gunID))
-			return
-		}
-		acquiredDate = &parsedDate
-	} else {
-		acquiredDate = nil
-	}
-
-	// Parse paid amount if provided
-	var paidAmount *float64
-	if paidStr != "" {
-		paid, err := strconv.ParseFloat(paidStr, 64)
-		if err != nil {
-			// Use session flash message instead of HTML error
-			session := sessions.Default(c)
-			session.AddFlash("Invalid paid amount")
-			session.Save()
-			c.Redirect(http.StatusSeeOther, fmt.Sprintf("/owner/guns/%s/edit", gunID))
-			return
-		}
-		paidAmount = &paid
-	} else {
-		paidAmount = nil
-	}
-
-	// Update the gun
+	// Create updated gun object
 	updatedGun := &models.Gun{
 		Name:           name,
 		SerialNumber:   serialNumber,
@@ -1479,24 +1510,85 @@ func (o *OwnerController) Update(c *gin.Context) {
 	}
 	updatedGun.ID = gun.ID
 
-	// Save the gun
-	if err := models.UpdateGun(db, updatedGun); err != nil {
-		// Use session flash message instead of HTML error
-		session := sessions.Default(c)
-		session.AddFlash("Failed to update gun")
-		session.Save()
-		c.Redirect(http.StatusSeeOther, fmt.Sprintf("/owner/guns/%s/edit", gunID))
-		return
-	}
+	// Use the validation-enabled update function
+	err = models.UpdateGunWithValidation(db, updatedGun)
+	if err != nil {
+		// Map validation errors to form errors
+		switch err {
+		case models.ErrGunNameTooLong:
+			formErrors["name"] = "Name cannot exceed 100 characters"
+		case models.ErrNegativePrice:
+			formErrors["paid"] = "Price cannot be negative"
+		case models.ErrFutureDate:
+			formErrors["acquired_date"] = "Acquisition date cannot be in the future"
+		case models.ErrInvalidWeaponType:
+			formErrors["weapon_type_id"] = "Selected weapon type doesn't exist"
+		case models.ErrInvalidCaliber:
+			formErrors["caliber_id"] = "Selected caliber doesn't exist"
+		case models.ErrInvalidManufacturer:
+			formErrors["manufacturer_id"] = "Selected manufacturer doesn't exist"
+		default:
+			// Set generic flash message
+			session := sessions.Default(c)
+			session.AddFlash("Failed to update gun: " + err.Error())
+			session.Save()
+			c.Redirect(http.StatusSeeOther, fmt.Sprintf("/owner/guns/%s/edit", gunID))
+			return
+		}
 
-	// Reload the gun with its relationships to ensure they're updated
-	if err := db.Preload("WeaponType").Preload("Caliber").Preload("Manufacturer").First(&updatedGun, updatedGun.ID).Error; err != nil {
-		// Use session flash message instead of HTML error
-		session := sessions.Default(c)
-		session.AddFlash("Failed to reload gun")
-		session.Save()
-		c.Redirect(http.StatusSeeOther, "/owner")
-		return
+		// If we got specific validation errors, show them in the form
+		if len(formErrors) > 0 {
+			// Get reference data for the form
+			var weaponTypes []models.WeaponType
+			if err := db.Order("popularity DESC").Find(&weaponTypes).Error; err != nil {
+				session := sessions.Default(c)
+				session.AddFlash("Failed to get weapon types")
+				session.Save()
+				c.Redirect(http.StatusSeeOther, "/owner")
+				return
+			}
+
+			var calibers []models.Caliber
+			if err := db.Order("popularity DESC").Find(&calibers).Error; err != nil {
+				session := sessions.Default(c)
+				session.AddFlash("Failed to get calibers")
+				session.Save()
+				c.Redirect(http.StatusSeeOther, "/owner")
+				return
+			}
+
+			var manufacturers []models.Manufacturer
+			if err := db.Order("popularity DESC").Find(&manufacturers).Error; err != nil {
+				session := sessions.Default(c)
+				session.AddFlash("Failed to get manufacturers")
+				session.Save()
+				c.Redirect(http.StatusSeeOther, "/owner")
+				return
+			}
+
+			// Create the data for the view with validation errors
+			viewData := data.NewOwnerData().
+				WithTitle("Edit Firearm").
+				WithAuthenticated(true).
+				WithUser(user).
+				WithGun(&gun).
+				WithWeaponTypes(weaponTypes).
+				WithCalibers(calibers).
+				WithManufacturers(manufacturers).
+				WithFormErrors(formErrors)
+
+			// Add CSRF token to view data
+			if csrfTokenInterface, exists := c.Get("csrf_token"); exists {
+				if csrfToken, ok := csrfTokenInterface.(string); ok {
+					viewData.Auth = viewData.Auth.WithCSRFToken(csrfToken)
+				}
+			}
+
+			// Render the edit form with validation errors
+			c.Status(http.StatusOK)
+			gunView.Edit(viewData).Render(context.Background(), c.Writer)
+			return
+		}
 	}
 
 	// Set flash message for success
@@ -1537,8 +1629,12 @@ func (o *OwnerController) Delete(c *gin.Context) {
 			return
 		}
 
-		// Get the gun ID from the URL parameter
-		gunID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+		// Get the gun ID from the URL
+		gunID := c.Param("id")
+
+		// Delete the gun
+		db := o.db.GetDB()
+		gunIDUint, err := strconv.ParseUint(gunID, 10, 64)
 		if err != nil {
 			// Set flash message
 			if setFlash, exists := c.Get("setFlash"); exists {
@@ -1547,10 +1643,7 @@ func (o *OwnerController) Delete(c *gin.Context) {
 			c.Redirect(http.StatusSeeOther, "/owner")
 			return
 		}
-
-		// Delete the gun
-		db := o.db.GetDB()
-		err = o.db.DeleteGun(db, uint(gunID), dbUser.ID)
+		err = o.db.DeleteGun(db, uint(gunIDUint), dbUser.ID)
 		if err != nil {
 			// Set flash message
 			if setFlash, exists := c.Get("setFlash"); exists {
@@ -1588,8 +1681,12 @@ func (o *OwnerController) Delete(c *gin.Context) {
 		return
 	}
 
-	// Get the gun ID from the URL parameter
-	gunID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	// Get the gun ID from the URL
+	gunID := c.Param("id")
+
+	// Delete the gun
+	db := o.db.GetDB()
+	gunIDUint, err := strconv.ParseUint(gunID, 10, 64)
 	if err != nil {
 		// Set flash message
 		if setFlash, exists := c.Get("setFlash"); exists {
@@ -1598,10 +1695,7 @@ func (o *OwnerController) Delete(c *gin.Context) {
 		c.Redirect(http.StatusSeeOther, "/owner")
 		return
 	}
-
-	// Delete the gun
-	db := o.db.GetDB()
-	err = o.db.DeleteGun(db, uint(gunID), dbUser.ID)
+	err = o.db.DeleteGun(db, uint(gunIDUint), dbUser.ID)
 	if err != nil {
 		// Set flash message
 		if setFlash, exists := c.Get("setFlash"); exists {

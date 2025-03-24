@@ -37,7 +37,7 @@ templ New(data *data.OwnerData) {
 
 		_, err = io.WriteString(w, `
 		<div class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
-			<form action="/owner/guns" method="post">
+			<form action="/owner/guns" method="post" id="new-gun-form">
 				<input type="hidden" name="csrf_token" value="` + data.Auth.CSRFToken + `">
 				<div class="mb-4">
 					<label class="block text-gunmetal-700 text-sm font-bold mb-2" for="name">
@@ -89,6 +89,21 @@ templ New(data *data.OwnerData) {
 					</label>
 					<input class="shadow appearance-none border rounded w-full py-2 px-3 text-gunmetal-800 leading-tight focus:outline-none focus:shadow-outline" 
 						id="acquired" type="date" name="acquired">
+					`)
+		if err != nil {
+			return err
+		}
+
+		if acquiredError, ok := data.FormErrors["acquired"]; ok {
+			_, err = io.WriteString(w, `
+					<p class="text-red-500 text-xs italic">`+acquiredError+`</p>
+					`)
+			if err != nil {
+				return err
+			}
+		}
+
+		_, err = io.WriteString(w, `
 				</div>
 				<div class="mb-4">
 					<label class="block text-gunmetal-700 text-sm font-bold mb-2" for="weapon_type_id">
@@ -290,6 +305,44 @@ templ New(data *data.OwnerData) {
 		</div>
 		</div>
 		`)
-		return err
+		if err != nil {
+			return err
+		}
+
+		// Add date validation for acquired date
+		_, err = io.WriteString(w, `
+		<script>
+			// Add date validation for acquired date
+			document.addEventListener('DOMContentLoaded', function() {
+				const dateField = document.getElementById('acquired');
+				
+				dateField.addEventListener('input', function() {
+					const selectedDate = new Date(this.value);
+					const today = new Date();
+					today.setHours(0, 0, 0, 0); // Reset time part for date comparison
+					
+					if (selectedDate > today) {
+						// Show client-side warning but allow submission
+						if (!this.nextElementSibling || !this.nextElementSibling.classList.contains('date-warning')) {
+							const warning = document.createElement('p');
+							warning.textContent = 'Warning: Date is in the future';
+							warning.className = 'text-yellow-500 text-xs italic date-warning';
+							this.parentNode.insertBefore(warning, this.nextElementSibling);
+						}
+					} else {
+						// Remove warning if date is valid
+						const warning = this.nextElementSibling;
+						if (warning && warning.classList.contains('date-warning')) {
+							warning.remove();
+						}
+					}
+				});
+			});
+		</script>
+		`)
+		if err != nil {
+			return err
+		}
+		return nil
 	}))
 } 
