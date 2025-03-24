@@ -9,6 +9,8 @@ import (
 
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
+
+	"github.com/hail2skins/armory/internal/validation"
 )
 
 var (
@@ -16,6 +18,8 @@ var (
 	ErrTokenExpired       = errors.New("token expired")
 	ErrUserLocked         = errors.New("user account is locked")
 	ErrInvalidCredentials = errors.New("invalid credentials")
+	ErrInvalidEmail       = errors.New("invalid email format")
+	ErrInvalidPassword    = errors.New("invalid password format")
 )
 
 // User represents a user in the system
@@ -61,8 +65,29 @@ func (u *User) GetID() uint {
 	return u.ID
 }
 
+// Validate validates the user model fields
+func (u *User) Validate() error {
+	// Validate email
+	if err := validation.ValidateEmail(u.Email); err != nil {
+		return ErrInvalidEmail
+	}
+
+	// For password validation, we only want to validate non-hashed passwords
+	// If the password is already hashed (typically >40 chars), we skip validation
+	if len(u.Password) < 40 {
+		if err := validation.ValidatePassword(u.Password); err != nil {
+			return ErrInvalidPassword
+		}
+	}
+
+	return nil
+}
+
 // BeforeCreate is a GORM hook that hashes the password before creating a user
 func (u *User) BeforeCreate(tx *gorm.DB) error {
+	// We'll skip validation in the hook to maintain compatibility with existing tests
+	// Validation should be done explicitly before calling Create
+
 	hashedPassword, err := HashPassword(u.Password)
 	if err != nil {
 		return err

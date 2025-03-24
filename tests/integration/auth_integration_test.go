@@ -25,7 +25,7 @@ func (s *AuthIntegrationTest) SetupTest() {
 	s.IntegrationSuite.SetupTest()
 
 	// Create a test user for login tests
-	s.testUser = s.CreateTestUser("test@example.com", "password123", true)
+	s.testUser = s.CreateTestUser("test@example.com", "Password123!", true)
 
 	// Set up email mock with wildcards for any token
 	s.MockEmail.On("SendVerificationEmail",
@@ -89,7 +89,7 @@ func (s *AuthIntegrationTest) TestLoginFlow() {
 	// Test 4: Successful login redirects to owner page with welcome flash
 	s.Run("Successful login redirects to owner page with welcome flash", func() {
 		// Use our helper to login
-		cookies := s.LoginUser("test@example.com", "password123")
+		cookies := s.LoginUser("test@example.com", "Password123!")
 
 		// Follow redirect to owner page
 		ownerResp := s.MakeAuthenticatedRequest("GET", "/owner", cookies)
@@ -103,7 +103,7 @@ func (s *AuthIntegrationTest) TestLoginFlow() {
 	// Test 5: After login, nav bar should change to show real UI elements
 	s.Run("After login, nav bar shows correct authenticated elements", func() {
 		// Use our helper to login
-		cookies := s.LoginUser("test@example.com", "password123")
+		cookies := s.LoginUser("test@example.com", "Password123!")
 
 		// Check the nav bar on the home page
 		homeResp := s.MakeAuthenticatedRequest("GET", "/", cookies)
@@ -121,7 +121,7 @@ func (s *AuthIntegrationTest) TestLoginFlow() {
 // TestLogoutFlow tests the full logout flow
 func (s *AuthIntegrationTest) TestLogoutFlow() {
 	// Login using our helper
-	cookies := s.LoginUser("test@example.com", "password123")
+	cookies := s.LoginUser("test@example.com", "Password123!")
 
 	// Make a direct request to /logout
 	logoutReq, _ := http.NewRequest("GET", "/logout", nil)
@@ -140,7 +140,7 @@ func (s *AuthIntegrationTest) TestLogoutFlow() {
 func (s *AuthIntegrationTest) TestRegistrationFlow() {
 	// Create a test email that's not already registered
 	testEmail := "newuser@example.com"
-	testPassword := "password123"
+	testPassword := "Password123!"
 
 	s.Run("Registration Page UI Elements", func() {
 		// Request the register page

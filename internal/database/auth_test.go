@@ -72,8 +72,8 @@ func (s *AuthenticationTestSuite) SetupSuite() {
 	// (the BeforeCreate hook will hash it automatically)
 	s.testUser = &User{
 		Email:    "test@example.com",
-		Password: "password123", // Plain password - will be hashed by BeforeCreate
-		Verified: true,          // User is verified
+		Password: "Password123!", // Plain password - will be hashed by BeforeCreate
+		Verified: true,           // User is verified
 	}
 
 	// Save the user
@@ -86,7 +86,7 @@ func (s *AuthenticationTestSuite) SetupSuite() {
 	require.NoError(s.T(), err)
 
 	// Verify the password works after hashing by BeforeCreate
-	require.True(s.T(), CheckPassword("password123", savedUser.Password),
+	require.True(s.T(), CheckPassword("Password123!", savedUser.Password),
 		"Password verification failed after saving user")
 }
 
@@ -112,7 +112,7 @@ func (s *AuthenticationTestSuite) TestResetLoginAttemptsOnSuccessfulLogin() {
 	require.NotNil(s.T(), userCheck, "User should exist in the database before test")
 
 	// Perform successful authentication
-	user, err := s.service.AuthenticateUser(context.Background(), "test@example.com", "password123")
+	user, err := s.service.AuthenticateUser(context.Background(), "test@example.com", "Password123!")
 	require.NoError(s.T(), err)
 	require.NotNil(s.T(), user, "User should not be nil after successful authentication")
 
@@ -145,7 +145,7 @@ func (s *AuthenticationTestSuite) TestTrackLastLoginTimeOnSuccessfulLogin() {
 	beforeAuth := time.Now()
 
 	// Perform successful authentication
-	user, err := s.service.AuthenticateUser(context.Background(), "test@example.com", "password123")
+	user, err := s.service.AuthenticateUser(context.Background(), "test@example.com", "Password123!")
 	require.NoError(s.T(), err)
 	require.NotNil(s.T(), user)
 

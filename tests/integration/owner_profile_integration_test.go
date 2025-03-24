@@ -24,7 +24,7 @@ func (s *OwnerProfileIntegrationTest) SetupTest() {
 	s.IntegrationSuite.SetupTest()
 
 	// Create a test user for our tests
-	s.testUser = s.CreateTestUser("profileowner@example.com", "password123", true)
+	s.testUser = s.CreateTestUser("profileowner@example.com", "Password123!", true)
 }
 
 // TearDownTest runs after each test in the suite
@@ -40,7 +40,7 @@ func (s *OwnerProfileIntegrationTest) TearDownTest() {
 // and it displays all the required elements
 func (s *OwnerProfileIntegrationTest) TestProfilePage() {
 	// Login the user using the shared helper
-	cookies := s.LoginUser(s.testUser.Email, "password123")
+	cookies := s.LoginUser(s.testUser.Email, "Password123!")
 
 	// Visit the owner page to verify the Profile link exists
 	ownerResp := s.MakeAuthenticatedRequest("GET", "/owner", cookies)
@@ -97,7 +97,7 @@ func (s *OwnerProfileIntegrationTest) TestProfilePage() {
 // and it displays the expected elements (including the missing Back to Dashboard link)
 func (s *OwnerProfileIntegrationTest) TestPaymentHistoryPage() {
 	// Login the user using the shared helper
-	cookies := s.LoginUser(s.testUser.Email, "password123")
+	cookies := s.LoginUser(s.testUser.Email, "Password123!")
 
 	// Visit the payment history page
 	paymentHistoryResp := s.MakeAuthenticatedRequest("GET", "/owner/payment-history", cookies)
@@ -121,7 +121,7 @@ func (s *OwnerProfileIntegrationTest) TestPaymentHistoryPage() {
 // and it displays all the expected elements
 func (s *OwnerProfileIntegrationTest) TestSubscriptionPage() {
 	// Login the user using the shared helper
-	cookies := s.LoginUser(s.testUser.Email, "password123")
+	cookies := s.LoginUser(s.testUser.Email, "Password123!")
 
 	// Visit the subscription page
 	subscriptionResp := s.MakeAuthenticatedRequest("GET", "/owner/profile/subscription", cookies)
@@ -157,7 +157,7 @@ func (s *OwnerProfileIntegrationTest) TestSubscriptionPage() {
 // TestDeleteAccountFlow tests the account deletion confirmation page and the actual deletion process
 func (s *OwnerProfileIntegrationTest) TestDeleteAccountFlow() {
 	// 1. Login
-	cookies := s.LoginUser(s.testUser.Email, "password123")
+	cookies := s.LoginUser(s.testUser.Email, "Password123!")
 
 	// 2. Click the profile link from /owner page
 	profileReq, _ := http.NewRequest("GET", "/owner/profile", nil)
@@ -222,7 +222,7 @@ func (s *OwnerProfileIntegrationTest) TestDeleteAccountFlow() {
 // When a user changes their email, they should be redirected to the verification sent page
 func (s *OwnerProfileIntegrationTest) TestEditProfileWithEmailChange() {
 	// Login the user using the shared helper
-	cookies := s.LoginUser(s.testUser.Email, "password123")
+	cookies := s.LoginUser(s.testUser.Email, "Password123!")
 
 	// Step 1: Visit the profile edit page
 	editProfileResp := s.MakeAuthenticatedRequest("GET", "/owner/profile/edit", cookies)
@@ -269,7 +269,7 @@ func (s *OwnerProfileIntegrationTest) TestEditProfileWithEmailChange() {
 // TestPasswordResetFlow tests that a user can access the password reset flow from the profile edit page
 func (s *OwnerProfileIntegrationTest) TestPasswordResetFlow() {
 	// Login the user using the shared helper
-	cookies := s.LoginUser(s.testUser.Email, "password123")
+	cookies := s.LoginUser(s.testUser.Email, "Password123!")
 
 	// Step 1: Visit the profile edit page
 	editProfileResp := s.MakeAuthenticatedRequest("GET", "/owner/profile/edit", cookies)

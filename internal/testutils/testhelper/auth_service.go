@@ -95,7 +95,7 @@ func NewMockAuthService(db database.Service) *MockAuthService {
 // AuthenticateUser mocks authenticating a user
 func (m *MockAuthService) AuthenticateUser(ctx context.Context, email, password string) (*database.User, error) {
 	// For testing, we'll simplify and accept preset credentials
-	if email == "test@example.com" && password == "password123" {
+	if email == "test@example.com" && password == "Password123!" {
 		user := &database.User{}
 		user.Model.ID = 1
 		user.Email = email

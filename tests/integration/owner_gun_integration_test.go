@@ -26,7 +26,7 @@ func (s *OwnerGunIntegrationTest) SetupTest() {
 	s.IntegrationSuite.SetupTest()
 
 	// Create a test user for our tests
-	s.testUser = s.CreateTestUser("gunowner@example.com", "password123", true)
+	s.testUser = s.CreateTestUser("gunowner@example.com", "Password123!", true)
 }
 
 // TearDownTest runs after each test in the suite
@@ -42,7 +42,7 @@ func (s *OwnerGunIntegrationTest) TearDownTest() {
 // and it displays the "no firearms" message when they haven't added any
 func (s *OwnerGunIntegrationTest) TestOwnerPageWithNoFirearms() {
 	// Login the user using the shared helper
-	cookies := s.LoginUser(s.testUser.Email, "password123")
+	cookies := s.LoginUser(s.testUser.Email, "Password123!")
 
 	// Visit the owner page with the session cookies using the shared helper
 	resp := s.MakeAuthenticatedRequest("GET", "/owner", cookies)
@@ -84,7 +84,7 @@ func (s *OwnerGunIntegrationTest) TestOwnerPageWithNoFirearms() {
 // and it displays an empty state when they haven't added any firearms
 func (s *OwnerGunIntegrationTest) TestArsenalPageWithNoFirearms() {
 	// Login the user using the shared helper
-	cookies := s.LoginUser(s.testUser.Email, "password123")
+	cookies := s.LoginUser(s.testUser.Email, "Password123!")
 
 	// Visit the arsenal page with the session cookies using the shared helper
 	resp := s.MakeAuthenticatedRequest("GET", "/owner/guns/arsenal", cookies)
@@ -114,7 +114,7 @@ func (s *OwnerGunIntegrationTest) TestArsenalPageWithNoFirearms() {
 // TestArsenalPageWithOneFirearm tests the arsenal page when a user has one firearm
 func (s *OwnerGunIntegrationTest) TestArsenalPageWithOneFirearm() {
 	// Login the user
-	cookies := s.LoginUser(s.testUser.Email, "password123")
+	cookies := s.LoginUser(s.testUser.Email, "Password123!")
 
 	// First create a gun to test with
 	// Create the gun directly in the database for simplicity
@@ -174,7 +174,7 @@ func (s *OwnerGunIntegrationTest) TestArsenalPageWithOneFirearm() {
 // TestCreateGunWorkflow tests the full workflow of gun creation
 func (s *OwnerGunIntegrationTest) TestCreateGunWorkflow() {
 	// Login the user using the shared helper
-	cookies := s.LoginUser(s.testUser.Email, "password123")
+	cookies := s.LoginUser(s.testUser.Email, "Password123!")
 
 	// Step 1: Visit the new gun form
 	resp := s.MakeAuthenticatedRequest("GET", "/owner/guns/new", cookies)
@@ -341,7 +341,7 @@ func (s *OwnerGunIntegrationTest) TestCreateGunWorkflow() {
 // TestGunDetailPage tests the gun detail page for a logged-in owner with one gun
 func (s *OwnerGunIntegrationTest) TestGunDetailPage() {
 	// Login the user
-	cookies := s.LoginUser(s.testUser.Email, "password123")
+	cookies := s.LoginUser(s.testUser.Email, "Password123!")
 
 	// First create a gun to test with
 	// Create the gun directly in the database for simplicity
@@ -419,7 +419,7 @@ func (s *OwnerGunIntegrationTest) TestGunDetailPage() {
 // TestEditGunWorkflow tests the full workflow of editing a gun
 func (s *OwnerGunIntegrationTest) TestEditGunWorkflow() {
 	// Login the user
-	cookies := s.LoginUser(s.testUser.Email, "password123")
+	cookies := s.LoginUser(s.testUser.Email, "Password123!")
 
 	// First create a gun to test with directly in the database
 	originalName := "Test Edit Gun"
@@ -615,7 +615,7 @@ func (s *OwnerGunIntegrationTest) TestEditGunWorkflow() {
 // TestDeleteGunWorkflow tests deleting a gun from the owner page
 func (s *OwnerGunIntegrationTest) TestDeleteGunWorkflow() {
 	// Login the user
-	cookies := s.LoginUser(s.testUser.Email, "password123")
+	cookies := s.LoginUser(s.testUser.Email, "Password123!")
 
 	// First create a gun to test with directly in the database
 	gunName := "Test Delete Gun"

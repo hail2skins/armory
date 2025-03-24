@@ -69,7 +69,7 @@ func (c *ExampleSimpleController) SimpleLoginHandler(ctx *gin.Context) {
 	}
 
 	// Simple validation
-	if req.Email == "test@example.com" && req.Password == "password123" {
+	if req.Email == "test@example.com" && req.Password == "Password123!" {
 		// Set success flash message
 		if setFlash, exists := ctx.Get("setFlash"); exists {
 			setFlash.(func(string))("Welcome back, " + req.Email)
@@ -116,7 +116,7 @@ func TestAuthFlowUsage(t *testing.T) {
 	// 4. Create form data
 	form := url.Values{}
 	form.Add("email", "test@example.com")
-	form.Add("password", "password123")
+	form.Add("password", "Password123!")
 
 	// 5. Use the helper to submit the form and test the response
 	// w := helper.SubmitForm(

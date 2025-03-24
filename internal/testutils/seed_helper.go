@@ -20,7 +20,7 @@ func NewSeedData(db database.Service) *SeedData {
 
 // CreateTestUser creates a test user with default credentials
 func (s *SeedData) CreateTestUser(ctx context.Context) *database.User {
-	user, err := CreateTestUser(ctx, s.DB, "test@example.com", "password123")
+	user, err := CreateTestUser(ctx, s.DB, "test@example.com", "Password123!")
 	if err != nil {
 		log.Printf("Error creating test user: %v", err)
 		return nil
@@ -30,7 +30,7 @@ func (s *SeedData) CreateTestUser(ctx context.Context) *database.User {
 
 // CreateVerifiedTestUser creates a test user that is already verified
 func (s *SeedData) CreateVerifiedTestUser(ctx context.Context) *database.User {
-	user, err := s.DB.CreateUser(ctx, "verified@example.com", "password123")
+	user, err := s.DB.CreateUser(ctx, "verified@example.com", "Password123!")
 	if err != nil {
 		log.Printf("Error creating verified test user: %v", err)
 		return nil

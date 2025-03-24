@@ -180,8 +180,8 @@ func (s *PromotionAuthTestSuite) TestRegisterWithActivePromotion() {
 	// Create form data
 	form := url.Values{}
 	form.Add("email", "test@example.com")
-	form.Add("password", "password123")
-	form.Add("password_confirm", "password123")
+	form.Add("password", "Password123!")
+	form.Add("password_confirm", "Password123!")
 
 	// Create a test request
 	req, _ := http.NewRequest("POST", "/register", bytes.NewBufferString(form.Encode()))
@@ -235,8 +235,8 @@ func (s *PromotionAuthTestSuite) TestRegisterWithNoActivePromotion() {
 	// Create form data
 	form := url.Values{}
 	form.Add("email", "test@example.com")
-	form.Add("password", "password123")
-	form.Add("password_confirm", "password123")
+	form.Add("password", "Password123!")
+	form.Add("password_confirm", "Password123!")
 
 	// Create a test request
 	req, _ := http.NewRequest("POST", "/register", bytes.NewBufferString(form.Encode()))

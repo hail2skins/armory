@@ -74,7 +74,7 @@ func TestFormSubmission(t *testing.T) {
     // Create form values
     form := url.Values{}
     form.Add("email", "test@example.com")
-    form.Add("password", "password123")
+    form.Add("password", "Password123!")
     
     // Submit the form and check the response
     w := helper.SubmitForm(

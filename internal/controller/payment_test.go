@@ -846,7 +846,7 @@ func TestRealPaymentSuccessUpdatesUserAndPayment(t *testing.T) {
 	// Create a test user
 	testCtx := context.Background()
 	testEmail := "payment_test_user@example.com"
-	testPassword := "password123"
+	testPassword := "Password123!"
 
 	// First clean up any existing test user
 	existingUser, _ := testDB.GetUserByEmail(testCtx, testEmail)
@@ -1030,7 +1030,7 @@ func TestPaymentSuccessHandlerUpdatesDatabase(t *testing.T) {
 	// Create a test user
 	testCtx := context.Background()
 	testEmail := "payment_success_test@example.com"
-	testPassword := "password123"
+	testPassword := "Password123!"
 
 	// First clean up any existing test user
 	existingUser, _ := testDB.GetUserByEmail(testCtx, testEmail)

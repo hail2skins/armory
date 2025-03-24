@@ -298,7 +298,7 @@ func setupTestRouter(t *testing.T) (*gin.Engine, *MockDBWithContext, *mocks.Mock
 	mockDB := new(MockDBWithContext)
 
 	// Create test user
-	hashedPassword, err := database.HashPassword("password123")
+	hashedPassword, err := database.HashPassword("Password123!")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -318,7 +318,7 @@ func setupTestRouter(t *testing.T) (*gin.Engine, *MockDBWithContext, *mocks.Mock
 	mockDB.On("GetDB").Return(testDb.GetDB())
 
 	// Mock authentication
-	mockDB.On("AuthenticateUser", mock.Anything, "test@example.com", "password123").Return(testUser, nil)
+	mockDB.On("AuthenticateUser", mock.Anything, "test@example.com", "Password123!").Return(testUser, nil)
 	mockDB.On("AuthenticateUser", mock.Anything, "test@example.com", "wrongpassword").Return(nil, nil)
 	mockDB.On("AuthenticateUser", mock.Anything, mock.Anything, mock.Anything).Return(nil, nil)
 
@@ -340,14 +340,14 @@ func setupTestRouter(t *testing.T) (*gin.Engine, *MockDBWithContext, *mocks.Mock
 	testUser2.ID = 2 // Set ID
 
 	// Mock create user
-	mockDB.On("CreateUser", mock.Anything, "test@example.com", "password123").Return(testUser, nil)
-	mockDB.On("CreateUser", mock.Anything, "test2@example.com", "password123").Return(testUser2, nil)
+	mockDB.On("CreateUser", mock.Anything, "test@example.com", "Password123!").Return(testUser, nil)
+	mockDB.On("CreateUser", mock.Anything, "test2@example.com", "Password123!").Return(testUser2, nil)
 
 	// Mock GetUserByEmail specifically for the first "test@example.com" calls
 	mockDB.On("GetUserByEmail", mock.Anything, "test2@example.com").Return(nil, nil).Once()
 
 	// Mock AuthenticateUser for test2@example.com
-	mockDB.On("AuthenticateUser", mock.Anything, "test2@example.com", "password123").Return(testUser2, nil)
+	mockDB.On("AuthenticateUser", mock.Anything, "test2@example.com", "Password123!").Return(testUser2, nil)
 
 	// Mock UpdateUser to return nil error
 	mockDB.On("UpdateUser", mock.Anything, mock.AnythingOfType("*database.User")).Return(nil)
@@ -543,8 +543,8 @@ func TestSimplifiedAuthFlow(t *testing.T) {
 		t.Run("Registration redirects to verification page", func(t *testing.T) {
 			form := url.Values{}
 			form.Add("email", "test@example.com")
-			form.Add("password", "password123")
-			form.Add("confirm_password", "password123")
+			form.Add("password", "Password123!")
+			form.Add("confirm_password", "Password123!")
 
 			req, _ := http.NewRequest("POST", "/register", strings.NewReader(form.Encode()))
 			req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
@@ -573,7 +573,7 @@ func TestSimplifiedAuthFlow(t *testing.T) {
 			// Login
 			form := url.Values{}
 			form.Add("email", "test@example.com")
-			form.Add("password", "password123")
+			form.Add("password", "Password123!")
 
 			req, _ := http.NewRequest("POST", "/login", strings.NewReader(form.Encode()))
 			req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
@@ -682,7 +682,7 @@ type LoginTestSuite struct {
 // TestLoginLogout tests the complete login and logout flow
 func (s *LoginTestSuite) TestLoginLogout() {
 	// Create a test user
-	user, err := s.DB.CreateUser(context.Background(), "test@example.com", "password123")
+	user, err := s.DB.CreateUser(context.Background(), "test@example.com", "Password123!")
 	s.NoError(err)
 	s.NotNil(user)
 
@@ -694,7 +694,7 @@ func (s *LoginTestSuite) TestLoginLogout() {
 	// Test 1: Successful login
 	loginForm := url.Values{}
 	loginForm.Add("email", "test@example.com")
-	loginForm.Add("password", "password123")
+	loginForm.Add("password", "Password123!")
 
 	resp, err := http.Post(s.Server.URL+"/login", "application/x-www-form-urlencoded", strings.NewReader(loginForm.Encode()))
 	s.NoError(err)
@@ -730,7 +730,7 @@ func (s *LoginTestSuite) TestLoginLogout() {
 // TestLoginFailures tests various login failure scenarios
 func (s *LoginTestSuite) TestLoginFailures() {
 	// Create a test user
-	user, err := s.DB.CreateUser(context.Background(), "test@example.com", "password123")
+	user, err := s.DB.CreateUser(context.Background(), "test@example.com", "Password123!")
 	s.NoError(err)
 	s.NotNil(user)
 
@@ -746,20 +746,20 @@ func (s *LoginTestSuite) TestLoginFailures() {
 	// Test 2: Non-existent user
 	loginForm = url.Values{}
 	loginForm.Add("email", "nonexistent@example.com")
-	loginForm.Add("password", "password123")
+	loginForm.Add("password", "Password123!")
 
 	resp, err = http.Post(s.Server.URL+"/login", "application/x-www-form-urlencoded", strings.NewReader(loginForm.Encode()))
 	s.NoError(err)
 	s.Equal(http.StatusOK, resp.StatusCode) // Shows login form with error
 
 	// Test 3: Unverified user
-	user2, err := s.DB.CreateUser(context.Background(), "unverified@example.com", "password123")
+	user2, err := s.DB.CreateUser(context.Background(), "unverified@example.com", "Password123!")
 	s.NoError(err)
 	s.NotNil(user2)
 
 	loginForm = url.Values{}
 	loginForm.Add("email", "unverified@example.com")
-	loginForm.Add("password", "password123")
+	loginForm.Add("password", "Password123!")
 
 	resp, err = http.Post(s.Server.URL+"/login", "application/x-www-form-urlencoded", strings.NewReader(loginForm.Encode()))
 	s.NoError(err)

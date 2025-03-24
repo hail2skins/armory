@@ -109,7 +109,7 @@ func createTestManufacturers(db *gorm.DB) []Manufacturer {
 func (td *TestData) CreateTestUser(ctx context.Context) *database.User {
 	if td.Service != nil {
 		// Use the database service if provided
-		user, err := td.Service.CreateUser(ctx, "test@example.com", "password123")
+		user, err := td.Service.CreateUser(ctx, "test@example.com", "Password123!")
 		if err != nil {
 			log.Printf("Error creating test user: %v", err)
 			return nil
@@ -129,7 +129,7 @@ func (td *TestData) CreateTestUser(ctx context.Context) *database.User {
 	// Fallback to direct database operations
 	var user database.User
 	user.Email = "test@example.com"
-	user.Password = "password123"
+	user.Password = "Password123!"
 	user.Verified = true
 
 	if err := td.DB.Create(&user).Error; err != nil {

@@ -53,10 +53,10 @@ func (s *AuthControllerTestSuite) TestSuccessfulLogin() {
 	}
 
 	// Set up mock expectations for AuthenticateUser with context.Background()
-	s.MockDB.On("AuthenticateUser", mock.Anything, "test@example.com", "password123").Return(mockUser, nil)
+	s.MockDB.On("AuthenticateUser", mock.Anything, "test@example.com", "Password123!").Return(mockUser, nil)
 
 	// Create form data instead of JSON
-	formData := "email=test@example.com&password=password123"
+	formData := "email=test@example.com&password=Password123!"
 
 	// Create a test request with form data
 	req, _ := http.NewRequest("POST", "/login", strings.NewReader(formData))

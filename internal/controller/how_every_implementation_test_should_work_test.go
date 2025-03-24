@@ -62,7 +62,7 @@ func (s *SimpleExampleController) SimpleLoginHandler(c *gin.Context) {
 	}
 
 	// Simple validation - in a real app, this would call the DB
-	if req.Email == "test@example.com" && req.Password == "password123" {
+	if req.Email == "test@example.com" && req.Password == "Password123!" {
 		// Set success flash message
 		if setFlash, exists := c.Get("setFlash"); exists {
 			setFlash.(func(string))("Welcome back, " + req.Email)
@@ -105,7 +105,7 @@ func TestFormSubmission(t *testing.T) {
 	// Create form data
 	form := url.Values{}
 	form.Add("email", "test@example.com")
-	form.Add("password", "password123")
+	form.Add("password", "Password123!")
 
 	// Make the request
 	req, _ := http.NewRequest("POST", "/login", strings.NewReader(form.Encode()))

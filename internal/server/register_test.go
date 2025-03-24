@@ -33,8 +33,8 @@ func TestUserRegistration(t *testing.T) {
 	// Create registration form data with CSRF token
 	form := url.Values{}
 	form.Add("email", "test@example.com") // Use the email that's already mocked
-	form.Add("password", "password123")
-	form.Add("password_confirm", "password123")
+	form.Add("password", "Password123!")
+	form.Add("password_confirm", "Password123!")
 	form.Add("csrf_token", "test-token") // Dummy token, will be bypassed in test mode
 
 	// Create a request to register
@@ -64,7 +64,7 @@ func TestUserRegistration(t *testing.T) {
 	// Now try to login with the new user
 	loginForm := url.Values{}
 	loginForm.Add("email", "test@example.com")
-	loginForm.Add("password", "password123")
+	loginForm.Add("password", "Password123!")
 	loginForm.Add("csrf_token", "test-token") // Dummy token, will be bypassed in test mode
 
 	loginReq, _ := http.NewRequest("POST", "/login", strings.NewReader(loginForm.Encode()))
@@ -113,7 +113,7 @@ func TestRegistrationValidation(t *testing.T) {
 	ctx := context.Background()
 
 	// First create a user with the duplicate email
-	_, err := db.CreateUser(ctx, "duplicate@example.com", "password123")
+	_, err := db.CreateUser(ctx, "duplicate@example.com", "Password123!")
 	require.NoError(t, err)
 
 	testCases := []struct {
@@ -127,16 +127,16 @@ func TestRegistrationValidation(t *testing.T) {
 		{
 			name:          "Empty email",
 			email:         "",
-			password:      "password123",
-			confirmPass:   "password123",
+			password:      "Password123!",
+			confirmPass:   "Password123!",
 			expectedCode:  http.StatusOK, // Form renders with error
 			expectedError: "Invalid form data",
 		},
 		{
 			name:          "Invalid email format",
 			email:         "notanemail",
-			password:      "password123",
-			confirmPass:   "password123",
+			password:      "Password123!",
+			confirmPass:   "Password123!",
 			expectedCode:  http.StatusOK,
 			expectedError: "Invalid form data",
 		},
@@ -151,7 +151,7 @@ func TestRegistrationValidation(t *testing.T) {
 		{
 			name:          "Passwords don't match",
 			email:         "test@example.com",
-			password:      "password123",
+			password:      "Password123!",
 			confirmPass:   "password456",
 			expectedCode:  http.StatusOK,
 			expectedError: "Invalid form data",
@@ -159,8 +159,8 @@ func TestRegistrationValidation(t *testing.T) {
 		{
 			name:          "Duplicate email",
 			email:         "duplicate@example.com",
-			password:      "password123",
-			confirmPass:   "password123",
+			password:      "Password123!",
+			confirmPass:   "Password123!",
 			expectedCode:  http.StatusOK,
 			expectedError: "Email already registered",
 		},

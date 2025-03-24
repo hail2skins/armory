@@ -238,7 +238,7 @@ func TestDatabaseOperations(t *testing.T) {
 
 	// Test user operations
 	ctx := NewContext()
-	user, err := svc.CreateUser(ctx, "test@example.com", "password123")
+	user, err := svc.CreateUser(ctx, "test@example.com", "Password123!")
 	assert.NoError(t, err)
 	assert.NotNil(t, user)
 	assert.Equal(t, "test@example.com", user.Email)
@@ -249,7 +249,7 @@ func TestDatabaseOperations(t *testing.T) {
 	assert.Equal(t, user.ID, userByEmail.ID)
 
 	// Test user authentication
-	authUser, err := svc.AuthenticateUser(ctx, "test@example.com", "password123")
+	authUser, err := svc.AuthenticateUser(ctx, "test@example.com", "Password123!")
 	assert.NoError(t, err)
 	assert.NotNil(t, authUser)
 	assert.Equal(t, user.ID, authUser.ID)

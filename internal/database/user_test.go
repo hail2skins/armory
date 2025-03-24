@@ -44,7 +44,7 @@ func TestUserVerificationFields(t *testing.T) {
 	// Create a test user
 	user := &User{
 		Email:    "test@example.com",
-		Password: "password123",
+		Password: "Password123!",
 	}
 
 	// Save the user
