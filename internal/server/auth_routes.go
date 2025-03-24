@@ -22,6 +22,7 @@ func (s *Server) RegisterAuthRoutes(r *gin.Engine, authController *controller.Au
 	r.GET("/register", authController.RegisterHandler)
 	r.POST("/register", authController.RegisterHandler)
 	r.GET("/logout", authController.LogoutHandler)
+	r.POST("/logout", authController.LogoutHandler)
 	r.GET("/verification-sent", func(c *gin.Context) {
 		authData := data.NewAuthData().WithTitle("Verification Email Sent")
 		// Set authentication state

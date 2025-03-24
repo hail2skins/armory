@@ -418,9 +418,16 @@ func (a *AuthController) LogoutHandler(c *gin.Context) {
 		logger.Error("Failed to save session during logout", err, nil)
 	}
 
-	// Redirect to login page
-	c.Redirect(http.StatusSeeOther, "/login")
-	c.Abort() // Stop further processing
+	// Create auth data for the logout page
+	authData := data.NewAuthData().WithTitle("Logged Out")
+	// Handle flash messages
+	flash := session.Flashes()
+	if len(flash) > 0 {
+		authData.Success = flash[0].(string)
+	}
+
+	// Render the logout page
+	a.RenderLogout(c, authData)
 }
 
 // AuthMiddleware is a middleware that checks if the user is authenticated

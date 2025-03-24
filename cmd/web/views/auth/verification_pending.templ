@@ -40,6 +40,7 @@ templ verificationPendingContent(data data.AuthData) {
 			
 			<form action="/resend-verification" method="POST" class="mb-6">
 				<input type="hidden" name="email" value={ data.Email } />
+				<input type="hidden" name="csrf_token" value={ data.CSRFToken } />
 				<button type="submit" class="w-full bg-gunmetal-800 hover:bg-gunmetal-700 text-white font-bold py-3 px-6 rounded-full shadow-lg transition duration-300">
 					Resend Verification Email
 				</button>

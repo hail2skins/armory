@@ -68,7 +68,10 @@ templ Nav(data data.AuthData) {
 							<a class="inline-block py-2 px-4 text-white font-medium no-underline hover:text-brass-300" href="/owner">My Armory</a>
 						</li>
 						<li class="mr-3">
-							<a class="inline-block text-white py-2 px-4 font-medium no-underline border border-white hover:border-transparent hover:text-gunmetal-800 hover:bg-brass-300 rounded" href="/logout">Logout</a>
+							<form action="/logout" method="POST" class="inline">
+								<input type="hidden" name="csrf_token" value={ data.CSRFToken } />
+								<button type="submit" class="inline-block text-white py-2 px-4 font-medium no-underline border border-white hover:border-transparent hover:text-gunmetal-800 hover:bg-brass-300 rounded" style="background: none; border: 1px solid white; cursor: pointer;">Logout</button>
+							</form>
 						</li>
 					}
 				</ul>
