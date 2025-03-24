@@ -140,6 +140,13 @@ func (p *PaymentController) PricingHandler(c *gin.Context) {
 		CurrentPlan: "free",
 	}
 
+	// Get the CSRF token from the context and set it in PricingData
+	if csrfToken, exists := c.Get("csrf_token"); exists {
+		if tokenStr, ok := csrfToken.(string); ok {
+			pricingData.CSRFToken = tokenStr
+		}
+	}
+
 	// Process flash messages using session directly
 	session := sessions.Default(c)
 	if flashes := session.Flashes(); len(flashes) > 0 {
@@ -180,6 +187,9 @@ func (p *PaymentController) CreateCheckoutSession(c *gin.Context) {
 		c.Redirect(http.StatusSeeOther, "/login")
 		return
 	}
+
+	// Verify CSRF token here if needed
+	// The CSRF middleware should already be handling this, but we can add a check if necessary
 
 	// Get the subscription tier from the form
 	tier := c.PostForm("tier")

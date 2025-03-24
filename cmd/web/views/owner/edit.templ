@@ -27,6 +27,7 @@ templ profileEditContent(data *data.OwnerData) {
 		<div class="bg-white shadow-md rounded-lg overflow-hidden">
 			<div class="p-6">
 				<form method="POST" action="/owner/profile/update">
+					<input type="hidden" name="csrf_token" value={ data.Auth.CSRFToken } />
 					<div class="mb-6">
 						<label for="email" class="block text-gray-800 font-bold mb-2">Email Address</label>
 						<input 

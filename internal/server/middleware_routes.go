@@ -77,8 +77,17 @@ func (s *Server) RegisterMiddleware(r *gin.Engine, authController *controller.Au
 	}
 	r.Use(sessions.Sessions("armory-session", store))
 
-	// Set up CSRF protection middleware
-	r.Use(middleware.CSRFMiddleware())
+	// Set up CSRF protection middleware with exclusions for webhooks
+	r.Use(func(c *gin.Context) {
+		// Exclude webhook endpoints from CSRF protection
+		if strings.HasPrefix(c.Request.URL.Path, "/webhook") {
+			c.Next()
+			return
+		}
+
+		// Apply CSRF middleware to all other routes
+		middleware.CSRFMiddleware()(c)
+	})
 
 	// Set up flash message middleware - moved before rate limiting
 	r.Use(FlashMiddleware())

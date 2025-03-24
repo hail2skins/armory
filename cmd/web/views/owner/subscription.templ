@@ -123,6 +123,7 @@ templ Subscription(data *data.OwnerData) {
 								` + func() string {
 									if data.User.SubscriptionStatus != "canceled" {
 										return `<form method="POST" action="/subscription/cancel" onsubmit="return confirmCancel(event)" data-expires="` + data.SubscriptionEndsAt + `">
+											<input type="hidden" name="csrf_token" value="` + data.Auth.CSRFToken + `">
 											<button type="submit" class="bg-gunmetal-600 hover:bg-gunmetal-500 text-white py-2 px-4 rounded transition duration-300">
 												Cancel Subscription
 											</button>

@@ -35,6 +35,7 @@ templ DeleteConfirm(data *data.OwnerData) {
 					</p>
 					
 					<form action="/owner/profile/delete" method="POST" class="flex items-center gap-4">
+						<input type="hidden" name="csrf_token" value="` + data.Auth.CSRFToken + `">
 						<input type="hidden" name="confirm" value="true">
 						<button type="submit" class="bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded transition duration-300">
 							Yes, Delete My Account

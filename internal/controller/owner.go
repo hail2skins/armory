@@ -2762,6 +2762,13 @@ func (o *OwnerController) DeleteAccountConfirm(c *gin.Context) {
 				subscriptionEndsAt,
 			)
 
+		// Get CSRF token from context and set it in auth data
+		if csrfTokenInterface, exists := c.Get("csrf_token"); exists {
+			if csrfToken, ok := csrfTokenInterface.(string); ok {
+				ownerData.Auth = ownerData.Auth.WithCSRFToken(csrfToken)
+			}
+		}
+
 		// Render the delete confirmation page
 		owner.DeleteConfirm(ownerData).Render(c.Request.Context(), c.Writer)
 		return
@@ -2801,6 +2808,13 @@ func (o *OwnerController) DeleteAccountConfirm(c *gin.Context) {
 			dbUser.SubscriptionTier,
 			subscriptionEndsAt,
 		)
+
+	// Get CSRF token from context and set it in auth data
+	if csrfTokenInterface, exists := c.Get("csrf_token"); exists {
+		if csrfToken, ok := csrfTokenInterface.(string); ok {
+			ownerData.Auth = ownerData.Auth.WithCSRFToken(csrfToken)
+		}
+	}
 
 	// Render the delete confirmation page
 	owner.DeleteConfirm(ownerData).Render(c.Request.Context(), c.Writer)

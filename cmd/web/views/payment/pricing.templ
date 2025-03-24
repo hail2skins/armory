@@ -8,6 +8,7 @@ import (
 type PricingData struct {
 	data.AuthData
 	CurrentPlan string
+	CSRFToken   string
 }
 
 // canSubscribeToTier checks if a user can subscribe to a specific tier based on their current subscription
@@ -143,6 +144,7 @@ templ pricingContent(data PricingData) {
 										</div>
 									} else if canSubscribeToTier(data.CurrentPlan, "monthly") {
 										<form action="/checkout" method="POST">
+											<input type="hidden" name="csrf_token" value={ data.CSRFToken } />
 											<input type="hidden" name="tier" value="monthly" />
 											<button type="submit" class="block w-full bg-indigo-600 text-white font-semibold py-2 px-4 rounded hover:bg-indigo-700 transition duration-200 text-center">
 												Subscribe Monthly
@@ -201,6 +203,7 @@ templ pricingContent(data PricingData) {
 										</div>
 									} else if canSubscribeToTier(data.CurrentPlan, "yearly") {
 										<form action="/checkout" method="POST">
+											<input type="hidden" name="csrf_token" value={ data.CSRFToken } />
 											<input type="hidden" name="tier" value="yearly" />
 											<button type="submit" class="block w-full bg-green-600 text-white font-semibold py-2 px-4 rounded hover:bg-green-700 transition duration-200 text-center">
 												Subscribe Yearly
@@ -253,6 +256,7 @@ templ pricingContent(data PricingData) {
 										</div>
 									} else if canSubscribeToTier(data.CurrentPlan, "lifetime") {
 										<form action="/checkout" method="POST">
+											<input type="hidden" name="csrf_token" value={ data.CSRFToken } />
 											<input type="hidden" name="tier" value="lifetime" />
 											<button type="submit" class="block w-full bg-purple-600 text-white font-semibold py-2 px-4 rounded hover:bg-purple-700 transition duration-200 text-center">
 												Get Lifetime Access
@@ -315,6 +319,7 @@ templ pricingContent(data PricingData) {
 											</div>
 										} else if canSubscribeToTier(data.CurrentPlan, "premium_lifetime") {
 											<form action="/checkout" method="POST">
+												<input type="hidden" name="csrf_token" value={ data.CSRFToken } />
 												<input type="hidden" name="tier" value="premium_lifetime" />
 												<button type="submit" class="block w-full bg-white text-indigo-600 font-semibold py-2 px-4 rounded hover:bg-gray-100 transition duration-200 text-center">
 													Buy Premium Lifetime - $1000
