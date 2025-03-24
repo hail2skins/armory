@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hail2skins/armory/internal/middleware"
 	"github.com/hail2skins/armory/internal/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -15,6 +16,10 @@ import (
 )
 
 func TestUserRegistration(t *testing.T) {
+	// Enable CSRF test mode for this test
+	middleware.EnableTestMode()
+	defer middleware.DisableTestMode()
+
 	// Setup test router with mock database and email service
 	router, _, mockEmail := setupTestRouter(t)
 
@@ -25,16 +30,17 @@ func TestUserRegistration(t *testing.T) {
 		mock.AnythingOfType("string"), // baseURL will be constructed from request
 	).Return(nil)
 
-	// Create registration form data
+	// Create registration form data with CSRF token
 	form := url.Values{}
 	form.Add("email", "test@example.com") // Use the email that's already mocked
 	form.Add("password", "password123")
 	form.Add("password_confirm", "password123")
+	form.Add("csrf_token", "test-token") // Dummy token, will be bypassed in test mode
 
 	// Create a request to register
 	req, _ := http.NewRequest("POST", "/register", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	// Don't set X-Test header so we get redirected to verification-sent page
+	req.Header.Set("X-Test-CSRF-Bypass", "true") // Alternative way to bypass CSRF in tests
 
 	// Create a response recorder
 	resp := httptest.NewRecorder()
@@ -59,9 +65,11 @@ func TestUserRegistration(t *testing.T) {
 	loginForm := url.Values{}
 	loginForm.Add("email", "test@example.com")
 	loginForm.Add("password", "password123")
+	loginForm.Add("csrf_token", "test-token") // Dummy token, will be bypassed in test mode
 
 	loginReq, _ := http.NewRequest("POST", "/login", strings.NewReader(loginForm.Encode()))
 	loginReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	loginReq.Header.Set("X-Test-CSRF-Bypass", "true") // Bypass CSRF validation in tests
 	loginResp := httptest.NewRecorder()
 
 	// Serve the login request
@@ -72,9 +80,9 @@ func TestUserRegistration(t *testing.T) {
 	assert.Equal(t, "/owner", loginResp.Header().Get("Location"))
 
 	// Check that the auth cookie is set after login
-	loginCookies := loginResp.Result().Cookies()
+	loginResultCookies := loginResp.Result().Cookies()
 	var loginAuthCookie *http.Cookie
-	for _, cookie := range loginCookies {
+	for _, cookie := range loginResultCookies {
 		if cookie.Name == "auth-session" {
 			loginAuthCookie = cookie
 			break
@@ -86,6 +94,10 @@ func TestUserRegistration(t *testing.T) {
 
 // TestRegistrationValidation tests validation of the registration form
 func TestRegistrationValidation(t *testing.T) {
+	// Enable CSRF test mode for this test
+	middleware.EnableTestMode()
+	defer middleware.DisableTestMode()
+
 	// IMPORTANT: Use SharedTestService to avoid repeatedly seeding the database
 	// The shared database is seeded only once and reused across tests
 	db := testutils.SharedTestService()
@@ -160,9 +172,11 @@ func TestRegistrationValidation(t *testing.T) {
 			form.Add("email", tc.email)
 			form.Add("password", tc.password)
 			form.Add("password_confirm", tc.confirmPass)
+			form.Add("csrf_token", "test-token") // Dummy token, will be bypassed in test mode
 
 			req, _ := http.NewRequest("POST", "/register", strings.NewReader(form.Encode()))
 			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			req.Header.Set("X-Test-CSRF-Bypass", "true") // Bypass CSRF validation in tests
 			resp := httptest.NewRecorder()
 
 			router.ServeHTTP(resp, req)

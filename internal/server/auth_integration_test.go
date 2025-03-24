@@ -15,6 +15,7 @@ import (
 	"github.com/hail2skins/armory/cmd/web/views/data"
 	"github.com/hail2skins/armory/internal/controller"
 	"github.com/hail2skins/armory/internal/database"
+	"github.com/hail2skins/armory/internal/middleware"
 	"github.com/hail2skins/armory/internal/models"
 	"github.com/hail2skins/armory/internal/testutils"
 	"github.com/hail2skins/armory/internal/testutils/mocks"
@@ -289,6 +290,9 @@ func setupTestRouter(t *testing.T) (*gin.Engine, *MockDBWithContext, *mocks.Mock
 	// Add session middleware
 	store := cookie.NewStore([]byte("test-secret-key"))
 	router.Use(sessions.Sessions("auth-session", store))
+
+	// Add CSRF middleware after session middleware
+	router.Use(middleware.CSRFMiddleware())
 
 	// Create mock database
 	mockDB := new(MockDBWithContext)
