@@ -10,9 +10,37 @@ import (
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
+	"github.com/hail2skins/armory/internal/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// testErrorMiddleware is a test middleware that checks for errors and handles them
+func testErrorMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Next()
+
+		// Check if there were any errors during processing
+		if len(c.Errors) > 0 {
+			// Get the last error
+			err := c.Errors.Last().Err
+
+			// Check error type and respond accordingly
+			switch err.(type) {
+			case *errors.ForbiddenError:
+				c.AbortWithStatus(http.StatusForbidden)
+				return
+			case *errors.InternalServerError:
+				c.AbortWithStatus(http.StatusInternalServerError)
+				return
+			default:
+				// For any other error
+				c.AbortWithStatus(http.StatusInternalServerError)
+				return
+			}
+		}
+	}
+}
 
 func TestCSRFMiddleware(t *testing.T) {
 	// Save original test mode and restore after test
@@ -27,6 +55,9 @@ func TestCSRFMiddleware(t *testing.T) {
 	// Initialize session middleware - required for CSRF middleware
 	store := cookie.NewStore([]byte("test-session-secret"))
 	r.Use(sessions.Sessions("armory-session", store))
+
+	// Add our test error middleware to handle errors from CSRF middleware
+	r.Use(testErrorMiddleware())
 
 	// Add the CSRF middleware
 	r.Use(CSRFMiddleware())

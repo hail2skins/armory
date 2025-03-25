@@ -3,11 +3,11 @@ package middleware
 import (
 	"crypto/rand"
 	"encoding/base64"
-	"net/http"
 	"os"
 
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
+	"github.com/hail2skins/armory/internal/errors"
 )
 
 const (
@@ -46,7 +46,9 @@ func CSRFMiddleware() gin.HandlerFunc {
 				// Generate a new token if none exists
 				token, err := generateToken()
 				if err != nil {
-					c.AbortWithStatus(http.StatusInternalServerError)
+					// Use the error middleware instead of direct abort
+					c.Error(errors.NewInternalServerError("Failed to generate CSRF token"))
+					c.Abort()
 					return
 				}
 
@@ -69,7 +71,9 @@ func CSRFMiddleware() gin.HandlerFunc {
 		sessionToken := session.Get(CSRFKey)
 		if sessionToken == nil {
 			// No CSRF token in session
-			c.AbortWithStatus(http.StatusForbidden)
+			// Use the error middleware instead of direct abort
+			c.Error(errors.NewForbiddenError("CSRF token is missing or invalid"))
+			c.Abort()
 			return
 		}
 
@@ -83,14 +87,18 @@ func CSRFMiddleware() gin.HandlerFunc {
 
 		if requestToken == "" || sessionToken.(string) != requestToken {
 			// Invalid or missing token
-			c.AbortWithStatus(http.StatusForbidden)
+			// Use the error middleware instead of direct abort
+			c.Error(errors.NewForbiddenError("CSRF token is missing or invalid"))
+			c.Abort()
 			return
 		}
 
 		// Generate a new token for the next request
 		newToken, err := generateToken()
 		if err != nil {
-			c.AbortWithStatus(http.StatusInternalServerError)
+			// Use the error middleware instead of direct abort
+			c.Error(errors.NewInternalServerError("Failed to generate CSRF token"))
+			c.Abort()
 			return
 		}
 
