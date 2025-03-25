@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/gin-contrib/sessions"
@@ -465,8 +466,15 @@ func (p *PaymentController) CancelSubscription(c *gin.Context) {
 	// Cancel the subscription at the end of the current period
 	err = p.stripeService.CancelSubscription(dbUser.StripeSubscriptionID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to cancel subscription"})
-		return
+		// Check if the error is because the subscription is already canceled
+		if strings.Contains(err.Error(), "invalid-canceled-subscription-fields") ||
+			strings.Contains(err.Error(), "A canceled subscription can only update") {
+			// Subscription is already canceled in Stripe, just update our database
+			logger.Info("Subscription already canceled in Stripe, updating local status", nil)
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to cancel subscription"})
+			return
+		}
 	}
 
 	// Get updated subscription info to check cancellation status

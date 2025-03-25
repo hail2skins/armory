@@ -148,17 +148,28 @@ templ Subscription(data *data.OwnerData) {
 									if data.User.SubscriptionStatus != "canceled" {
 										return `<form method="POST" action="/subscription/cancel" onsubmit="return confirmCancel(event)" data-expires="` + data.SubscriptionEndsAt + `">
 											<input type="hidden" name="csrf_token" value="` + data.Auth.CSRFToken + `">
-											<button type="submit" class="bg-gunmetal-600 hover:bg-gunmetal-500 text-white py-2 px-4 rounded transition duration-300">
-												Cancel Subscription
-											</button>
-										</form>
-										<script>
-											function confirmCancel(event) {
-												const form = event.target;
-												const expiresDate = form.getAttribute('data-expires');
-												return confirm("Are you sure you want to cancel your subscription? Your subscription will remain active until " + expiresDate + ".");
-											}
-										</script>`
+											` + func() string {
+												if data.User.SubscriptionStatus == "pending_cancellation" {
+													return `<button type="button" disabled class="bg-gray-400 text-white py-2 px-4 rounded cursor-not-allowed opacity-70">
+														Cancellation Pending
+													</button>
+													<p class="text-amber-600 font-medium mt-2">
+														Your subscription will not renew after the expiration date.
+													</p>`
+												} else {
+													return `<button type="submit" class="bg-gunmetal-600 hover:bg-gunmetal-500 text-white py-2 px-4 rounded transition duration-300">
+														Cancel Subscription
+													</button>
+													<script>
+														function confirmCancel(event) {
+															const form = event.target;
+															const expiresDate = form.getAttribute('data-expires');
+															return confirm("Are you sure you want to cancel your subscription? Your subscription will remain active until " + expiresDate + ".");
+														}
+													</script>`
+												}
+											}() + `
+										</form>`
 									} else {
 										return `<p class="text-amber-600 font-medium mt-2">
 											Your subscription will not renew after the expiration date.
