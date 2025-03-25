@@ -565,8 +565,20 @@ func setSubscriptionEndDate(user *database.User, endTimestamp int64, newTier str
 
 	// Simple rule: if there's an existing end date, add the new duration to it
 	if !user.SubscriptionEndDate.IsZero() {
-		// Calculate the duration of the new subscription from now
-		duration := newEndDate.Sub(time.Now())
+		// Calculate the proper duration based on tier instead of from now to endTimestamp
+		var duration time.Duration
+
+		switch newTier {
+		case "monthly":
+			duration = 30 * 24 * time.Hour // 30 days
+		case "yearly":
+			duration = 365 * 24 * time.Hour // 365 days
+		case "lifetime", "premium_lifetime":
+			duration = 20 * 365 * 24 * time.Hour // 20 years
+		default:
+			// Default to monthly if tier is unknown
+			duration = 30 * 24 * time.Hour
+		}
 
 		// Add that duration to the existing end date
 		oldEndDate := user.SubscriptionEndDate
