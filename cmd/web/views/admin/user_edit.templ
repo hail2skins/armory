@@ -52,6 +52,7 @@ templ UserEdit(data *data.UserEditData) {
 		// Edit form
 		_, err = io.WriteString(w, `
 				<form method="POST" action="/admin/users/`+fmt.Sprint(data.User.GetID())+`" class="space-y-6">
+					<input type="hidden" name="csrf_token" value="` + data.AuthData.CSRFToken + `">
 					<div class="bg-gunmetal-50 rounded-lg p-6">
 						<h2 class="text-lg font-semibold text-gunmetal-800 border-b border-gunmetal-200 pb-2 mb-4">Account Information</h2>
 						

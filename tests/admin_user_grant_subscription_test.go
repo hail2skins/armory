@@ -41,6 +41,7 @@ func (s *AdminUserGrantSubscriptionSuite) SetupTest() {
 			"Email":         "admin@example.com",
 			"Roles":         []string{"admin"},
 			"IsCasbinAdmin": true,
+			"CSRFToken":     "mX0OwCuPLFmTs4Og0tANOmccR6NpB6OsM1XfoDa3VWQ=",
 		})
 		c.Next()
 	})
@@ -103,6 +104,7 @@ func (s *AdminUserGrantSubscriptionSuite) TestGrantSubscriptionExistingType() {
 	form := url.Values{}
 	form.Add("subscription_type", "monthly")
 	form.Add("grant_reason", "Test grant")
+	form.Add("csrf_token", "mX0OwCuPLFmTs4Og0tANOmccR6NpB6OsM1XfoDa3VWQ=")
 
 	// Send request
 	req, _ := http.NewRequest("POST", "/admin/users/1/grant-subscription", strings.NewReader(form.Encode()))
@@ -153,6 +155,7 @@ func (s *AdminUserGrantSubscriptionSuite) TestGrantSubscriptionAdminGrant() {
 	form.Add("subscription_type", "admin_grant")
 	form.Add("duration_days", "30")
 	form.Add("grant_reason", "Test admin grant")
+	form.Add("csrf_token", "mX0OwCuPLFmTs4Og0tANOmccR6NpB6OsM1XfoDa3VWQ=")
 
 	// Send request
 	req, _ := http.NewRequest("POST", "/admin/users/1/grant-subscription", strings.NewReader(form.Encode()))
@@ -201,11 +204,12 @@ func (s *AdminUserGrantSubscriptionSuite) TestGrantSubscriptionLifetime() {
 		}).
 		Return(nil)
 
-	// Prepare form data for lifetime subscription
+	// Prepare form data for admin grant with lifetime subscription
 	form := url.Values{}
 	form.Add("subscription_type", "admin_grant")
 	form.Add("is_lifetime", "on")
 	form.Add("grant_reason", "Test lifetime grant")
+	form.Add("csrf_token", "mX0OwCuPLFmTs4Og0tANOmccR6NpB6OsM1XfoDa3VWQ=")
 
 	// Send request
 	req, _ := http.NewRequest("POST", "/admin/users/1/grant-subscription", strings.NewReader(form.Encode()))
@@ -242,6 +246,7 @@ func (s *AdminUserGrantSubscriptionSuite) TestGrantSubscriptionValidationError()
 
 	// Prepare invalid form data (missing required fields)
 	form := url.Values{}
+	form.Add("csrf_token", "mX0OwCuPLFmTs4Og0tANOmccR6NpB6OsM1XfoDa3VWQ=")
 
 	// Send request
 	req, _ := http.NewRequest("POST", "/admin/users/1/grant-subscription", strings.NewReader(form.Encode()))

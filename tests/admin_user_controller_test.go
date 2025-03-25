@@ -40,6 +40,7 @@ func (s *AdminUserSuite) SetupTest() {
 			"Email":         "admin@example.com",
 			"Roles":         []string{"admin"},
 			"IsCasbinAdmin": true,
+			"CSRFToken":     "mX0OwCuPLFmTs4Og0tANOmccR6NpB6OsM1XfoDa3VWQ=",
 		})
 		c.Next()
 	})
@@ -146,6 +147,7 @@ func (s *AdminUserSuite) TestUpdate() {
 	form.Add("email", "updated@example.com")
 	form.Add("subscription_tier", "yearly")
 	form.Add("verified", "on")
+	form.Add("csrf_token", "mX0OwCuPLFmTs4Og0tANOmccR6NpB6OsM1XfoDa3VWQ=")
 
 	// Send request
 	req, _ := http.NewRequest("POST", "/admin/users/1", strings.NewReader(form.Encode()))

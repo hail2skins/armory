@@ -86,6 +86,7 @@ templ UserGrantSubscription(data *data.UserGrantSubscriptionData) {
 						<h2 class="text-lg font-semibold text-gunmetal-800 border-b border-gunmetal-200 pb-2 mb-4">Grant Subscription</h2>
 						
 						<form method="POST" action="/admin/users/`+fmt.Sprint(data.User.GetID())+`/grant-subscription" class="space-y-4">
+							<input type="hidden" name="csrf_token" value="` + data.AuthData.CSRFToken + `">
 							<div>
 								<label for="subscription_type" class="block text-sm font-medium text-gunmetal-700">Subscription Type</label>
 								<select id="subscription_type" name="subscription_type" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gunmetal-300 focus:outline-none focus:ring-brass-500 focus:border-brass-500 sm:text-sm rounded-md" onchange="toggleAdminGrantOptions()">

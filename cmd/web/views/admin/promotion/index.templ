@@ -109,6 +109,7 @@ templ Index(data *data.AdminData) {
 						<a href="/admin/promotions/`+strconv.Itoa(int(p.ID))+`" class="text-brass-600 hover:text-brass-700 mr-3">View</a>
 						<a href="/admin/promotions/`+strconv.Itoa(int(p.ID))+`/edit" class="text-brass-600 hover:text-brass-700 mr-3">Edit</a>
 						<form action="/admin/promotions/`+strconv.Itoa(int(p.ID))+`/delete" method="post" class="inline">
+							<input type="hidden" name="csrf_token" value="` + data.AuthData.CSRFToken + `">
 							<button type="submit" class="text-red-600 hover:text-red-700" onclick="return confirm('Are you sure?')">Delete</button>
 						</form>
 					</td>
