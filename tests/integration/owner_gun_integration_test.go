@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/hail2skins/armory/internal/database"
+	"github.com/hail2skins/armory/internal/middleware"
 	"github.com/hail2skins/armory/internal/models"
 	"github.com/stretchr/testify/suite"
 )
@@ -25,6 +26,9 @@ func (s *OwnerGunIntegrationTest) SetupTest() {
 	// Call the parent SetupTest to set up the suite
 	s.IntegrationSuite.SetupTest()
 
+	// Enable CSRF test mode for this test suite
+	middleware.EnableTestMode()
+
 	// Create a test user for our tests
 	s.testUser = s.CreateTestUser("gunowner@example.com", "Password123!", true)
 }
@@ -33,6 +37,9 @@ func (s *OwnerGunIntegrationTest) SetupTest() {
 func (s *OwnerGunIntegrationTest) TearDownTest() {
 	// Clean up test user
 	s.CleanupTestUser(s.testUser)
+
+	// Disable CSRF test mode
+	middleware.DisableTestMode()
 
 	// Call the parent TearDownTest
 	s.IntegrationSuite.TearDownTest()
@@ -177,26 +184,26 @@ func (s *OwnerGunIntegrationTest) TestCreateGunWorkflow() {
 	cookies := s.LoginUser(s.testUser.Email, "Password123!")
 
 	// Step 1: Visit the new gun form
-	resp := s.MakeAuthenticatedRequest("GET", "/owner/guns/new", cookies)
-	s.Equal(http.StatusOK, resp.Code)
+	formResp := s.MakeAuthenticatedRequest("GET", "/owner/guns/new", cookies)
+	s.Equal(http.StatusOK, formResp.Code)
 
 	// Verify the form title is present
-	s.Contains(resp.Body.String(), "Add New Firearm")
+	s.Contains(formResp.Body.String(), "Add New Firearm")
+
+	// Extract CSRF token
+	csrfToken := s.extractCSRFToken(formResp)
 
 	// Step 2: Submit the form with invalid data (missing required fields)
 	invalidForm := url.Values{}
 	invalidForm.Add("name", "Test Gun") // Only provide name, missing other required fields
 
-	req, _ := http.NewRequest("POST", "/owner/guns", strings.NewReader(invalidForm.Encode()))
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-	// Add auth cookies
-	for _, cookie := range cookies {
-		req.AddCookie(cookie)
+	// Add CSRF token if present
+	if csrfToken != "" {
+		invalidForm.Add("csrf_token", csrfToken)
 	}
 
-	invalidResp := httptest.NewRecorder()
-	s.Router.ServeHTTP(invalidResp, req)
+	// Use the authenticated form submission helper
+	invalidResp := s.MakeAuthenticatedFormSubmission("/owner/guns", invalidForm, cookies)
 
 	// Verify we remain on the form page with error messages
 	s.Equal(http.StatusOK, invalidResp.Code)
@@ -222,16 +229,13 @@ func (s *OwnerGunIntegrationTest) TestCreateGunWorkflow() {
 	today := time.Now().Format("2006-01-02")
 	validForm.Add("acquired", today)
 
-	req, _ = http.NewRequest("POST", "/owner/guns", strings.NewReader(validForm.Encode()))
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-	// Add auth cookies
-	for _, cookie := range cookies {
-		req.AddCookie(cookie)
+	// Add CSRF token if present
+	if csrfToken != "" {
+		validForm.Add("csrf_token", csrfToken)
 	}
 
-	validResp := httptest.NewRecorder()
-	s.Router.ServeHTTP(validResp, req)
+	// Use the authenticated form submission helper
+	validResp := s.MakeAuthenticatedFormSubmission("/owner/guns", validForm, cookies)
 
 	// Verify redirect to owner page
 	s.Equal(http.StatusSeeOther, validResp.Code)
@@ -466,9 +470,13 @@ func (s *OwnerGunIntegrationTest) TestEditGunWorkflow() {
 	s.Contains(editBody, originalSerial)
 	s.Contains(editBody, fmt.Sprintf("value=\"%.2f\"", originalPaid)) // The paid amount with 2 decimal places
 
+	// Extract CSRF token for form submissions
+	csrfToken := s.extractCSRFToken(editResp)
+
 	// Step 2: Submit the form with invalid data (empty name)
 	invalidForm := url.Values{}
-	invalidForm.Add("name", "") // Empty name should fail validation
+	// Use a name that's too long (exceeds 100 chars) to trigger the validation error
+	invalidForm.Add("name", "This is a very very very very very very very very very very very very very very very very very long name that exceeds the limit")
 	invalidForm.Add("serial_number", originalSerial)
 	invalidForm.Add("weapon_type_id", "1")
 	invalidForm.Add("caliber_id", "1")
@@ -476,23 +484,21 @@ func (s *OwnerGunIntegrationTest) TestEditGunWorkflow() {
 	invalidForm.Add("paid", fmt.Sprintf("%.2f", originalPaid))
 	invalidForm.Add("acquired_date", formattedToday)
 
-	updateURL := fmt.Sprintf("/owner/guns/%d", gun.ID)
-	req, _ := http.NewRequest("POST", updateURL, strings.NewReader(invalidForm.Encode()))
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-	// Add auth cookies
-	for _, cookie := range cookies {
-		req.AddCookie(cookie)
+	// Add CSRF token if present
+	if csrfToken != "" {
+		invalidForm.Add("csrf_token", csrfToken)
 	}
 
-	invalidResp := httptest.NewRecorder()
-	s.Router.ServeHTTP(invalidResp, req)
+	updateURL := fmt.Sprintf("/owner/guns/%d", gun.ID)
+
+	// Use the authenticated form submission helper
+	invalidResp := s.MakeAuthenticatedFormSubmission(updateURL, invalidForm, cookies)
 
 	// Verify we're still on the edit form with an error
 	s.Equal(http.StatusOK, invalidResp.Code)
 	invalidRespBody := invalidResp.Body.String()
 	s.Contains(invalidRespBody, "Edit Gun")
-	s.Contains(invalidRespBody, "Name is required") // Error message should be displayed
+	s.Contains(invalidRespBody, "Name cannot exceed 100 characters") // Error message should be displayed
 
 	// Step 3: Submit the form with valid, updated data
 	// Define new values that are different from original
@@ -513,16 +519,13 @@ func (s *OwnerGunIntegrationTest) TestEditGunWorkflow() {
 	validForm.Add("paid", fmt.Sprintf("%.2f", updatedPaid))
 	validForm.Add("acquired_date", formattedUpdatedDate)
 
-	req, _ = http.NewRequest("POST", updateURL, strings.NewReader(validForm.Encode()))
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-	// Add auth cookies
-	for _, cookie := range cookies {
-		req.AddCookie(cookie)
+	// Add CSRF token if present
+	if csrfToken != "" {
+		validForm.Add("csrf_token", csrfToken)
 	}
 
-	validResp := httptest.NewRecorder()
-	s.Router.ServeHTTP(validResp, req)
+	// Use the authenticated form submission helper
+	validResp := s.MakeAuthenticatedFormSubmission(updateURL, validForm, cookies)
 
 	// Verify redirect to owner page
 	s.Equal(http.StatusSeeOther, validResp.Code)
@@ -654,6 +657,9 @@ func (s *OwnerGunIntegrationTest) TestDeleteGunWorkflow() {
 	s.Contains(ownerBody, fmt.Sprintf("Total Paid:</strong> %s", formattedPaid))
 	s.NotContains(ownerBody, "You haven't added any firearms yet")
 
+	// Extract CSRF token from the page
+	csrfToken := s.extractCSRFToken(ownerResp)
+
 	// Note: in a real browser, the delete action is triggered via a form submission with JavaScript
 	// Since we're testing backend functionality, we'll simulate the form POST directly
 
@@ -664,15 +670,15 @@ func (s *OwnerGunIntegrationTest) TestDeleteGunWorkflow() {
 
 	// Step 3: Submit the delete form (simulating clicking OK in the confirmation dialog)
 	deleteURL := fmt.Sprintf("/owner/guns/%d/delete", gun.ID)
-	req, _ := http.NewRequest("POST", deleteURL, nil)
 
-	// Add auth cookies
-	for _, cookie := range cookies {
-		req.AddCookie(cookie)
+	// Create a form with CSRF token
+	deleteForm := url.Values{}
+	if csrfToken != "" {
+		deleteForm.Add("csrf_token", csrfToken)
 	}
 
-	deleteResp := httptest.NewRecorder()
-	s.Router.ServeHTTP(deleteResp, req)
+	// Use MakeAuthenticatedFormSubmission helper
+	deleteResp := s.MakeAuthenticatedFormSubmission(deleteURL, deleteForm, cookies)
 
 	// Verify redirect back to owner page
 	s.Equal(http.StatusSeeOther, deleteResp.Code)

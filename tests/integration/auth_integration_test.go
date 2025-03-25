@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/hail2skins/armory/internal/database"
+	"github.com/hail2skins/armory/internal/middleware"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 )
@@ -24,6 +25,9 @@ func (s *AuthIntegrationTest) SetupTest() {
 	// Call the parent SetupTest
 	s.IntegrationSuite.SetupTest()
 
+	// Enable CSRF test mode for this test suite
+	middleware.EnableTestMode()
+
 	// Create a test user for login tests
 	s.testUser = s.CreateTestUser("test@example.com", "Password123!", true)
 
@@ -38,6 +42,9 @@ func (s *AuthIntegrationTest) SetupTest() {
 func (s *AuthIntegrationTest) TearDownTest() {
 	// Clean up test user
 	s.CleanupTestUser(s.testUser)
+
+	// Disable CSRF test mode
+	middleware.DisableTestMode()
 
 	// Call the parent TearDownTest
 	s.IntegrationSuite.TearDownTest()
@@ -131,9 +138,27 @@ func (s *AuthIntegrationTest) TestLogoutFlow() {
 	logoutResp := httptest.NewRecorder()
 	s.Router.ServeHTTP(logoutResp, logoutReq)
 
-	// Verify logout redirects to login
-	s.Equal(http.StatusSeeOther, logoutResp.Code)
-	s.Equal("/login", logoutResp.Header().Get("Location"))
+	// Verify we see the logout.templ content
+	s.Equal(http.StatusOK, logoutResp.Code)
+	s.Contains(logoutResp.Body.String(), "You have been logged out")
+
+	// Verify the nav bar no longer shows authenticated elements
+	s.Contains(logoutResp.Body.String(), "Login")
+	s.Contains(logoutResp.Body.String(), "Register")
+	s.NotContains(logoutResp.Body.String(), "My Armory")
+
+	// Verify we can't access protected pages after logout
+	ownerReq, _ := http.NewRequest("GET", "/owner", nil)
+	// Use cookies from the logout response
+	for _, cookie := range logoutResp.Result().Cookies() {
+		ownerReq.AddCookie(cookie)
+	}
+	ownerResp := httptest.NewRecorder()
+	s.Router.ServeHTTP(ownerResp, ownerReq)
+
+	// Should redirect to login
+	s.Equal(http.StatusSeeOther, ownerResp.Code)
+	s.Equal("/login", ownerResp.Header().Get("Location"))
 }
 
 // TestRegistrationFlow tests the registration functionality
@@ -167,16 +192,44 @@ func (s *AuthIntegrationTest) TestRegistrationFlow() {
 	})
 
 	s.Run("Successful Registration", func() {
+		// First get the registration page to get CSRF token
+		regPageReq, _ := http.NewRequest(http.MethodGet, "/register", nil)
+		regPageResp := httptest.NewRecorder()
+		s.Router.ServeHTTP(regPageResp, regPageReq)
+
+		// Extract CSRF token if present
+		csrfToken := s.extractCSRFToken(regPageResp)
+
 		// Prepare form data
 		form := url.Values{}
 		form.Add("email", testEmail)
 		form.Add("password", testPassword)
 		form.Add("password_confirm", testPassword)
 
+		// Add CSRF token if we have one
+		if csrfToken != "" {
+			form.Add("csrf_token", csrfToken)
+		}
+
+		// Get the session cookie from the registration page
+		var sessionCookie *http.Cookie
+		for _, cookie := range regPageResp.Result().Cookies() {
+			if cookie.Name == "armory-session" {
+				sessionCookie = cookie
+				break
+			}
+		}
+
 		// Submit the registration form
 		req, err := http.NewRequest(http.MethodPost, "/register", strings.NewReader(form.Encode()))
 		s.Require().NoError(err)
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+		// Add the session cookie to maintain session across requests
+		if sessionCookie != nil {
+			req.AddCookie(sessionCookie)
+		}
+
 		resp := httptest.NewRecorder()
 		s.Router.ServeHTTP(resp, req)
 
@@ -189,15 +242,15 @@ func (s *AuthIntegrationTest) TestRegistrationFlow() {
 		s.Require().NoError(err)
 
 		// Get session cookie from registration response
-		var sessionCookie *http.Cookie
+		var newSessionCookie *http.Cookie
 		for _, cookie := range resp.Result().Cookies() {
 			if cookie.Name == "armory-session" {
-				sessionCookie = cookie
+				newSessionCookie = cookie
 				break
 			}
 		}
-		s.NotNil(sessionCookie, "Session cookie should be present")
-		redirectReq.AddCookie(sessionCookie)
+		s.NotNil(newSessionCookie, "Session cookie should be present")
+		redirectReq.AddCookie(newSessionCookie)
 
 		redirectResp := httptest.NewRecorder()
 		s.Router.ServeHTTP(redirectResp, redirectReq)

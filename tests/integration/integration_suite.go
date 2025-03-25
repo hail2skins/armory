@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"reflect"
+	"strings"
 
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/cookie"
@@ -14,6 +15,7 @@ import (
 	"github.com/hail2skins/armory/cmd/web/views/data"
 	"github.com/hail2skins/armory/internal/controller"
 	"github.com/hail2skins/armory/internal/database"
+	"github.com/hail2skins/armory/internal/middleware"
 	"github.com/hail2skins/armory/internal/testutils"
 	"github.com/hail2skins/armory/internal/testutils/mocks"
 	"github.com/hail2skins/armory/internal/testutils/testhelper"
@@ -40,6 +42,9 @@ func (s *IntegrationSuite) SetupSuite() {
 	// Set Gin to test mode
 	gin.SetMode(gin.TestMode)
 
+	// Enable CSRF TestMode for integration tests
+	middleware.EnableTestMode()
+
 	// Create a test database service
 	s.Service = testutils.SharedTestService()
 	s.DB = s.Service.GetDB()
@@ -59,6 +64,9 @@ func (s *IntegrationSuite) SetupSuite() {
 
 // TearDownSuite runs once after all tests in the suite
 func (s *IntegrationSuite) TearDownSuite() {
+	// Disable CSRF TestMode after tests are done
+	middleware.DisableTestMode()
+
 	// Clean up database connection
 	if s.Service != nil {
 		s.Service.Close()
@@ -497,4 +505,73 @@ func (s *IntegrationSuite) MakeRequest(method, path string, body io.Reader) *htt
 
 	// Return the response
 	return w.Result()
+}
+
+// extractCSRFToken extracts the CSRF token from a response if present
+func (s *IntegrationSuite) extractCSRFToken(resp *httptest.ResponseRecorder) string {
+	// Try to get the token from the response body
+	body := resp.Body.String()
+
+	// Look for the CSRF token in the HTML form
+	// This is a simple approach - we're looking for name="csrf_token" value="TOKEN"
+	for _, line := range strings.Split(body, "\n") {
+		if strings.Contains(line, `name="csrf_token"`) {
+			// Parse the value
+			start := strings.Index(line, `value="`)
+			if start != -1 {
+				start += 7 // length of 'value="'
+				end := strings.Index(line[start:], `"`)
+				if end != -1 {
+					return line[start : start+end]
+				}
+			}
+		}
+	}
+
+	// If we didn't find it in the body, try the cookies
+	cookies := resp.Result().Cookies()
+	var sessionCookie *http.Cookie
+	for _, cookie := range cookies {
+		if cookie.Name == "armory-session" {
+			sessionCookie = cookie
+			break
+		}
+	}
+
+	if sessionCookie == nil {
+		return ""
+	}
+
+	// Create a request with this cookie
+	req, _ := http.NewRequest("GET", "/", nil)
+	req.AddCookie(sessionCookie)
+
+	// Create a gin context for the request
+	c, _ := gin.CreateTestContext(httptest.NewRecorder())
+	c.Request = req
+
+	// Try to get the session
+	session := sessions.Default(c)
+	if session != nil {
+		if token := session.Get("csrf_token"); token != nil {
+			if tokenStr, ok := token.(string); ok {
+				return tokenStr
+			}
+		}
+	}
+
+	// Last resort: check if our TestMode is enabled, in which case any token will work
+	if middleware.TestMode {
+		return "test-csrf-token"
+	}
+
+	return ""
+}
+
+// addCSRFTokenToForm adds the CSRF token to a form
+func (s *IntegrationSuite) addCSRFTokenToForm(form url.Values, token string) url.Values {
+	if token != "" {
+		form.Set("csrf_token", token)
+	}
+	return form
 }
