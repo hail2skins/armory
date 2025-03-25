@@ -16,5 +16,7 @@ func (s *Server) RegisterStaticRoutes(r *gin.Engine) {
 
 	// You can add more static file routes here if needed
 	// r.StaticFS("/docs", http.FS(docsFiles))
-	// r.StaticFile("/favicon.ico", "./resources/favicon.ico")
+
+	// Serve favicon.ico from the embedded assets
+	r.StaticFileFS("/favicon.ico", "favicon.ico", http.FS(staticFiles))
 }
