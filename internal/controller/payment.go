@@ -471,6 +471,32 @@ func (p *PaymentController) CancelSubscription(c *gin.Context) {
 			strings.Contains(err.Error(), "A canceled subscription can only update") {
 			// Subscription is already canceled in Stripe, just update our database
 			logger.Info("Subscription already canceled in Stripe, updating local status", nil)
+
+			// Force the subscription status to pending_cancellation since Stripe already has it as canceled
+			dbUser.SubscriptionStatus = "pending_cancellation"
+			err = p.db.UpdateUser(c.Request.Context(), dbUser)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user"})
+				return
+			}
+
+			// Format subscription end date for the flash message
+			var expiresMessage string
+			if !dbUser.SubscriptionEndDate.IsZero() {
+				expiresDate := dbUser.SubscriptionEndDate.Format("January 2, 2006")
+				expiresMessage = "Your subscription has been cancelled but will remain active until " + expiresDate + "."
+			} else {
+				expiresMessage = "Your subscription has been cancelled."
+			}
+
+			// Set a flash message using the session
+			session := sessions.Default(c)
+			session.AddFlash(expiresMessage)
+			session.Save()
+
+			// Redirect to the owner dashboard
+			c.Redirect(http.StatusSeeOther, "/owner")
+			return
 		} else {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to cancel subscription"})
 			return
