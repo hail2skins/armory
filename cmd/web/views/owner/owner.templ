@@ -88,9 +88,13 @@ templ Owner(data *data.OwnerData) {
 									tier = data.SubscriptionTier
 								}
 								
-								// Add (canceled) label if subscription is canceled
-								if data.User != nil && data.User.SubscriptionStatus == "canceled" {
-									tier += " (canceled)"
+								// Add appropriate status label based on subscription status
+								if data.User != nil {
+									if data.User.SubscriptionStatus == "canceled" {
+										tier += ` <span class="text-red-600 font-medium">(Canceled)</span>`
+									} else if data.User.SubscriptionStatus == "pending_cancellation" {
+										tier += ` <span class="text-amber-600 font-medium">(Cancellation Pending)</span>`
+									}
 								}
 								
 								return tier

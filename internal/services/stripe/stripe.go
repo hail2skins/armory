@@ -30,8 +30,14 @@ type Service interface {
 	// GetSubscriptionDetails gets details about a subscription
 	GetSubscriptionDetails(subscriptionID string) (*stripe.Subscription, error)
 
-	// CancelSubscription cancels a subscription
+	// CancelSubscription cancels a subscription at the end of the current billing period,
+	// allowing the subscription to remain active until its scheduled renewal date,
+	// after which it will not renew.
 	CancelSubscription(subscriptionID string) error
+
+	// CancelSubscriptionImmediately cancels a subscription immediately, stopping it right away
+	// instead of letting it continue until the end of the billing period.
+	CancelSubscriptionImmediately(subscriptionID string) error
 }
 
 // service implements the Service interface
@@ -436,8 +442,21 @@ func (s *service) GetSubscriptionDetails(subscriptionID string) (*stripe.Subscri
 	return subscription, nil
 }
 
-// CancelSubscription cancels a subscription
+// CancelSubscription cancels a subscription at the end of the current billing period,
+// allowing the subscription to remain active until its scheduled renewal date,
+// after which it will not renew.
 func (s *service) CancelSubscription(subscriptionID string) error {
+	params := &stripe.SubscriptionParams{
+		CancelAtPeriodEnd: stripe.Bool(true),
+	}
+
+	_, err := sub.Update(subscriptionID, params)
+	return err
+}
+
+// CancelSubscriptionImmediately cancels a subscription immediately, stopping it right away
+// instead of letting it continue until the end of the billing period.
+func (s *service) CancelSubscriptionImmediately(subscriptionID string) error {
 	_, err := sub.Cancel(subscriptionID, nil)
 	return err
 }

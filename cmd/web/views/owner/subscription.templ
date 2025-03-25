@@ -99,6 +99,30 @@ templ Subscription(data *data.OwnerData) {
 						<p class="font-medium text-gunmetal-800">` + getSubscriptionName(data.User.SubscriptionTier) + `</p>
 					</div>
 					
+					<div class="mb-4">
+						<p class="text-gunmetal-600">Status</p>
+						` + func() string {
+							switch data.User.SubscriptionStatus {
+							case "pending_cancellation":
+								return `<p class="font-medium text-amber-600">
+									Cancellation Pending - Your subscription will remain active until it expires
+								</p>`
+							case "canceled":
+								return `<p class="font-medium text-red-600">
+									Canceled
+								</p>`
+							case "active":
+								return `<p class="font-medium text-green-600">
+									Active
+								</p>`
+							default:
+								return `<p class="font-medium text-gunmetal-800">
+									` + data.User.SubscriptionStatus + `
+								</p>`
+							}
+						}() + `
+					</div>
+					
 					` + func() string {
 						if data.User.SubscriptionTier != "free" && data.User.SubscriptionTier != "premium_lifetime" && data.User.SubscriptionTier != "lifetime" {
 							return `<div class="mb-6">

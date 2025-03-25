@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
@@ -461,15 +462,29 @@ func (p *PaymentController) CancelSubscription(c *gin.Context) {
 		return
 	}
 
-	// Cancel the subscription
+	// Cancel the subscription at the end of the current period
 	err = p.stripeService.CancelSubscription(dbUser.StripeSubscriptionID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to cancel subscription"})
 		return
 	}
 
+	// Get updated subscription info to check cancellation status
+	subscription, err := p.stripeService.GetSubscriptionDetails(dbUser.StripeSubscriptionID)
+	if err != nil {
+		logger.Error("Failed to get subscription details after cancellation", err, nil)
+		// Continue even if this fails
+	}
+
 	// Update the user's subscription information
-	dbUser.SubscriptionStatus = "canceled"
+	// If the subscription is still active but marked for cancellation, we use "pending_cancellation"
+	// This distinguishes between immediate cancellation and end-of-period cancellation
+	if subscription != nil && subscription.Status == "active" && subscription.CancelAtPeriodEnd {
+		dbUser.SubscriptionStatus = "pending_cancellation"
+	} else {
+		dbUser.SubscriptionStatus = "canceled"
+	}
+
 	err = p.db.UpdateUser(c.Request.Context(), dbUser)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user"})
@@ -480,7 +495,11 @@ func (p *PaymentController) CancelSubscription(c *gin.Context) {
 	var expiresMessage string
 	if !dbUser.SubscriptionEndDate.IsZero() {
 		expiresDate := dbUser.SubscriptionEndDate.Format("January 2, 2006")
-		expiresMessage = "Your subscription will remain active until " + expiresDate + "."
+		expiresMessage = "Your subscription has been cancelled but will remain active until " + expiresDate + "."
+	} else if subscription != nil && subscription.CurrentPeriodEnd > 0 {
+		// If we have the period end from Stripe, use that
+		endDate := time.Unix(subscription.CurrentPeriodEnd, 0).Format("January 2, 2006")
+		expiresMessage = "Your subscription has been cancelled but will remain active until " + endDate + "."
 	} else {
 		expiresMessage = "Your subscription has been cancelled."
 	}
