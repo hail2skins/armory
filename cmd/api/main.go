@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -38,6 +39,17 @@ func gracefulShutdown(apiServer *http.Server, done chan bool) {
 }
 
 func main() {
+	// Configure logger based on environment
+	env := os.Getenv("APP_ENV")
+	switch strings.ToLower(env) {
+	case "production":
+		logger.Configure(logger.Production)
+	case "staging":
+		logger.Configure(logger.Staging)
+	default:
+		logger.Configure(logger.Development)
+	}
+
 	// Initialize the server (which also sets up logging)
 	s := server.New()
 
@@ -45,7 +57,10 @@ func main() {
 	defer logger.ResetLogging()
 
 	// Start the server in a separate goroutine
-	logger.Info("Starting server", nil)
+	logger.Info("Starting server", map[string]interface{}{
+		"environment": env,
+	})
+
 	err := s.Start()
 	if err != nil {
 		logger.Error("Server error", err, nil)
