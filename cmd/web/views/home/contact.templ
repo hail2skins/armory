@@ -16,9 +16,9 @@ templ Contact(data ContactData) {
 }
 
 templ contactContent(data ContactData) {
-	<div class="max-w-4xl mx-auto">
+	<div class="max-w-6xl mx-auto">
 		<!-- Header Section with Background Image -->
-		<div class="bg-cover bg-center py-12 rounded-lg shadow-md mb-8" style="background-image: url('/assets/contact-bench.jpg');">
+		<div class="bg-cover bg-center py-12 rounded-t-lg shadow-md" style="background-image: url('/assets/contact-bench.jpg');">
 			<div class="bg-gunmetal-800 bg-opacity-80 p-8 max-w-3xl mx-auto text-center">
 				<h2 class="text-3xl font-bold text-white mb-4">Contact Us</h2>
 				<p class="text-lg text-white">
@@ -33,56 +33,90 @@ templ contactContent(data ContactData) {
 			</div>
 		}
 
-		<div class="bg-white p-6 rounded-lg shadow-md">
-			<form class="space-y-4" method="POST" action="/contact">
-				<input type="hidden" name="csrf_token" value={ data.CSRFToken } />
-				<div>
-					<label for="name" class="block text-gray-700 mb-2">Name</label>
-					<input 
-						type="text" 
-						id="name" 
-						name="name" 
-						class="w-full p-2 border border-gray-300 rounded-lg text-gunmetal-800"
-						required
-					/>
+		<div class="bg-white p-6 rounded-b-lg shadow-md">
+			<div class="flex flex-col md:flex-row gap-8">
+				<!-- Left Column: Information -->
+				<div class="md:w-1/2">
+					<h3 class="text-xl font-semibold text-gunmetal-800 mb-4">Common Reasons to Contact Us</h3>
+					
+					<div class="prose prose-lg max-w-none text-gunmetal-700">
+						<p class="mb-4">
+							Contact us for anything, but here are some common reasons:
+						</p>
+						
+						<h4 class="text-lg font-medium text-gunmetal-800 mt-5 mb-2">Missing Information</h4>
+						<p class="mb-4">
+							We have seeded gun calibers, types and manufacturers with many names, but we didn't get them all. 
+							Contact us with a name we need to add and we'll get to it right away.
+						</p>
+						
+						<h4 class="text-lg font-medium text-gunmetal-800 mt-5 mb-2">Report Issues</h4>
+						<p class="mb-4">
+							This site is new. We've spent a good deal of time working out bugs and odd behaviors, 
+							but if you notice something, please let us know immediately.
+						</p>
+						
+						<h4 class="text-lg font-medium text-gunmetal-800 mt-5 mb-2">Feature Suggestions</h4>
+						<p class="mb-4">
+							We have a roadmap planned for things to add. Ammo inventory is next, followed by tracking your Range Day outings, 
+							but if you have an idea you think would benefit the site, let us know. We'll try to get it working for you.
+						</p>
+					</div>
 				</div>
-				<div>
-					<label for="email" class="block text-gray-700 mb-2">Email</label>
-					<input 
-						type="email" 
-						id="email" 
-						name="email" 
-						class="w-full p-2 border border-gray-300 rounded-lg text-gunmetal-800"
-						required
-					/>
+				
+				<!-- Right Column: Form -->
+				<div class="md:w-1/2">
+					<form class="space-y-4" method="POST" action="/contact">
+						<input type="hidden" name="csrf_token" value={ data.CSRFToken } />
+						<div>
+							<label for="name" class="block text-gray-700 mb-2">Name</label>
+							<input 
+								type="text" 
+								id="name" 
+								name="name" 
+								class="w-full p-2 border border-gray-300 rounded-lg text-gunmetal-800"
+								required
+							/>
+						</div>
+						<div>
+							<label for="email" class="block text-gray-700 mb-2">Email</label>
+							<input 
+								type="email" 
+								id="email" 
+								name="email" 
+								class="w-full p-2 border border-gray-300 rounded-lg text-gunmetal-800"
+								required
+							/>
+						</div>
+						<div>
+							<label for="subject" class="block text-gray-700 mb-2">Subject</label>
+							<input 
+								type="text" 
+								id="subject" 
+								name="subject" 
+								class="w-full p-2 border border-gray-300 rounded-lg text-gunmetal-800"
+								required
+							/>
+						</div>
+						<div>
+							<label for="message" class="block text-gray-700 mb-2">Message</label>
+							<textarea 
+								id="message" 
+								name="message" 
+								rows="5"
+								class="w-full p-2 border border-gray-300 rounded-lg text-gunmetal-800"
+								required
+							></textarea>
+						</div>
+						<button 
+							type="submit" 
+							class="bg-gunmetal-800 hover:bg-gunmetal-700 text-white py-2 px-4 rounded"
+						>
+							Send Message
+						</button>
+					</form>
 				</div>
-				<div>
-					<label for="subject" class="block text-gray-700 mb-2">Subject</label>
-					<input 
-						type="text" 
-						id="subject" 
-						name="subject" 
-						class="w-full p-2 border border-gray-300 rounded-lg text-gunmetal-800"
-						required
-					/>
-				</div>
-				<div>
-					<label for="message" class="block text-gray-700 mb-2">Message</label>
-					<textarea 
-						id="message" 
-						name="message" 
-						rows="5"
-						class="w-full p-2 border border-gray-300 rounded-lg text-gunmetal-800"
-						required
-					></textarea>
-				</div>
-				<button 
-					type="submit" 
-					class="bg-gunmetal-800 hover:bg-gunmetal-700 text-white py-2 px-4 rounded"
-				>
-					Send Message
-				</button>
-			</form>
+			</div>
 		</div>
 	</div>
 }
