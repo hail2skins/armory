@@ -491,7 +491,7 @@ func (o *OwnerController) Create(c *gin.Context) {
 	if acquiredDateStr != "" {
 		parsedDate, err := time.Parse("2006-01-02", acquiredDateStr)
 		if err != nil {
-			errors["acquired"] = "Invalid date format, use YYYY-MM-DD"
+			errors["acquired"] = "Invalid date format, use MM-DD-YYYY"
 		} else {
 			// Check if date is in the future
 			if parsedDate.After(time.Now()) {
@@ -1160,7 +1160,7 @@ func (o *OwnerController) Update(c *gin.Context) {
 		if acquiredDateStr != "" {
 			parsedDate, err := time.Parse("2006-01-02", acquiredDateStr)
 			if err != nil {
-				formErrors["acquired_date"] = "Invalid date format, use YYYY-MM-DD"
+				formErrors["acquired_date"] = "Invalid date format, use MM-DD-YYYY"
 			} else {
 				// Check if date is in the future
 				if parsedDate.After(time.Now()) {
@@ -1421,7 +1421,7 @@ func (o *OwnerController) Update(c *gin.Context) {
 	if acquiredDateStr != "" {
 		parsedDate, err := time.Parse("2006-01-02", acquiredDateStr)
 		if err != nil {
-			formErrors["acquired_date"] = "Invalid date format, use YYYY-MM-DD"
+			formErrors["acquired_date"] = "Invalid date format, use MM-DD-YYYY"
 		} else {
 			// Check if date is in the future
 			if parsedDate.After(time.Now()) {

@@ -92,6 +92,7 @@ templ Edit(data *data.OwnerData) {
 						type="date" 
 						id="acquired_date" 
 						name="acquired_date"
+						placeholder="MM-DD-YYYY"
 						value="`+ func() string {
 							if data.Gun.Acquired != nil {
 								return data.Gun.Acquired.Format("2006-01-02")
@@ -100,21 +101,7 @@ templ Edit(data *data.OwnerData) {
 						}() +`"
 						class="block w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-brass-500 focus:border-brass-500"
 					/>
-					`)
-		if err != nil {
-			return err
-		}
-
-		if acquiredDateError, ok := data.FormErrors["acquired_date"]; ok {
-			_, err = io.WriteString(w, `
-					<p class="text-red-500 text-xs italic">`+acquiredDateError+`</p>
-					`)
-			if err != nil {
-				return err
-			}
-		}
-
-		_, err = io.WriteString(w, `
+					<p class="text-gunmetal-500 text-xs">Format: MM-DD-YYYY</p>
 				</div>
 				<div class="mb-4">
 					<label for="paid" class="block text-gunmetal-700 font-medium mb-1">Paid (USD)</label>
