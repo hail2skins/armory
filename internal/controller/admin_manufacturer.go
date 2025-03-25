@@ -223,7 +223,7 @@ func (c *AdminManufacturerController) Update(ctx *gin.Context) {
 		return
 	}
 
-	// Redirect to the show page with a success message
+	// Redirect to the index page with a success message
 	ctx.Redirect(http.StatusSeeOther, "/admin/manufacturers/"+strconv.FormatUint(id, 10)+"?success=Manufacturer updated successfully")
 }
 
