@@ -21,6 +21,7 @@ func (s *Server) RegisterAdminRoutes(r *gin.Engine, authController *controller.A
 	adminPromotionController := controller.NewAdminPromotionController(s.db)
 	adminUserController := controller.NewAdminUserController(s.db)
 	adminPaymentController := controller.NewAdminPaymentController(s.db)
+	adminGunsController := controller.NewAdminGunsController(s.db)
 
 	// Create Stripe security controller
 	stripeSecurityController := controller.NewStripeSecurityController(s.ipFilterService)
@@ -260,6 +261,9 @@ func (s *Server) RegisterAdminRoutes(r *gin.Engine, authController *controller.A
 		// ===== Payment Management Routes =====
 		// Payments history
 		adminGroup.GET("/payments-history", adminPaymentController.ShowPaymentsHistory)
+
+		// ===== Guns Management Routes =====
+		adminGroup.GET("/guns", adminGunsController.Index)
 
 		// ===== Dashboard Routes =====
 		adminGroup.GET("", adminDashboardController.Dashboard)

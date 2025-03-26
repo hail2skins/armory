@@ -42,4 +42,7 @@ type User interface {
 
 	// GetGrantedByID returns the ID of the admin who granted the subscription
 	GetGrantedByID() uint
+
+	// GetGunCount returns the number of guns owned by the user
+	GetGunCount() int64
 }
