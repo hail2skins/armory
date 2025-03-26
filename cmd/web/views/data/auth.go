@@ -33,7 +33,7 @@ func NewAuthData() AuthData {
 		AlwaysTrue:      true, // Set this to always be true
 		MetaDescription: "The Virtual Armory helps firearm owners securely track and manage their collection online.",
 		OgType:          "website",
-		OgImage:         "/assets/images/virtualarmory-social.jpg", // Default social sharing image
+		OgImage:         "/assets/images/tva-logo.jpg", // Default social sharing image
 		StructuredData:  make(map[string]interface{}),
 	}
 }
