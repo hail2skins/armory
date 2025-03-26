@@ -1,0 +1,31 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+
+# Your rule content
+
+- @internal/testutils/README.md  is our current location where key test information is for our project. 
+
+- We are Tailwind/HTMX.
+
+- We build the site with make build -- see the Makefile.
+
+- We run the site with make run.
+
+- The main main.go is @cmd/api/main.go
+
+- The data structs for views is generally in @cmd/views/data
+
+- This site is golang.
+
+- This site uses Gin/Gonic.
+
+- This site also uses Gin Sessions.
+
+- This site uses GoGuardian for auth.
+
+- This site uses Casbin for RBAC, though presently limited in scope to /admin routes.
+
+- CSRF is a custom middleware specific to our site.
