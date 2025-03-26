@@ -76,6 +76,7 @@ func UpdateGun(db *gorm.DB, gun *Gun) error {
 	result := db.Model(&existingGun).Updates(map[string]interface{}{
 		"name":            gun.Name,
 		"serial_number":   gun.SerialNumber,
+		"purpose":         gun.Purpose,
 		"acquired":        gun.Acquired,
 		"weapon_type_id":  gun.WeaponTypeID,
 		"caliber_id":      gun.CaliberID,

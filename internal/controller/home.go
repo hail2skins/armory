@@ -53,30 +53,12 @@ func (h *HomeController) HomeHandler(c *gin.Context) {
 
 	// Try to get auth data from context first
 	if authDataInterface, exists := c.Get("authData"); exists {
-		if data, ok := authDataInterface.(data.AuthData); ok {
+		if authData, ok := authDataInterface.(data.AuthData); ok {
 			// Use the auth data that already has roles
-			homeData.AuthData = data.WithTitle("Home")
+			homeData.AuthData = authData.WithTitle("Home")
 
-			// Set SEO metadata
-			homeData.AuthData = homeData.AuthData.WithMetaDescription("The Virtual Armory - Your digital home for tracking your home arsenal safely and securely. Keep detailed records of all your firearms in one secure location.")
-			homeData.AuthData = homeData.AuthData.WithOgImage("/assets/tva-logo.jpg")
-			homeData.AuthData = homeData.AuthData.WithCanonicalURL("https://" + c.Request.Host)
-			homeData.AuthData = homeData.AuthData.WithMetaKeywords("virtual armory, gun collection, firearm tracking, arsenal management, gun inventory, firearm collection")
-			homeData.AuthData = homeData.AuthData.WithOgType("website")
-
-			// Add JSON-LD structured data for the website
-			homeData.AuthData = homeData.AuthData.WithStructuredData(map[string]interface{}{
-				"@context":    "https://schema.org",
-				"@type":       "WebSite",
-				"name":        "The Virtual Armory",
-				"url":         "https://" + c.Request.Host,
-				"description": "Your digital home for tracking your home arsenal safely and securely.",
-				"potentialAction": map[string]interface{}{
-					"@type":       "SearchAction",
-					"target":      "https://" + c.Request.Host + "/search?q={search_term_string}",
-					"query-input": "required name=search_term_string",
-				},
-			})
+			// Apply SEO enhancements
+			homeData.AuthData = data.EnhanceHomePageSEO(homeData.AuthData, c.Request.Host)
 
 			// Log authData for debugging
 			logger.Info("HomeHandler authData", map[string]interface{}{
@@ -125,26 +107,8 @@ func (h *HomeController) HomeHandler(c *gin.Context) {
 		authData.Authenticated = authenticated
 		authData.Title = "Home"
 
-		// Set SEO metadata
-		authData = authData.WithMetaDescription("The Virtual Armory - Your digital home for tracking your home arsenal safely and securely. Keep detailed records of all your firearms in one secure location.")
-		authData = authData.WithOgImage("/assets/tva-logo.jpg")
-		authData = authData.WithCanonicalURL("https://" + c.Request.Host)
-		authData = authData.WithMetaKeywords("virtual armory, gun collection, firearm tracking, arsenal management, gun inventory, firearm collection")
-		authData = authData.WithOgType("website")
-
-		// Add JSON-LD structured data for the website
-		authData = authData.WithStructuredData(map[string]interface{}{
-			"@context":    "https://schema.org",
-			"@type":       "WebSite",
-			"name":        "The Virtual Armory",
-			"url":         "https://" + c.Request.Host,
-			"description": "Your digital home for tracking your home arsenal safely and securely.",
-			"potentialAction": map[string]interface{}{
-				"@type":       "SearchAction",
-				"target":      "https://" + c.Request.Host + "/search?q={search_term_string}",
-				"query-input": "required name=search_term_string",
-			},
-		})
+		// Apply SEO enhancements
+		authData = data.EnhanceHomePageSEO(authData, c.Request.Host)
 
 		// Check for flash messages directly from session
 		session := sessions.Default(c)
@@ -193,36 +157,24 @@ func (h *HomeController) AboutHandler(c *gin.Context) {
 
 	// Try to get auth data from context first
 	if authDataInterface, exists := c.Get("authData"); exists {
-		if data, ok := authDataInterface.(data.AuthData); ok {
+		if authData, ok := authDataInterface.(data.AuthData); ok {
 			// Use the auth data that already has roles
-			aboutData.AuthData = data.WithTitle("About")
+			aboutData.AuthData = authData.WithTitle("About")
 
-			// Set SEO metadata
-			aboutData.AuthData = aboutData.AuthData.WithMetaDescription("Learn about The Virtual Armory and our mission to provide firearm enthusiasts with a secure, private, and comprehensive platform to track their collections.")
-			aboutData.AuthData = aboutData.AuthData.WithOgImage("/assets/virtualarmory.jpg")
-			aboutData.AuthData = aboutData.AuthData.WithCanonicalURL("https://" + c.Request.Host + "/about")
-			aboutData.AuthData = aboutData.AuthData.WithMetaKeywords("about virtual armory, firearm tracking mission, gun collection platform, secure gun inventory")
-			aboutData.AuthData = aboutData.AuthData.WithOgType("website")
-
-			// Add JSON-LD structured data for the about page
-			aboutData.AuthData = aboutData.AuthData.WithStructuredData(map[string]interface{}{
-				"@context":    "https://schema.org",
-				"@type":       "AboutPage",
-				"name":        "About The Virtual Armory",
-				"description": "Learn about The Virtual Armory and our mission to provide firearm enthusiasts with a secure, private, and comprehensive platform to track their collections.",
-			})
+			// Apply SEO enhancements
+			aboutData.AuthData = data.EnhanceAboutPageSEO(aboutData.AuthData, c.Request.Host)
 
 			// Re-fetch roles from Casbin to ensure they're fresh
-			if data.Authenticated && data.Email != "" {
+			if authData.Authenticated && authData.Email != "" {
 				// Get Casbin from context
 				if casbinAuth, exists := c.Get("casbinAuth"); exists && casbinAuth != nil {
 					if ca, ok := casbinAuth.(interface{ GetUserRoles(string) []string }); ok {
-						roles := ca.GetUserRoles(data.Email)
+						roles := ca.GetUserRoles(authData.Email)
 						aboutData.AuthData = aboutData.AuthData.WithRoles(roles)
 
 						// Log roles for debugging
 						logger.Info("About page - Casbin roles for user", map[string]interface{}{
-							"email":   data.Email,
+							"email":   authData.Email,
 							"roles":   roles,
 							"isAdmin": aboutData.AuthData.IsCasbinAdmin,
 						})
@@ -251,20 +203,8 @@ func (h *HomeController) AboutHandler(c *gin.Context) {
 		authData.Title = "About"
 		authData.Authenticated = authenticated
 
-		// Set SEO metadata
-		authData = authData.WithMetaDescription("Learn about The Virtual Armory and our mission to provide firearm enthusiasts with a secure, private, and comprehensive platform to track their collections.")
-		authData = authData.WithOgImage("/assets/virtualarmory.jpg")
-		authData = authData.WithCanonicalURL("https://" + c.Request.Host + "/about")
-		authData = authData.WithMetaKeywords("about virtual armory, firearm tracking mission, gun collection platform, secure gun inventory")
-		authData = authData.WithOgType("website")
-
-		// Add JSON-LD structured data for the about page
-		authData = authData.WithStructuredData(map[string]interface{}{
-			"@context":    "https://schema.org",
-			"@type":       "AboutPage",
-			"name":        "About The Virtual Armory",
-			"description": "Learn about The Virtual Armory and our mission to provide firearm enthusiasts with a secure, private, and comprehensive platform to track their collections.",
-		})
+		// Apply SEO enhancements
+		authData = data.EnhanceAboutPageSEO(authData, c.Request.Host)
 
 		// Check for flash messages directly from session
 		session := sessions.Default(c)
@@ -309,36 +249,24 @@ func (h *HomeController) ContactHandler(c *gin.Context) {
 
 	// Try to get auth data from context first
 	if authDataInterface, exists := c.Get("authData"); exists {
-		if data, ok := authDataInterface.(data.AuthData); ok {
+		if authData, ok := authDataInterface.(data.AuthData); ok {
 			// Use the auth data that already has roles
-			contactData.AuthData = data.WithTitle("Contact")
+			contactData.AuthData = authData.WithTitle("Contact")
 
-			// Set SEO metadata
-			contactData.AuthData = contactData.AuthData.WithMetaDescription("Contact The Virtual Armory with your questions, feedback, or feature suggestions. We're here to help you get the most out of your digital firearm collection management.")
-			contactData.AuthData = contactData.AuthData.WithOgImage("/assets/contact-bench.jpg")
-			contactData.AuthData = contactData.AuthData.WithCanonicalURL("https://" + c.Request.Host + "/contact")
-			contactData.AuthData = contactData.AuthData.WithMetaKeywords("contact virtual armory, firearm tracking help, gun collection support, feedback")
-			contactData.AuthData = contactData.AuthData.WithOgType("website")
-
-			// Add JSON-LD structured data for the contact page
-			contactData.AuthData = contactData.AuthData.WithStructuredData(map[string]interface{}{
-				"@context":    "https://schema.org",
-				"@type":       "ContactPage",
-				"name":        "Contact The Virtual Armory",
-				"description": "Contact The Virtual Armory with your questions, feedback, or feature suggestions.",
-			})
+			// Apply SEO enhancements
+			contactData.AuthData = data.EnhanceContactPageSEO(contactData.AuthData, c.Request.Host)
 
 			// Re-fetch roles from Casbin to ensure they're fresh
-			if data.Authenticated && data.Email != "" {
+			if authData.Authenticated && authData.Email != "" {
 				// Get Casbin from context
 				if casbinAuth, exists := c.Get("casbinAuth"); exists && casbinAuth != nil {
 					if ca, ok := casbinAuth.(interface{ GetUserRoles(string) []string }); ok {
-						roles := ca.GetUserRoles(data.Email)
+						roles := ca.GetUserRoles(authData.Email)
 						contactData.AuthData = contactData.AuthData.WithRoles(roles)
 
 						// Log roles for debugging
 						logger.Info("Contact page - Casbin roles for user", map[string]interface{}{
-							"email":   data.Email,
+							"email":   authData.Email,
 							"roles":   roles,
 							"isAdmin": contactData.AuthData.IsCasbinAdmin,
 						})
@@ -367,20 +295,8 @@ func (h *HomeController) ContactHandler(c *gin.Context) {
 		authData.Title = "Contact"
 		authData.Authenticated = authenticated
 
-		// Set SEO metadata
-		authData = authData.WithMetaDescription("Contact The Virtual Armory with your questions, feedback, or feature suggestions. We're here to help you get the most out of your digital firearm collection management.")
-		authData = authData.WithOgImage("/assets/contact-bench.jpg")
-		authData = authData.WithCanonicalURL("https://" + c.Request.Host + "/contact")
-		authData = authData.WithMetaKeywords("contact virtual armory, firearm tracking help, gun collection support, feedback")
-		authData = authData.WithOgType("website")
-
-		// Add JSON-LD structured data for the contact page
-		authData = authData.WithStructuredData(map[string]interface{}{
-			"@context":    "https://schema.org",
-			"@type":       "ContactPage",
-			"name":        "Contact The Virtual Armory",
-			"description": "Contact The Virtual Armory with your questions, feedback, or feature suggestions.",
-		})
+		// Apply SEO enhancements
+		authData = data.EnhanceContactPageSEO(authData, c.Request.Host)
 
 		// Check for flash messages directly from session
 		session := sessions.Default(c)

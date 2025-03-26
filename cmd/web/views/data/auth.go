@@ -151,6 +151,13 @@ func (a AuthData) WithStructuredData(data map[string]interface{}) AuthData {
 func (a AuthData) AddStructuredData(key string, value interface{}) AuthData {
 	if a.StructuredData == nil {
 		a.StructuredData = make(map[string]interface{})
+	} else {
+		// Create a deep copy of the map to prevent shared references
+		cloned := make(map[string]interface{}, len(a.StructuredData))
+		for k, v := range a.StructuredData {
+			cloned[k] = v
+		}
+		a.StructuredData = cloned
 	}
 	a.StructuredData[key] = value
 	return a
