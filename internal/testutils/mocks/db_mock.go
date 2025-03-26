@@ -125,6 +125,11 @@ func (m *MockDB) GetPaymentsByUserID(userID uint) ([]models.Payment, error) {
 	return args.Get(0).([]models.Payment), args.Error(1)
 }
 
+func (m *MockDB) GetAllPayments() ([]models.Payment, error) {
+	args := m.Called()
+	return args.Get(0).([]models.Payment), args.Error(1)
+}
+
 func (m *MockDB) FindPaymentByID(id uint) (*models.Payment, error) {
 	args := m.Called(id)
 	if args.Get(0) == nil {

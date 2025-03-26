@@ -395,6 +395,15 @@ func (s *TestService) GetPaymentsByUserID(userID uint) ([]models.Payment, error)
 	return payments, nil
 }
 
+// GetAllPayments gets all payments
+func (s *TestService) GetAllPayments() ([]models.Payment, error) {
+	var payments []models.Payment
+	if err := s.db.Order("created_at desc").Find(&payments).Error; err != nil {
+		return nil, err
+	}
+	return payments, nil
+}
+
 // FindPaymentByID finds a payment by ID
 func (s *TestService) FindPaymentByID(id uint) (*models.Payment, error) {
 	var payment models.Payment

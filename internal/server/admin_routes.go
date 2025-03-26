@@ -20,6 +20,7 @@ func (s *Server) RegisterAdminRoutes(r *gin.Engine, authController *controller.A
 	adminDashboardController := controller.NewAdminDashboardController(s.db)
 	adminPromotionController := controller.NewAdminPromotionController(s.db)
 	adminUserController := controller.NewAdminUserController(s.db)
+	adminPaymentController := controller.NewAdminPaymentController(s.db)
 
 	// Create Stripe security controller
 	stripeSecurityController := controller.NewStripeSecurityController(s.ipFilterService)
@@ -255,6 +256,10 @@ func (s *Server) RegisterAdminRoutes(r *gin.Engine, authController *controller.A
 				userGroup.POST("/:id/grant-subscription", adminUserController.GrantSubscription)
 			}
 		}
+
+		// ===== Payment Management Routes =====
+		// Payments history
+		adminGroup.GET("/payments-history", adminPaymentController.ShowPaymentsHistory)
 
 		// ===== Dashboard Routes =====
 		adminGroup.GET("", adminDashboardController.Dashboard)

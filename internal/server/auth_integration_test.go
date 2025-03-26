@@ -273,6 +273,12 @@ func (m *MockDBWithContext) CountUsers() (int64, error) {
 	return args.Get(0).(int64), args.Error(1)
 }
 
+// GetAllPayments retrieves all payments ordered by creation date descending
+func (m *MockDBWithContext) GetAllPayments() ([]models.Payment, error) {
+	args := m.Called()
+	return args.Get(0).([]models.Payment), args.Error(1)
+}
+
 // FindRecentUsers finds recent users with pagination and sorting
 func (m *MockDBWithContext) FindRecentUsers(offset, limit int, sortBy, sortOrder string) ([]database.User, error) {
 	args := m.Called(offset, limit, sortBy, sortOrder)

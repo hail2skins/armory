@@ -37,6 +37,7 @@ type Service interface {
 	// Payment-related methods
 	CreatePayment(payment *models.Payment) error
 	GetPaymentsByUserID(userID uint) ([]models.Payment, error)
+	GetAllPayments() ([]models.Payment, error)
 	FindPaymentByID(id uint) (*models.Payment, error)
 	UpdatePayment(payment *models.Payment) error
 
@@ -250,6 +251,15 @@ func (s *service) CreatePayment(payment *models.Payment) error {
 func (s *service) GetPaymentsByUserID(userID uint) ([]models.Payment, error) {
 	var payments []models.Payment
 	if err := s.db.Where("user_id = ?", userID).Order("created_at desc").Find(&payments).Error; err != nil {
+		return nil, err
+	}
+	return payments, nil
+}
+
+// GetAllPayments retrieves all payments ordered by creation date descending
+func (s *service) GetAllPayments() ([]models.Payment, error) {
+	var payments []models.Payment
+	if err := s.db.Order("created_at desc").Find(&payments).Error; err != nil {
 		return nil, err
 	}
 	return payments, nil
