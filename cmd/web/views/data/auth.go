@@ -14,15 +14,27 @@ type AuthData struct {
 	CurrentPath     string      // Current route path for navigation highlighting
 	ActivePromotion interface{} // Active promotion data
 	CSRFToken       string      // CSRF token for form protection
+
+	// SEO-related fields
+	MetaDescription string                 // Page-specific meta description
+	OgImage         string                 // Open Graph image URL
+	CanonicalURL    string                 // Canonical URL for this page
+	MetaKeywords    string                 // Meta keywords (still useful for some search engines)
+	OgType          string                 // Open Graph type (website, article, etc.)
+	StructuredData  map[string]interface{} // JSON-LD structured data
 }
 
 // NewAuthData creates a new AuthData with default values
 func NewAuthData() AuthData {
 	return AuthData{
-		Title:      "",
-		SiteName:   "The Virtual Armory",
-		Roles:      []string{},
-		AlwaysTrue: true, // Set this to always be true
+		Title:           "",
+		SiteName:        "The Virtual Armory",
+		Roles:           []string{},
+		AlwaysTrue:      true, // Set this to always be true
+		MetaDescription: "The Virtual Armory helps firearm owners securely track and manage their collection online.",
+		OgType:          "website",
+		OgImage:         "/assets/images/tva-logo.jpg", // Default social sharing image
+		StructuredData:  make(map[string]interface{}),
 	}
 }
 
@@ -96,5 +108,57 @@ func (a AuthData) WithActivePromotion(promotion interface{}) AuthData {
 // WithCSRFToken returns a copy of the AuthData with a CSRF token
 func (a AuthData) WithCSRFToken(token string) AuthData {
 	a.CSRFToken = token
+	return a
+}
+
+// WithMetaDescription returns a copy of the AuthData with a meta description
+func (a AuthData) WithMetaDescription(description string) AuthData {
+	a.MetaDescription = description
+	return a
+}
+
+// WithOgImage returns a copy of the AuthData with an Open Graph image URL
+func (a AuthData) WithOgImage(imageURL string) AuthData {
+	a.OgImage = imageURL
+	return a
+}
+
+// WithCanonicalURL returns a copy of the AuthData with a canonical URL
+func (a AuthData) WithCanonicalURL(url string) AuthData {
+	a.CanonicalURL = url
+	return a
+}
+
+// WithMetaKeywords returns a copy of the AuthData with meta keywords
+func (a AuthData) WithMetaKeywords(keywords string) AuthData {
+	a.MetaKeywords = keywords
+	return a
+}
+
+// WithOgType returns a copy of the AuthData with an Open Graph type
+func (a AuthData) WithOgType(ogType string) AuthData {
+	a.OgType = ogType
+	return a
+}
+
+// WithStructuredData returns a copy of the AuthData with JSON-LD structured data
+func (a AuthData) WithStructuredData(data map[string]interface{}) AuthData {
+	a.StructuredData = data
+	return a
+}
+
+// AddStructuredData adds a key-value pair to the structured data map
+func (a AuthData) AddStructuredData(key string, value interface{}) AuthData {
+	if a.StructuredData == nil {
+		a.StructuredData = make(map[string]interface{})
+	} else {
+		// Create a deep copy of the map to prevent shared references
+		cloned := make(map[string]interface{}, len(a.StructuredData))
+		for k, v := range a.StructuredData {
+			cloned[k] = v
+		}
+		a.StructuredData = cloned
+	}
+	a.StructuredData[key] = value
 	return a
 }

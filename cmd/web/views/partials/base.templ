@@ -2,6 +2,7 @@ package partials
 
 import (
 	"strings"
+	"encoding/json"
 	
 	"github.com/hail2skins/armory/cmd/web/views/data"
 )
@@ -9,6 +10,21 @@ import (
 // Helper function to check if a path is an admin path
 func isAdminPath(path string) bool {
 	return strings.HasPrefix(path, "/admin")
+}
+
+// Helper function to convert structured data to JSON string
+func structuredDataToJSON(data map[string]interface{}) string {
+	// Add schema context if not present
+	if _, ok := data["@context"]; !ok {
+		data["@context"] = "https://schema.org"
+	}
+	
+	// Convert to JSON
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		return ""
+	}
+	return string(jsonData)
 }
 
 templ Base(data data.AuthData, children templ.Component) {
@@ -27,12 +43,78 @@ templ Base(data data.AuthData, children templ.Component) {
 			
 			<meta charset="utf-8"/>
 			<meta name="viewport" content="width=device-width,initial-scale=1"/>
+			
+			<!-- Primary Meta Tags -->
 			if data.Title != "" {
 				<title>{ data.Title } | { data.SiteName }</title>
+				<meta name="title" content={ data.Title + " | " + data.SiteName }/>
 			} else {
 				<title>{ data.SiteName }</title>
+				<meta name="title" content={ data.SiteName }/>
 			}
+			
+			<!-- Meta Description -->
+			if data.MetaDescription != "" {
+				<meta name="description" content={ data.MetaDescription }/>
+			}
+			
+			<!-- Meta Keywords (if provided) -->
+			if data.MetaKeywords != "" {
+				<meta name="keywords" content={ data.MetaKeywords }/>
+			}
+			
+			<!-- Canonical URL -->
+			if data.CanonicalURL != "" {
+				<link rel="canonical" href={ data.CanonicalURL }/>
+			}
+			
+			<!-- Open Graph / Facebook -->
+			if data.Title != "" {
+				<meta property="og:title" content={ data.Title + " | " + data.SiteName }/>
+			} else {
+				<meta property="og:title" content={ data.SiteName }/>
+			}
+			<meta property="og:site_name" content={ data.SiteName }/>
+			if data.OgType != "" {
+				<meta property="og:type" content={ data.OgType }/>
+			} else {
+				<meta property="og:type" content="website"/>
+			}
+			if data.MetaDescription != "" {
+				<meta property="og:description" content={ data.MetaDescription }/>
+			}
+			if data.CanonicalURL != "" {
+				<meta property="og:url" content={ data.CanonicalURL }/>
+			}
+			if data.OgImage != "" {
+				<meta property="og:image" content={ data.OgImage }/>
+				<meta property="og:image:alt" content={ data.Title + " | " + data.SiteName }/>
+			}
+			
+			<!-- Twitter -->
+			<meta name="twitter:card" content="summary_large_image"/>
+			if data.Title != "" {
+				<meta name="twitter:title" content={ data.Title + " | " + data.SiteName }/>
+			} else {
+				<meta name="twitter:title" content={ data.SiteName }/>
+			}
+			if data.MetaDescription != "" {
+				<meta name="twitter:description" content={ data.MetaDescription }/>
+			}
+			if data.OgImage != "" {
+				<meta name="twitter:image" content={ data.OgImage }/>
+			}
+			
+			<!-- Structured Data / JSON-LD -->
+			if len(data.StructuredData) > 0 {
+				<script type="application/ld+json">
+					{ structuredDataToJSON(data.StructuredData) }
+				</script>
+			}
+			
+			<!-- Favicon -->
 			<link rel="icon" href="/favicon.ico" type="image/x-icon"/>
+			
 			<!-- Tailwind CDN -->
 			<script src="https://cdn.tailwindcss.com"></script>
 			<!-- Local compiled CSS -->

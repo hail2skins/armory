@@ -53,9 +53,12 @@ func (h *HomeController) HomeHandler(c *gin.Context) {
 
 	// Try to get auth data from context first
 	if authDataInterface, exists := c.Get("authData"); exists {
-		if data, ok := authDataInterface.(data.AuthData); ok {
+		if authData, ok := authDataInterface.(data.AuthData); ok {
 			// Use the auth data that already has roles
-			homeData.AuthData = data.WithTitle("Home")
+			homeData.AuthData = authData.WithTitle("Home")
+
+			// Apply SEO enhancements
+			homeData.AuthData = data.EnhanceHomePageSEO(homeData.AuthData, c.Request.Host)
 
 			// Log authData for debugging
 			logger.Info("HomeHandler authData", map[string]interface{}{
@@ -104,6 +107,9 @@ func (h *HomeController) HomeHandler(c *gin.Context) {
 		authData.Authenticated = authenticated
 		authData.Title = "Home"
 
+		// Apply SEO enhancements
+		authData = data.EnhanceHomePageSEO(authData, c.Request.Host)
+
 		// Check for flash messages directly from session
 		session := sessions.Default(c)
 		if flashes := session.Flashes(); len(flashes) > 0 {
@@ -151,21 +157,24 @@ func (h *HomeController) AboutHandler(c *gin.Context) {
 
 	// Try to get auth data from context first
 	if authDataInterface, exists := c.Get("authData"); exists {
-		if data, ok := authDataInterface.(data.AuthData); ok {
+		if authData, ok := authDataInterface.(data.AuthData); ok {
 			// Use the auth data that already has roles
-			aboutData.AuthData = data.WithTitle("About")
+			aboutData.AuthData = authData.WithTitle("About")
+
+			// Apply SEO enhancements
+			aboutData.AuthData = data.EnhanceAboutPageSEO(aboutData.AuthData, c.Request.Host)
 
 			// Re-fetch roles from Casbin to ensure they're fresh
-			if data.Authenticated && data.Email != "" {
+			if authData.Authenticated && authData.Email != "" {
 				// Get Casbin from context
 				if casbinAuth, exists := c.Get("casbinAuth"); exists && casbinAuth != nil {
 					if ca, ok := casbinAuth.(interface{ GetUserRoles(string) []string }); ok {
-						roles := ca.GetUserRoles(data.Email)
+						roles := ca.GetUserRoles(authData.Email)
 						aboutData.AuthData = aboutData.AuthData.WithRoles(roles)
 
 						// Log roles for debugging
 						logger.Info("About page - Casbin roles for user", map[string]interface{}{
-							"email":   data.Email,
+							"email":   authData.Email,
 							"roles":   roles,
 							"isAdmin": aboutData.AuthData.IsCasbinAdmin,
 						})
@@ -193,6 +202,9 @@ func (h *HomeController) AboutHandler(c *gin.Context) {
 		authData := data.NewAuthData()
 		authData.Title = "About"
 		authData.Authenticated = authenticated
+
+		// Apply SEO enhancements
+		authData = data.EnhanceAboutPageSEO(authData, c.Request.Host)
 
 		// Check for flash messages directly from session
 		session := sessions.Default(c)
@@ -237,21 +249,24 @@ func (h *HomeController) ContactHandler(c *gin.Context) {
 
 	// Try to get auth data from context first
 	if authDataInterface, exists := c.Get("authData"); exists {
-		if data, ok := authDataInterface.(data.AuthData); ok {
+		if authData, ok := authDataInterface.(data.AuthData); ok {
 			// Use the auth data that already has roles
-			contactData.AuthData = data.WithTitle("Contact")
+			contactData.AuthData = authData.WithTitle("Contact")
+
+			// Apply SEO enhancements
+			contactData.AuthData = data.EnhanceContactPageSEO(contactData.AuthData, c.Request.Host)
 
 			// Re-fetch roles from Casbin to ensure they're fresh
-			if data.Authenticated && data.Email != "" {
+			if authData.Authenticated && authData.Email != "" {
 				// Get Casbin from context
 				if casbinAuth, exists := c.Get("casbinAuth"); exists && casbinAuth != nil {
 					if ca, ok := casbinAuth.(interface{ GetUserRoles(string) []string }); ok {
-						roles := ca.GetUserRoles(data.Email)
+						roles := ca.GetUserRoles(authData.Email)
 						contactData.AuthData = contactData.AuthData.WithRoles(roles)
 
 						// Log roles for debugging
 						logger.Info("Contact page - Casbin roles for user", map[string]interface{}{
-							"email":   data.Email,
+							"email":   authData.Email,
 							"roles":   roles,
 							"isAdmin": contactData.AuthData.IsCasbinAdmin,
 						})
@@ -279,6 +294,9 @@ func (h *HomeController) ContactHandler(c *gin.Context) {
 		authData := data.NewAuthData()
 		authData.Title = "Contact"
 		authData.Authenticated = authenticated
+
+		// Apply SEO enhancements
+		authData = data.EnhanceContactPageSEO(authData, c.Request.Host)
 
 		// Check for flash messages directly from session
 		session := sessions.Default(c)

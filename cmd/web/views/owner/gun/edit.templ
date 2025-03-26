@@ -85,6 +85,29 @@ templ Edit(data *data.OwnerData) {
 		_, err = io.WriteString(w, `
 				</div>
 				<div class="mb-4">
+					<label class="block text-gunmetal-700 text-sm font-bold mb-2" for="purpose">
+						Purpose (Optional)
+					</label>
+					<input class="shadow appearance-none border rounded w-full py-2 px-3 text-gunmetal-800 leading-tight focus:outline-none focus:shadow-outline" 
+						id="purpose" type="text" name="purpose" value="`+data.Gun.Purpose+`" maxlength="100">
+					<p class="text-gunmetal-500 text-xs">Examples: Carry, Plinking, Home Defense, Target Shooting, Hunting, Competition</p>
+					`)
+		if err != nil {
+			return err
+		}
+
+		if purposeError, ok := data.FormErrors["purpose"]; ok {
+			_, err = io.WriteString(w, `
+					<p class="text-red-500 text-xs italic">`+purposeError+`</p>
+					`)
+			if err != nil {
+				return err
+			}
+		}
+
+		_, err = io.WriteString(w, `
+				</div>
+				<div class="mb-4">
 					<label class="block text-gunmetal-700 text-sm font-bold mb-2" for="acquired_date">
 						Acquired Date
 					</label>

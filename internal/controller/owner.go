@@ -407,11 +407,12 @@ func (o *OwnerController) Create(c *gin.Context) {
 	// Get all form values
 	name := c.PostForm("name")
 	serialNumber := c.PostForm("serial_number")
-	acquiredDateStr := c.PostForm("acquired")
+	acquiredDateStr := c.PostForm("acquired_date")
 	weaponTypeIDStr := c.PostForm("weapon_type_id")
 	caliberIDStr := c.PostForm("caliber_id")
 	manufacturerIDStr := c.PostForm("manufacturer_id")
 	paidStr := c.PostForm("paid")
+	purpose := c.PostForm("purpose")
 
 	logger.Info("Form data received", map[string]interface{}{
 		"name":            name,
@@ -421,6 +422,7 @@ func (o *OwnerController) Create(c *gin.Context) {
 		"caliber_id":      caliberIDStr,
 		"manufacturer_id": manufacturerIDStr,
 		"paid":            paidStr,
+		"purpose":         purpose,
 	})
 
 	// Get current user
@@ -491,11 +493,11 @@ func (o *OwnerController) Create(c *gin.Context) {
 	if acquiredDateStr != "" {
 		parsedDate, err := time.Parse("2006-01-02", acquiredDateStr)
 		if err != nil {
-			errors["acquired"] = "Invalid date format, use MM-DD-YYYY"
+			errors["acquired_date"] = "Invalid date format, use MM-DD-YYYY"
 		} else {
 			// Check if date is in the future
 			if parsedDate.After(time.Now()) {
-				errors["acquired"] = "Acquisition date cannot be in the future"
+				errors["acquired_date"] = "Acquisition date cannot be in the future"
 			} else {
 				acquiredDate = &parsedDate
 			}
@@ -557,6 +559,7 @@ func (o *OwnerController) Create(c *gin.Context) {
 	newGun := &models.Gun{
 		Name:           name,
 		SerialNumber:   serialNumber,
+		Purpose:        purpose,
 		Acquired:       acquiredDate,
 		WeaponTypeID:   uint(weaponTypeID),
 		CaliberID:      uint(caliberID),
@@ -590,7 +593,7 @@ func (o *OwnerController) Create(c *gin.Context) {
 		case models.ErrNegativePrice:
 			errors["paid"] = "Price cannot be negative"
 		case models.ErrFutureDate:
-			errors["acquired"] = "Acquisition date cannot be in the future"
+			errors["acquired_date"] = "Acquisition date cannot be in the future"
 		case models.ErrInvalidWeaponType:
 			errors["weapon_type_id"] = "Selected weapon type doesn't exist"
 		case models.ErrInvalidCaliber:
@@ -1135,6 +1138,7 @@ func (o *OwnerController) Update(c *gin.Context) {
 		caliberIDStr := c.PostForm("caliber_id")
 		manufacturerIDStr := c.PostForm("manufacturer_id")
 		paidStr := c.PostForm("paid")
+		purpose := c.PostForm("purpose")
 
 		// Initialize form errors map
 		formErrors := make(map[string]string)
@@ -1240,6 +1244,7 @@ func (o *OwnerController) Update(c *gin.Context) {
 		updatedGun := &models.Gun{
 			Name:           name,
 			SerialNumber:   serialNumber,
+			Purpose:        purpose,
 			Acquired:       acquiredDate,
 			WeaponTypeID:   uint(weaponTypeID),
 			CaliberID:      uint(caliberID),
@@ -1396,6 +1401,7 @@ func (o *OwnerController) Update(c *gin.Context) {
 	caliberIDStr := c.PostForm("caliber_id")
 	manufacturerIDStr := c.PostForm("manufacturer_id")
 	paidStr := c.PostForm("paid")
+	purpose := c.PostForm("purpose")
 
 	// Initialize form errors map
 	formErrors := make(map[string]string)
@@ -1501,6 +1507,7 @@ func (o *OwnerController) Update(c *gin.Context) {
 	updatedGun := &models.Gun{
 		Name:           name,
 		SerialNumber:   serialNumber,
+		Purpose:        purpose,
 		Acquired:       acquiredDate,
 		WeaponTypeID:   uint(weaponTypeID),
 		CaliberID:      uint(caliberID),

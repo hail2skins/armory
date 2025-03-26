@@ -88,6 +88,9 @@ func (p *PaymentController) PricingHandler(c *gin.Context) {
 	authData.Authenticated = authenticated
 	authData.Title = "Pricing"
 
+	// Apply SEO enhancements
+	authData = data.EnhancePricingPageSEO(authData, c.Request.Host)
+
 	// Set email if authenticated
 	if authenticated {
 		authData.Email = userInfo.GetUserName()
@@ -113,6 +116,9 @@ func (p *PaymentController) PricingHandler(c *gin.Context) {
 		if contextAuthData, ok := authDataInterface.(data.AuthData); ok {
 			// Use the auth data that already has roles, maintaining our title
 			authData = contextAuthData.WithTitle("Pricing")
+
+			// Apply SEO enhancements
+			authData = data.EnhancePricingPageSEO(authData, c.Request.Host)
 
 			// Re-fetch roles from Casbin to ensure they're fresh
 			if authenticated && authData.Email != "" {
