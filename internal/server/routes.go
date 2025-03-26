@@ -65,6 +65,10 @@ func (s *Server) RegisterRoutes() http.Handler {
 	// Register owner routes
 	RegisterOwnerRoutes(r, s.db, authController)
 
+	// Register sitemap routes - this must be done after all other routes are registered
+	sitemapController := controller.NewSitemapController(r)
+	sitemapController.RegisterRoutes(r)
+
 	return r
 }
 
