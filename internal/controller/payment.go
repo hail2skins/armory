@@ -88,6 +88,28 @@ func (p *PaymentController) PricingHandler(c *gin.Context) {
 	authData.Authenticated = authenticated
 	authData.Title = "Pricing"
 
+	// Set SEO metadata
+	authData = authData.WithMetaDescription("Choose from our flexible pricing plans for The Virtual Armory. From free basic access to premium lifetime memberships, find the plan that fits your collection management needs.")
+	authData = authData.WithOgImage("/assets/pricing-back.jpg")
+	authData = authData.WithCanonicalURL("https://" + c.Request.Host + "/pricing")
+	authData = authData.WithMetaKeywords("virtual armory pricing, gun collection subscription, firearm tracking plans, arsenal management cost")
+	authData = authData.WithOgType("website")
+
+	// Add JSON-LD structured data for the pricing page
+	authData = authData.WithStructuredData(map[string]interface{}{
+		"@context":    "https://schema.org",
+		"@type":       "Product",
+		"name":        "The Virtual Armory Subscription",
+		"description": "Digital firearm collection management service for responsible gun owners",
+		"offers": map[string]interface{}{
+			"@type":         "AggregateOffer",
+			"priceCurrency": "USD",
+			"lowPrice":      "0",
+			"highPrice":     "100",
+			"offerCount":    "4",
+		},
+	})
+
 	// Set email if authenticated
 	if authenticated {
 		authData.Email = userInfo.GetUserName()
@@ -113,6 +135,28 @@ func (p *PaymentController) PricingHandler(c *gin.Context) {
 		if contextAuthData, ok := authDataInterface.(data.AuthData); ok {
 			// Use the auth data that already has roles, maintaining our title
 			authData = contextAuthData.WithTitle("Pricing")
+
+			// Set SEO metadata
+			authData = authData.WithMetaDescription("Choose from our flexible pricing plans for The Virtual Armory. From free basic access to premium lifetime memberships, find the plan that fits your collection management needs.")
+			authData = authData.WithOgImage("/assets/pricing-back.jpg")
+			authData = authData.WithCanonicalURL("https://" + c.Request.Host + "/pricing")
+			authData = authData.WithMetaKeywords("virtual armory pricing, gun collection subscription, firearm tracking plans, arsenal management cost")
+			authData = authData.WithOgType("website")
+
+			// Add JSON-LD structured data for the pricing page
+			authData = authData.WithStructuredData(map[string]interface{}{
+				"@context":    "https://schema.org",
+				"@type":       "Product",
+				"name":        "The Virtual Armory Subscription",
+				"description": "Digital firearm collection management service for responsible gun owners",
+				"offers": map[string]interface{}{
+					"@type":         "AggregateOffer",
+					"priceCurrency": "USD",
+					"lowPrice":      "0",
+					"highPrice":     "100",
+					"offerCount":    "4",
+				},
+			})
 
 			// Re-fetch roles from Casbin to ensure they're fresh
 			if authenticated && authData.Email != "" {
