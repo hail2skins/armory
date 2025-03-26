@@ -154,6 +154,7 @@ templ StripeSecurityPage(data *StripeSecurityData) {
 							
 							<div class="mb-4">
 								<form method="post" action="/admin/stripe-security/toggle-filtering" class="mb-2">
+									<input type="hidden" name="csrf_token" value="` + data.CSRFToken + `">
 									<button type="submit" class="px-4 py-2 bg-gunmetal-700 hover:bg-gunmetal-800 text-white rounded font-medium transition">
 										`)
 		if err != nil {
@@ -174,6 +175,7 @@ templ StripeSecurityPage(data *StripeSecurityData) {
 								</form>
 								
 								<form method="post" action="/admin/stripe-security/refresh" class="mb-2">
+									<input type="hidden" name="csrf_token" value="` + data.CSRFToken + `">
 									<button type="submit" class="px-4 py-2 bg-brass-500 hover:bg-brass-600 text-white rounded font-medium transition">
 										Refresh IP Ranges
 									</button>
