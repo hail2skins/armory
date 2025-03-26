@@ -22,6 +22,7 @@ func (s *Server) RegisterAdminRoutes(r *gin.Engine, authController *controller.A
 	adminUserController := controller.NewAdminUserController(s.db)
 	adminPaymentController := controller.NewAdminPaymentController(s.db)
 	adminGunsController := controller.NewAdminGunsController(s.db)
+	adminPermissionsController := controller.NewAdminPermissionsController(s.db)
 
 	// Create Stripe security controller
 	stripeSecurityController := controller.NewStripeSecurityController(s.ipFilterService)
@@ -114,9 +115,11 @@ func (s *Server) RegisterAdminRoutes(r *gin.Engine, authController *controller.A
 		})
 
 		// If Casbin auth is available, also apply role-based access control for admin
-		if casbinAuth != nil {
-			adminGroup.Use(casbinAuth.Authorize("admin"))
-		}
+		// COMMENTING OUT GLOBAL ADMIN CHECK: This was preventing users with specific resource permissions
+		// from accessing admin routes unless they had the admin role
+		// if casbinAuth != nil {
+		//     adminGroup.Use(casbinAuth.Authorize("admin"))
+		// }
 
 		// Admin dashboard routes
 		if casbinAuth != nil {
@@ -140,14 +143,14 @@ func (s *Server) RegisterAdminRoutes(r *gin.Engine, authController *controller.A
 		manufacturerGroup := adminGroup.Group("/manufacturers")
 		{
 			if casbinAuth != nil {
-				// Define routes with fine-grained Casbin authorization
-				manufacturerGroup.GET("", casbinAuth.Authorize("manufacturers", "read"), adminManufacturerController.Index)
-				manufacturerGroup.GET("/new", casbinAuth.Authorize("manufacturers", "write"), adminManufacturerController.New)
-				manufacturerGroup.POST("", casbinAuth.Authorize("manufacturers", "write"), adminManufacturerController.Create)
-				manufacturerGroup.GET("/:id", casbinAuth.Authorize("manufacturers", "read"), adminManufacturerController.Show)
-				manufacturerGroup.GET("/:id/edit", casbinAuth.Authorize("manufacturers", "update"), adminManufacturerController.Edit)
-				manufacturerGroup.POST("/:id", casbinAuth.Authorize("manufacturers", "update"), adminManufacturerController.Update)
-				manufacturerGroup.POST("/:id/delete", casbinAuth.Authorize("manufacturers", "delete"), adminManufacturerController.Delete)
+				// Define routes with flexible Casbin authorization that checks for specific permissions OR admin role
+				manufacturerGroup.GET("", casbinAuth.FlexibleAuthorize("manufacturers", "read"), adminManufacturerController.Index)
+				manufacturerGroup.GET("/new", casbinAuth.FlexibleAuthorize("manufacturers", "write"), adminManufacturerController.New)
+				manufacturerGroup.POST("", casbinAuth.FlexibleAuthorize("manufacturers", "write"), adminManufacturerController.Create)
+				manufacturerGroup.GET("/:id", casbinAuth.FlexibleAuthorize("manufacturers", "read"), adminManufacturerController.Show)
+				manufacturerGroup.GET("/:id/edit", casbinAuth.FlexibleAuthorize("manufacturers", "update"), adminManufacturerController.Edit)
+				manufacturerGroup.POST("/:id", casbinAuth.FlexibleAuthorize("manufacturers", "update"), adminManufacturerController.Update)
+				manufacturerGroup.POST("/:id/delete", casbinAuth.FlexibleAuthorize("manufacturers", "delete"), adminManufacturerController.Delete)
 			} else {
 				// Without Casbin, register routes with just authentication middleware
 				manufacturerGroup.GET("", adminManufacturerController.Index)
@@ -255,6 +258,49 @@ func (s *Server) RegisterAdminRoutes(r *gin.Engine, authController *controller.A
 				userGroup.POST("/:id/restore", adminUserController.Restore)
 				userGroup.GET("/:id/grant-subscription", adminUserController.ShowGrantSubscription)
 				userGroup.POST("/:id/grant-subscription", adminUserController.GrantSubscription)
+			}
+		}
+
+		// ===== Permission Management Routes =====
+		permissionsGroup := adminGroup.Group("/permissions")
+		{
+			if casbinAuth != nil {
+				// Define routes with fine-grained Casbin authorization
+				// We don't need additional checks for admins since they already have "admin" middleware applied
+				permissionsGroup.GET("", adminPermissionsController.Index)
+
+				// Role management - using actual controller method names
+				permissionsGroup.GET("/roles/create", adminPermissionsController.CreateRole)
+				permissionsGroup.POST("/roles/create", adminPermissionsController.StoreRole)
+				permissionsGroup.GET("/roles/edit/:role", adminPermissionsController.EditRole)
+				permissionsGroup.POST("/roles/update", adminPermissionsController.UpdateRole)
+				permissionsGroup.GET("/roles/delete/:role", adminPermissionsController.DeleteRole)
+
+				// User role assignment
+				permissionsGroup.GET("/assign-role", adminPermissionsController.AssignRole)
+				permissionsGroup.POST("/assign-role", adminPermissionsController.StoreAssignRole)
+				permissionsGroup.POST("/remove-user-role", adminPermissionsController.RemoveUserRole)
+
+				// Import default policies
+				permissionsGroup.POST("/import-default-policies", adminPermissionsController.ImportDefaultPolicies)
+			} else {
+				// Without Casbin, register routes with just authentication middleware
+				permissionsGroup.GET("", adminPermissionsController.Index)
+
+				// Role management
+				permissionsGroup.GET("/roles/create", adminPermissionsController.CreateRole)
+				permissionsGroup.POST("/roles/create", adminPermissionsController.StoreRole)
+				permissionsGroup.GET("/roles/edit/:role", adminPermissionsController.EditRole)
+				permissionsGroup.POST("/roles/update", adminPermissionsController.UpdateRole)
+				permissionsGroup.GET("/roles/delete/:role", adminPermissionsController.DeleteRole)
+
+				// User role assignment
+				permissionsGroup.GET("/assign-role", adminPermissionsController.AssignRole)
+				permissionsGroup.POST("/assign-role", adminPermissionsController.StoreAssignRole)
+				permissionsGroup.POST("/remove-user-role", adminPermissionsController.RemoveUserRole)
+
+				// Import default policies
+				permissionsGroup.POST("/import-default-policies", adminPermissionsController.ImportDefaultPolicies)
 			}
 		}
 

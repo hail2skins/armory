@@ -1,0 +1,108 @@
+package permissions
+
+import (
+	"context"
+	"io"
+
+	"github.com/hail2skins/armory/cmd/web/views/data"
+	"github.com/hail2skins/armory/cmd/web/views/partials"
+)
+
+templ EditRole(viewData data.ViewData) {
+	@partials.Base(viewData.AuthData, templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+		formData := viewData.Data.(*data.EditRoleViewData)
+		
+		_, err := io.WriteString(w, `
+			<div class="container mx-auto px-4 py-8">
+				<div class="mb-8">
+					<h1 class="text-2xl font-bold text-gunmetal-800">Edit Role: `+formData.Role+`</h1>
+					<p class="text-gray-600">Modify permissions for this role.</p>
+				</div>
+		`)
+		if err != nil {
+			return err
+		}
+
+		if viewData.ErrorMsg != "" {
+			_, err = io.WriteString(w, `
+				<div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4" role="alert">
+					<span class="block sm:inline">`+viewData.ErrorMsg+`</span>
+				</div>
+			`)
+			if err != nil {
+				return err
+			}
+		}
+
+		_, err = io.WriteString(w, `
+			<div class="bg-white rounded-lg shadow">
+				<div class="p-6">
+					<form method="POST" action="/admin/permissions/roles/update">
+						<input type="hidden" name="csrf_token" value="`+viewData.AuthData.CSRFToken+`">
+						<input type="hidden" name="role" value="`+formData.Role+`">
+						
+						<div class="mb-6">
+							<h3 class="text-lg font-semibold mb-3">Permissions</h3>
+							<p class="text-gray-500 text-sm mb-4">Select resources and actions this role should have access to.</p>
+
+							<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+		`)
+		if err != nil {
+			return err
+		}
+
+		for _, resource := range formData.Resources {
+			_, err = io.WriteString(w, `
+								<div class="border rounded-lg p-4">
+									<h4 class="font-medium mb-2">`+resource+`</h4>
+									<div class="space-y-2">
+			`)
+			if err != nil {
+				return err
+			}
+			
+			for _, action := range formData.Actions {
+				permKey := resource + ":" + action
+				checked := ""
+				if formData.SelectedPermissions[permKey] {
+					checked = " checked"
+				}
+				
+				_, err = io.WriteString(w, `
+										<div class="flex items-center">
+											<input type="checkbox" id="perm_`+resource+`_`+action+`" name="permissions" value="`+resource+`:`+action+`"`+checked+` 
+													class="mr-2 h-4 w-4 text-brass-600 focus:ring-brass-500 border-gray-300 rounded">
+											<label for="perm_`+resource+`_`+action+`" class="text-gray-700">`+action+`</label>
+										</div>
+				`)
+				if err != nil {
+					return err
+				}
+			}
+			
+			_, err = io.WriteString(w, `
+									</div>
+								</div>
+			`)
+			if err != nil {
+				return err
+			}
+		}
+
+		_, err = io.WriteString(w, `
+							</div>
+						</div>
+
+						<div class="flex items-center justify-between">
+							<a href="/admin/permissions" class="text-brass-600 hover:text-brass-700">Cancel</a>
+							<button type="submit" class="bg-brass-500 hover:bg-brass-600 text-white font-medium py-2 px-4 rounded">
+								Update Role
+							</button>
+						</div>
+					</form>
+				</div>
+			</div>
+		`)
+		return err
+	}))
+} 

@@ -145,6 +145,7 @@ func (s *service) AutoMigrate() error {
 		&models.WeaponType{},
 		&models.Gun{},
 		&models.Promotion{},
+		&models.CasbinRule{},
 	)
 }
 
