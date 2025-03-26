@@ -20,10 +20,19 @@ templ PromotionBanner(data data.AuthData) {
 						if promo.Banner != "" {
 							<img src={ promo.Banner } alt="Promotion" class="h-12 mr-3 rounded" />
 						}
-						<p class="text-md">Register now and get <span class="font-bold">{ strconv.Itoa(promo.BenefitDays) } days free!</span></p>
+						if promo.ApplyToExistingUsers {
+							<p class="text-md">Register OR Login and get <span class="font-bold">{ strconv.Itoa(promo.BenefitDays) } days free!</span></p>
+						} else {
+							<p class="text-md">Register now and get <span class="font-bold">{ strconv.Itoa(promo.BenefitDays) } days free!</span></p>
+						}
 					</div>
 					<div class="pr-4 flex items-center justify-end">
-						<a href="/register" class="bg-white text-amber-600 px-4 py-2 rounded font-bold hover:bg-gray-100 transition-colors duration-200">Sign Up</a>
+						if promo.ApplyToExistingUsers {
+							<a href="/register" class="bg-white text-amber-600 px-4 py-2 rounded font-bold hover:bg-gray-100 transition-colors duration-200 mr-2">Sign Up</a>
+							<a href="/login" class="bg-white text-amber-600 px-4 py-2 rounded font-bold hover:bg-gray-100 transition-colors duration-200">Login</a>
+						} else {
+							<a href="/register" class="bg-white text-amber-600 px-4 py-2 rounded font-bold hover:bg-gray-100 transition-colors duration-200">Sign Up</a>
+						}
 					</div>
 				} else {
 					<!-- Fallback if type assertion fails -->

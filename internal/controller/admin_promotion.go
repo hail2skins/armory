@@ -85,10 +85,11 @@ func (c *AdminPromotionController) New(ctx *gin.Context) {
 
 	// Prepare initial form data
 	formData := map[string]interface{}{
-		"startDateFormatted":   time.Now().Format("2006-01-02"),
-		"endDateFormatted":     time.Now().AddDate(0, 1, 0).Format("2006-01-02"),
-		"activeChecked":        true,
-		"displayOnHomeChecked": false,
+		"startDateFormatted":          time.Now().Format("2006-01-02"),
+		"endDateFormatted":            time.Now().AddDate(0, 1, 0).Format("2006-01-02"),
+		"activeChecked":               true,
+		"displayOnHomeChecked":        false,
+		"applyToExistingUsersChecked": false,
 		"typeOptions": []map[string]interface{}{
 			{"value": "free_trial", "label": "Free Trial", "selected": true},
 			{"value": "discount", "label": "Discount", "selected": false},
@@ -112,10 +113,11 @@ func (c *AdminPromotionController) Create(ctx *gin.Context) {
 	if err := ctx.Request.ParseForm(); err != nil {
 		// Prepare form data for display
 		formData := map[string]interface{}{
-			"startDateFormatted":   time.Now().Format("2006-01-02"),
-			"endDateFormatted":     time.Now().AddDate(0, 1, 0).Format("2006-01-02"),
-			"activeChecked":        true,
-			"displayOnHomeChecked": false,
+			"startDateFormatted":          time.Now().Format("2006-01-02"),
+			"endDateFormatted":            time.Now().AddDate(0, 1, 0).Format("2006-01-02"),
+			"activeChecked":               true,
+			"displayOnHomeChecked":        false,
+			"applyToExistingUsersChecked": false,
 			"typeOptions": []map[string]interface{}{
 				{"value": "free_trial", "label": "Free Trial", "selected": true},
 				{"value": "discount", "label": "Discount", "selected": false},
@@ -138,6 +140,7 @@ func (c *AdminPromotionController) Create(ctx *gin.Context) {
 	// Parse active and displayOnHome checkboxes
 	active := ctx.PostForm("active") == "true"
 	displayOnHome := ctx.PostForm("displayOnHome") == "true"
+	applyToExistingUsers := ctx.PostForm("applyToExistingUsers") == "true"
 
 	// Parse numeric values
 	benefitDays := 0
@@ -146,10 +149,11 @@ func (c *AdminPromotionController) Create(ctx *gin.Context) {
 		if err != nil {
 			// Re-prepare form data for display
 			formData := map[string]interface{}{
-				"startDateFormatted":   time.Now().Format("2006-01-02"),
-				"endDateFormatted":     time.Now().AddDate(0, 1, 0).Format("2006-01-02"),
-				"activeChecked":        true,
-				"displayOnHomeChecked": false,
+				"startDateFormatted":          time.Now().Format("2006-01-02"),
+				"endDateFormatted":            time.Now().AddDate(0, 1, 0).Format("2006-01-02"),
+				"activeChecked":               true,
+				"displayOnHomeChecked":        false,
+				"applyToExistingUsersChecked": false,
 				"typeOptions": []map[string]interface{}{
 					{"value": "free_trial", "label": "Free Trial", "selected": true},
 					{"value": "discount", "label": "Discount", "selected": false},
@@ -170,10 +174,11 @@ func (c *AdminPromotionController) Create(ctx *gin.Context) {
 	if err != nil {
 		// Re-prepare form data for display
 		formData := map[string]interface{}{
-			"startDateFormatted":   time.Now().Format("2006-01-02"),
-			"endDateFormatted":     time.Now().AddDate(0, 1, 0).Format("2006-01-02"),
-			"activeChecked":        true,
-			"displayOnHomeChecked": false,
+			"startDateFormatted":          time.Now().Format("2006-01-02"),
+			"endDateFormatted":            time.Now().AddDate(0, 1, 0).Format("2006-01-02"),
+			"activeChecked":               true,
+			"displayOnHomeChecked":        false,
+			"applyToExistingUsersChecked": false,
 			"typeOptions": []map[string]interface{}{
 				{"value": "free_trial", "label": "Free Trial", "selected": true},
 				{"value": "discount", "label": "Discount", "selected": false},
@@ -191,10 +196,11 @@ func (c *AdminPromotionController) Create(ctx *gin.Context) {
 	if err != nil {
 		// Re-prepare form data for display
 		formData := map[string]interface{}{
-			"startDateFormatted":   time.Now().Format("2006-01-02"),
-			"endDateFormatted":     time.Now().AddDate(0, 1, 0).Format("2006-01-02"),
-			"activeChecked":        true,
-			"displayOnHomeChecked": false,
+			"startDateFormatted":          time.Now().Format("2006-01-02"),
+			"endDateFormatted":            time.Now().AddDate(0, 1, 0).Format("2006-01-02"),
+			"activeChecked":               true,
+			"displayOnHomeChecked":        false,
+			"applyToExistingUsersChecked": false,
 			"typeOptions": []map[string]interface{}{
 				{"value": "free_trial", "label": "Free Trial", "selected": true},
 				{"value": "discount", "label": "Discount", "selected": false},
@@ -212,10 +218,11 @@ func (c *AdminPromotionController) Create(ctx *gin.Context) {
 	if name == "" {
 		// Re-prepare form data for display
 		formData := map[string]interface{}{
-			"startDateFormatted":   time.Now().Format("2006-01-02"),
-			"endDateFormatted":     time.Now().AddDate(0, 1, 0).Format("2006-01-02"),
-			"activeChecked":        true,
-			"displayOnHomeChecked": false,
+			"startDateFormatted":          time.Now().Format("2006-01-02"),
+			"endDateFormatted":            time.Now().AddDate(0, 1, 0).Format("2006-01-02"),
+			"activeChecked":               true,
+			"displayOnHomeChecked":        false,
+			"applyToExistingUsersChecked": false,
 			"typeOptions": []map[string]interface{}{
 				{"value": "free_trial", "label": "Free Trial", "selected": true},
 				{"value": "discount", "label": "Discount", "selected": false},
@@ -232,10 +239,11 @@ func (c *AdminPromotionController) Create(ctx *gin.Context) {
 	if promotionType == "" {
 		// Re-prepare form data for display
 		formData := map[string]interface{}{
-			"startDateFormatted":   time.Now().Format("2006-01-02"),
-			"endDateFormatted":     time.Now().AddDate(0, 1, 0).Format("2006-01-02"),
-			"activeChecked":        true,
-			"displayOnHomeChecked": false,
+			"startDateFormatted":          time.Now().Format("2006-01-02"),
+			"endDateFormatted":            time.Now().AddDate(0, 1, 0).Format("2006-01-02"),
+			"activeChecked":               true,
+			"displayOnHomeChecked":        false,
+			"applyToExistingUsersChecked": false,
 			"typeOptions": []map[string]interface{}{
 				{"value": "free_trial", "label": "Free Trial", "selected": true},
 				{"value": "discount", "label": "Discount", "selected": false},
@@ -252,10 +260,11 @@ func (c *AdminPromotionController) Create(ctx *gin.Context) {
 	if description == "" {
 		// Re-prepare form data for display
 		formData := map[string]interface{}{
-			"startDateFormatted":   time.Now().Format("2006-01-02"),
-			"endDateFormatted":     time.Now().AddDate(0, 1, 0).Format("2006-01-02"),
-			"activeChecked":        true,
-			"displayOnHomeChecked": false,
+			"startDateFormatted":          time.Now().Format("2006-01-02"),
+			"endDateFormatted":            time.Now().AddDate(0, 1, 0).Format("2006-01-02"),
+			"activeChecked":               true,
+			"displayOnHomeChecked":        false,
+			"applyToExistingUsersChecked": false,
 			"typeOptions": []map[string]interface{}{
 				{"value": "free_trial", "label": "Free Trial", "selected": true},
 				{"value": "discount", "label": "Discount", "selected": false},
@@ -272,10 +281,11 @@ func (c *AdminPromotionController) Create(ctx *gin.Context) {
 	if endDate.Before(startDate) {
 		// Re-prepare form data for display
 		formData := map[string]interface{}{
-			"startDateFormatted":   time.Now().Format("2006-01-02"),
-			"endDateFormatted":     time.Now().AddDate(0, 1, 0).Format("2006-01-02"),
-			"activeChecked":        true,
-			"displayOnHomeChecked": false,
+			"startDateFormatted":          time.Now().Format("2006-01-02"),
+			"endDateFormatted":            time.Now().AddDate(0, 1, 0).Format("2006-01-02"),
+			"activeChecked":               true,
+			"displayOnHomeChecked":        false,
+			"applyToExistingUsersChecked": false,
 			"typeOptions": []map[string]interface{}{
 				{"value": "free_trial", "label": "Free Trial", "selected": true},
 				{"value": "discount", "label": "Discount", "selected": false},
@@ -291,25 +301,27 @@ func (c *AdminPromotionController) Create(ctx *gin.Context) {
 
 	// Create new promotion
 	newPromotion := &models.Promotion{
-		Name:          name,
-		Type:          promotionType,
-		Active:        active,
-		StartDate:     startDate,
-		EndDate:       endDate,
-		BenefitDays:   benefitDays,
-		DisplayOnHome: displayOnHome,
-		Description:   description,
-		Banner:        banner,
+		Name:                 name,
+		Type:                 promotionType,
+		Active:               active,
+		StartDate:            startDate,
+		EndDate:              endDate,
+		BenefitDays:          benefitDays,
+		DisplayOnHome:        displayOnHome,
+		ApplyToExistingUsers: applyToExistingUsers,
+		Description:          description,
+		Banner:               banner,
 	}
 
 	// Save to database
 	if err := c.db.CreatePromotion(newPromotion); err != nil {
 		// Prepare form data for display again
 		formData := map[string]interface{}{
-			"startDateFormatted":   startDate.Format("2006-01-02"),
-			"endDateFormatted":     endDate.Format("2006-01-02"),
-			"activeChecked":        active,
-			"displayOnHomeChecked": displayOnHome,
+			"startDateFormatted":          startDate.Format("2006-01-02"),
+			"endDateFormatted":            endDate.Format("2006-01-02"),
+			"activeChecked":               active,
+			"displayOnHomeChecked":        displayOnHome,
+			"applyToExistingUsersChecked": applyToExistingUsers,
 			"typeOptions": []map[string]interface{}{
 				{"value": "free_trial", "label": "Free Trial", "selected": promotionType == "free_trial"},
 				{"value": "discount", "label": "Discount", "selected": promotionType == "discount"},
@@ -402,10 +414,11 @@ func (c *AdminPromotionController) Edit(ctx *gin.Context) {
 
 	// Format dates for the template
 	formData := map[string]interface{}{
-		"startDateFormatted":   promo.StartDate.Format("2006-01-02"),
-		"endDateFormatted":     promo.EndDate.Format("2006-01-02"),
-		"activeChecked":        promo.Active,
-		"displayOnHomeChecked": promo.DisplayOnHome,
+		"startDateFormatted":          promo.StartDate.Format("2006-01-02"),
+		"endDateFormatted":            promo.EndDate.Format("2006-01-02"),
+		"activeChecked":               promo.Active,
+		"displayOnHomeChecked":        promo.DisplayOnHome,
+		"applyToExistingUsersChecked": promo.ApplyToExistingUsers,
 		"typeOptions": []map[string]interface{}{
 			{"value": "free_trial", "label": "Free Trial", "selected": promo.Type == "free_trial"},
 			{"value": "discount", "label": "Discount", "selected": promo.Type == "discount"},
@@ -446,10 +459,11 @@ func (c *AdminPromotionController) Update(ctx *gin.Context) {
 	if err := ctx.Request.ParseForm(); err != nil {
 		// Re-prepare form data for display
 		formData := map[string]interface{}{
-			"startDateFormatted":   existingPromo.StartDate.Format("2006-01-02"),
-			"endDateFormatted":     existingPromo.EndDate.Format("2006-01-02"),
-			"activeChecked":        existingPromo.Active,
-			"displayOnHomeChecked": existingPromo.DisplayOnHome,
+			"startDateFormatted":          existingPromo.StartDate.Format("2006-01-02"),
+			"endDateFormatted":            existingPromo.EndDate.Format("2006-01-02"),
+			"activeChecked":               existingPromo.Active,
+			"displayOnHomeChecked":        existingPromo.DisplayOnHome,
+			"applyToExistingUsersChecked": existingPromo.ApplyToExistingUsers,
 			"typeOptions": []map[string]interface{}{
 				{"value": "free_trial", "label": "Free Trial", "selected": existingPromo.Type == "free_trial"},
 				{"value": "discount", "label": "Discount", "selected": existingPromo.Type == "discount"},
@@ -472,6 +486,7 @@ func (c *AdminPromotionController) Update(ctx *gin.Context) {
 	// Parse active and displayOnHome checkboxes
 	active := ctx.PostForm("active") == "true"
 	displayOnHome := ctx.PostForm("displayOnHome") == "true"
+	applyToExistingUsers := ctx.PostForm("applyToExistingUsers") == "true"
 
 	// Parse numeric values
 	benefitDays := 0
@@ -480,10 +495,11 @@ func (c *AdminPromotionController) Update(ctx *gin.Context) {
 		if err != nil {
 			// Re-prepare form data for display
 			formData := map[string]interface{}{
-				"startDateFormatted":   existingPromo.StartDate.Format("2006-01-02"),
-				"endDateFormatted":     existingPromo.EndDate.Format("2006-01-02"),
-				"activeChecked":        existingPromo.Active,
-				"displayOnHomeChecked": existingPromo.DisplayOnHome,
+				"startDateFormatted":          existingPromo.StartDate.Format("2006-01-02"),
+				"endDateFormatted":            existingPromo.EndDate.Format("2006-01-02"),
+				"activeChecked":               existingPromo.Active,
+				"displayOnHomeChecked":        existingPromo.DisplayOnHome,
+				"applyToExistingUsersChecked": existingPromo.ApplyToExistingUsers,
 				"typeOptions": []map[string]interface{}{
 					{"value": "free_trial", "label": "Free Trial", "selected": existingPromo.Type == "free_trial"},
 					{"value": "discount", "label": "Discount", "selected": existingPromo.Type == "discount"},
@@ -504,10 +520,11 @@ func (c *AdminPromotionController) Update(ctx *gin.Context) {
 	if err != nil {
 		// Re-prepare form data for display
 		formData := map[string]interface{}{
-			"startDateFormatted":   existingPromo.StartDate.Format("2006-01-02"),
-			"endDateFormatted":     existingPromo.EndDate.Format("2006-01-02"),
-			"activeChecked":        existingPromo.Active,
-			"displayOnHomeChecked": existingPromo.DisplayOnHome,
+			"startDateFormatted":          existingPromo.StartDate.Format("2006-01-02"),
+			"endDateFormatted":            existingPromo.EndDate.Format("2006-01-02"),
+			"activeChecked":               existingPromo.Active,
+			"displayOnHomeChecked":        existingPromo.DisplayOnHome,
+			"applyToExistingUsersChecked": existingPromo.ApplyToExistingUsers,
 			"typeOptions": []map[string]interface{}{
 				{"value": "free_trial", "label": "Free Trial", "selected": existingPromo.Type == "free_trial"},
 				{"value": "discount", "label": "Discount", "selected": existingPromo.Type == "discount"},
@@ -525,10 +542,11 @@ func (c *AdminPromotionController) Update(ctx *gin.Context) {
 	if err != nil {
 		// Re-prepare form data for display
 		formData := map[string]interface{}{
-			"startDateFormatted":   existingPromo.StartDate.Format("2006-01-02"),
-			"endDateFormatted":     existingPromo.EndDate.Format("2006-01-02"),
-			"activeChecked":        existingPromo.Active,
-			"displayOnHomeChecked": existingPromo.DisplayOnHome,
+			"startDateFormatted":          existingPromo.StartDate.Format("2006-01-02"),
+			"endDateFormatted":            existingPromo.EndDate.Format("2006-01-02"),
+			"activeChecked":               existingPromo.Active,
+			"displayOnHomeChecked":        existingPromo.DisplayOnHome,
+			"applyToExistingUsersChecked": existingPromo.ApplyToExistingUsers,
 			"typeOptions": []map[string]interface{}{
 				{"value": "free_trial", "label": "Free Trial", "selected": existingPromo.Type == "free_trial"},
 				{"value": "discount", "label": "Discount", "selected": existingPromo.Type == "discount"},
@@ -546,10 +564,11 @@ func (c *AdminPromotionController) Update(ctx *gin.Context) {
 	if name == "" {
 		// Re-prepare form data for display
 		formData := map[string]interface{}{
-			"startDateFormatted":   existingPromo.StartDate.Format("2006-01-02"),
-			"endDateFormatted":     existingPromo.EndDate.Format("2006-01-02"),
-			"activeChecked":        existingPromo.Active,
-			"displayOnHomeChecked": existingPromo.DisplayOnHome,
+			"startDateFormatted":          existingPromo.StartDate.Format("2006-01-02"),
+			"endDateFormatted":            existingPromo.EndDate.Format("2006-01-02"),
+			"activeChecked":               existingPromo.Active,
+			"displayOnHomeChecked":        existingPromo.DisplayOnHome,
+			"applyToExistingUsersChecked": existingPromo.ApplyToExistingUsers,
 			"typeOptions": []map[string]interface{}{
 				{"value": "free_trial", "label": "Free Trial", "selected": existingPromo.Type == "free_trial"},
 				{"value": "discount", "label": "Discount", "selected": existingPromo.Type == "discount"},
@@ -566,10 +585,11 @@ func (c *AdminPromotionController) Update(ctx *gin.Context) {
 	if promotionType == "" {
 		// Re-prepare form data for display
 		formData := map[string]interface{}{
-			"startDateFormatted":   existingPromo.StartDate.Format("2006-01-02"),
-			"endDateFormatted":     existingPromo.EndDate.Format("2006-01-02"),
-			"activeChecked":        existingPromo.Active,
-			"displayOnHomeChecked": existingPromo.DisplayOnHome,
+			"startDateFormatted":          existingPromo.StartDate.Format("2006-01-02"),
+			"endDateFormatted":            existingPromo.EndDate.Format("2006-01-02"),
+			"activeChecked":               existingPromo.Active,
+			"displayOnHomeChecked":        existingPromo.DisplayOnHome,
+			"applyToExistingUsersChecked": existingPromo.ApplyToExistingUsers,
 			"typeOptions": []map[string]interface{}{
 				{"value": "free_trial", "label": "Free Trial", "selected": existingPromo.Type == "free_trial"},
 				{"value": "discount", "label": "Discount", "selected": existingPromo.Type == "discount"},
@@ -586,10 +606,11 @@ func (c *AdminPromotionController) Update(ctx *gin.Context) {
 	if description == "" {
 		// Re-prepare form data for display
 		formData := map[string]interface{}{
-			"startDateFormatted":   existingPromo.StartDate.Format("2006-01-02"),
-			"endDateFormatted":     existingPromo.EndDate.Format("2006-01-02"),
-			"activeChecked":        existingPromo.Active,
-			"displayOnHomeChecked": existingPromo.DisplayOnHome,
+			"startDateFormatted":          existingPromo.StartDate.Format("2006-01-02"),
+			"endDateFormatted":            existingPromo.EndDate.Format("2006-01-02"),
+			"activeChecked":               existingPromo.Active,
+			"displayOnHomeChecked":        existingPromo.DisplayOnHome,
+			"applyToExistingUsersChecked": existingPromo.ApplyToExistingUsers,
 			"typeOptions": []map[string]interface{}{
 				{"value": "free_trial", "label": "Free Trial", "selected": existingPromo.Type == "free_trial"},
 				{"value": "discount", "label": "Discount", "selected": existingPromo.Type == "discount"},
@@ -606,10 +627,11 @@ func (c *AdminPromotionController) Update(ctx *gin.Context) {
 	if endDate.Before(startDate) {
 		// Re-prepare form data for display
 		formData := map[string]interface{}{
-			"startDateFormatted":   existingPromo.StartDate.Format("2006-01-02"),
-			"endDateFormatted":     existingPromo.EndDate.Format("2006-01-02"),
-			"activeChecked":        existingPromo.Active,
-			"displayOnHomeChecked": existingPromo.DisplayOnHome,
+			"startDateFormatted":          existingPromo.StartDate.Format("2006-01-02"),
+			"endDateFormatted":            existingPromo.EndDate.Format("2006-01-02"),
+			"activeChecked":               existingPromo.Active,
+			"displayOnHomeChecked":        existingPromo.DisplayOnHome,
+			"applyToExistingUsersChecked": existingPromo.ApplyToExistingUsers,
 			"typeOptions": []map[string]interface{}{
 				{"value": "free_trial", "label": "Free Trial", "selected": existingPromo.Type == "free_trial"},
 				{"value": "discount", "label": "Discount", "selected": existingPromo.Type == "discount"},
@@ -631,6 +653,7 @@ func (c *AdminPromotionController) Update(ctx *gin.Context) {
 	existingPromo.EndDate = endDate
 	existingPromo.BenefitDays = benefitDays
 	existingPromo.DisplayOnHome = displayOnHome
+	existingPromo.ApplyToExistingUsers = applyToExistingUsers
 	existingPromo.Description = description
 	existingPromo.Banner = banner
 
@@ -638,10 +661,11 @@ func (c *AdminPromotionController) Update(ctx *gin.Context) {
 	if err := c.db.UpdatePromotion(existingPromo); err != nil {
 		// Re-prepare form data for display
 		formData := map[string]interface{}{
-			"startDateFormatted":   existingPromo.StartDate.Format("2006-01-02"),
-			"endDateFormatted":     existingPromo.EndDate.Format("2006-01-02"),
-			"activeChecked":        existingPromo.Active,
-			"displayOnHomeChecked": existingPromo.DisplayOnHome,
+			"startDateFormatted":          existingPromo.StartDate.Format("2006-01-02"),
+			"endDateFormatted":            existingPromo.EndDate.Format("2006-01-02"),
+			"activeChecked":               existingPromo.Active,
+			"displayOnHomeChecked":        existingPromo.DisplayOnHome,
+			"applyToExistingUsersChecked": existingPromo.ApplyToExistingUsers,
 			"typeOptions": []map[string]interface{}{
 				{"value": "free_trial", "label": "Free Trial", "selected": existingPromo.Type == "free_trial"},
 				{"value": "discount", "label": "Discount", "selected": existingPromo.Type == "discount"},

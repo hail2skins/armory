@@ -213,6 +213,22 @@ func (a *AuthController) LoginHandler(c *gin.Context) {
 		// Note: This would normally use a db.SaveUser method, but we'll use the existing methods
 		// in the controller instead
 
+		// Check for active promotions that apply to existing users and apply them
+		if a.promotionService != nil {
+			if promotion, err := a.promotionService.GetBestActivePromotion(); err == nil && promotion != nil && promotion.ApplyToExistingUsers {
+				// Apply promotion benefit to the existing user
+				a.ApplyPromotionToUser(user, promotion)
+
+				// Log application of promotion
+				logger.Info("Applied promotion to existing user during login", map[string]interface{}{
+					"user_id":        user.ID,
+					"email":          email,
+					"promotion_id":   promotion.ID,
+					"promotion_name": promotion.Name,
+				})
+			}
+		}
+
 		// Store user info in cache and session
 		userInfo := auth.NewUserInfo(email, strconv.FormatUint(uint64(user.ID), 10), nil, nil)
 		a.cache.Store(strconv.FormatUint(uint64(user.ID), 10), userInfo)

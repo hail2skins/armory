@@ -66,9 +66,12 @@ templ Index(data *data.AdminData) {
 							Active <span class="ml-1">↕</span>
 						</th>
 						<th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer text-gunmetal-800" onclick="sortTable(3)">
-							Start Date <span class="ml-1">↕</span>
+							Apply to Existing <span class="ml-1">↕</span>
 						</th>
 						<th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer text-gunmetal-800" onclick="sortTable(4)">
+							Start Date <span class="ml-1">↕</span>
+						</th>
+						<th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer text-gunmetal-800" onclick="sortTable(5)">
 							End Date <span class="ml-1">↕</span>
 						</th>
 						<th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gunmetal-800">
@@ -103,6 +106,12 @@ templ Index(data *data.AdminData) {
 					<td class="px-6 py-4 whitespace-nowrap">`+p.Name+`</td>
 					<td class="px-6 py-4 whitespace-nowrap">`+p.Type+`</td>
 					<td class="px-6 py-4 whitespace-nowrap">`+activeStatus+`</td>
+					<td class="px-6 py-4 whitespace-nowrap">`+func() string {
+						if p.ApplyToExistingUsers {
+							return "Yes"
+						}
+						return "No"
+					}()+`</td>
 					<td class="px-6 py-4 whitespace-nowrap">`+p.StartDate.Format("01/02/2006")+`</td>
 					<td class="px-6 py-4 whitespace-nowrap">`+p.EndDate.Format("01/02/2006")+`</td>
 					<td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
