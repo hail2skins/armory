@@ -13,6 +13,7 @@ type Gun struct {
 	gorm.Model
 	Name           string
 	SerialNumber   string
+	Purpose        string // Purpose of the gun (e.g., "Carry", "Plinking", "Home Defense")
 	Acquired       *time.Time
 	WeaponTypeID   uint
 	WeaponType     WeaponType `gorm:"foreignKey:WeaponTypeID"`

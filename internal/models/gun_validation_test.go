@@ -145,6 +145,49 @@ func TestGunDateValidation(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestGunPurposeValidation(t *testing.T) {
+	// Test valid purpose (under max length)
+	validPurposeGun := &Gun{
+		Name:    "Valid Gun",
+		Purpose: "Home Defense",
+	}
+	err := validPurposeGun.Validate(nil)
+	assert.NoError(t, err)
+
+	// Test purpose at exactly max length (100 chars)
+	exactLengthPurpose := string(make([]byte, 100))
+	for i := range exactLengthPurpose {
+		exactLengthPurpose = exactLengthPurpose[:i] + "a" + exactLengthPurpose[i+1:]
+	}
+	exactLengthPurposeGun := &Gun{
+		Name:    "Valid Gun",
+		Purpose: exactLengthPurpose,
+	}
+	err = exactLengthPurposeGun.Validate(nil)
+	assert.NoError(t, err)
+
+	// Test purpose exceeding max length
+	tooLongPurpose := string(make([]byte, 101))
+	for i := range tooLongPurpose {
+		tooLongPurpose = tooLongPurpose[:i] + "a" + tooLongPurpose[i+1:]
+	}
+	tooLongPurposeGun := &Gun{
+		Name:    "Valid Gun", // Valid name so we only test purpose length
+		Purpose: tooLongPurpose,
+	}
+	err = tooLongPurposeGun.Validate(nil)
+	assert.Error(t, err)
+	assert.Equal(t, ErrGunPurposeTooLong, err)
+
+	// Test nil/empty purpose (should be valid since it's optional)
+	nilPurposeGun := &Gun{
+		Name:    "Valid Gun",
+		Purpose: "",
+	}
+	err = nilPurposeGun.Validate(nil)
+	assert.NoError(t, err)
+}
+
 func TestGunForeignKeyValidation(t *testing.T) {
 	// Setup a test database
 	db := setupGunTestDB(t)
