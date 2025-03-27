@@ -679,3 +679,78 @@ func (s *TestService) FindAllWeaponTypesByIDs(ids []uint) ([]models.WeaponType, 
 	}
 	return weaponTypes, nil
 }
+
+// Feature Flag-related methods implementation
+
+// FindAllFeatureFlags retrieves all feature flags
+func (s *TestService) FindAllFeatureFlags() ([]models.FeatureFlag, error) {
+	var featureFlags []models.FeatureFlag
+	if err := s.db.Find(&featureFlags).Error; err != nil {
+		return nil, err
+	}
+	return featureFlags, nil
+}
+
+// FindFeatureFlagByID retrieves a feature flag by its ID
+func (s *TestService) FindFeatureFlagByID(id uint) (*models.FeatureFlag, error) {
+	var featureFlag models.FeatureFlag
+	if err := s.db.First(&featureFlag, id).Error; err != nil {
+		return nil, err
+	}
+	return &featureFlag, nil
+}
+
+// FindFeatureFlagByName retrieves a feature flag by its name
+func (s *TestService) FindFeatureFlagByName(name string) (*models.FeatureFlag, error) {
+	var featureFlag models.FeatureFlag
+	if err := s.db.Where("name = ?", name).First(&featureFlag).Error; err != nil {
+		return nil, err
+	}
+	return &featureFlag, nil
+}
+
+// CreateFeatureFlag creates a new feature flag
+func (s *TestService) CreateFeatureFlag(flag *models.FeatureFlag) error {
+	return s.db.Create(flag).Error
+}
+
+// UpdateFeatureFlag updates an existing feature flag
+func (s *TestService) UpdateFeatureFlag(flag *models.FeatureFlag) error {
+	return s.db.Save(flag).Error
+}
+
+// DeleteFeatureFlag deletes a feature flag
+func (s *TestService) DeleteFeatureFlag(id uint) error {
+	return s.db.Delete(&models.FeatureFlag{}, id).Error
+}
+
+// AddRoleToFeatureFlag adds a role to a feature flag
+func (s *TestService) AddRoleToFeatureFlag(flagID uint, role string) error {
+	return s.db.Create(&models.FeatureFlagRole{
+		FeatureFlagID: flagID,
+		Role:          role,
+	}).Error
+}
+
+// RemoveRoleFromFeatureFlag removes a role from a feature flag
+func (s *TestService) RemoveRoleFromFeatureFlag(flagID uint, role string) error {
+	return s.db.Where("feature_flag_id = ? AND role = ?", flagID, role).
+		Delete(&models.FeatureFlagRole{}).Error
+}
+
+// IsFeatureEnabled checks if a feature is enabled
+func (s *TestService) IsFeatureEnabled(name string) (bool, error) {
+	var featureFlag models.FeatureFlag
+	if err := s.db.Where("name = ?", name).First(&featureFlag).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return false, nil
+		}
+		return false, err
+	}
+	return featureFlag.Enabled, nil
+}
+
+// CanUserAccessFeature checks if a user can access a feature
+func (s *TestService) CanUserAccessFeature(username, featureName string) (bool, error) {
+	return models.CanAccessFeature(s.db, username, featureName)
+}
