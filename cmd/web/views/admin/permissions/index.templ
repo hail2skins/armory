@@ -290,7 +290,7 @@ templ Index(viewData data.ViewData) {
 
 		// Import Default Policies Section
 		_, err = io.WriteString(w, `
-			<div class="bg-white rounded-lg shadow">
+			<div class="bg-white rounded-lg shadow mb-8">
 				<div class="px-6 py-4 border-b border-gray-200">
 					<h2 class="text-xl font-semibold">Default Policies</h2>
 				</div>
@@ -303,6 +303,19 @@ templ Index(viewData data.ViewData) {
 							Import Default Policies
 						</button>
 					</form>
+				</div>
+			</div>
+
+			<!-- Feature Flags Section -->
+			<div class="bg-white rounded-lg shadow mb-8">
+				<div class="px-6 py-4 border-b border-gray-200">
+					<h2 class="text-xl font-semibold">Feature Flags</h2>
+				</div>
+				<div class="p-6">
+					<p class="text-gray-600 mb-4">Manage feature flags to control access to specific features in the application.</p>
+					<a href="/admin/permissions/feature-flags" class="bg-brass-500 hover:bg-brass-600 text-white font-medium py-2 px-4 rounded">
+						Manage Feature Flags
+					</a>
 				</div>
 			</div>
 
