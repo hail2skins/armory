@@ -37,6 +37,7 @@ type Service interface {
 	// Payment-related methods
 	CreatePayment(payment *models.Payment) error
 	GetPaymentsByUserID(userID uint) ([]models.Payment, error)
+	GetAllPayments() ([]models.Payment, error)
 	FindPaymentByID(id uint) (*models.Payment, error)
 	UpdatePayment(payment *models.Payment) error
 
@@ -54,6 +55,11 @@ type Service interface {
 
 	// Gun-related methods
 	DeleteGun(db *gorm.DB, id uint, ownerID uint) error
+	FindAllGuns() ([]models.Gun, error)
+	FindAllUsers() ([]User, error)
+	CountGunsByUser(userID uint) (int64, error)
+	FindAllCalibersByIDs(ids []uint) ([]models.Caliber, error)
+	FindAllWeaponTypesByIDs(ids []uint) ([]models.WeaponType, error)
 
 	// GetDB returns the underlying *gorm.DB instance
 	GetDB() *gorm.DB
@@ -139,6 +145,7 @@ func (s *service) AutoMigrate() error {
 		&models.WeaponType{},
 		&models.Gun{},
 		&models.Promotion{},
+		&models.CasbinRule{},
 	)
 }
 
@@ -255,6 +262,15 @@ func (s *service) GetPaymentsByUserID(userID uint) ([]models.Payment, error) {
 	return payments, nil
 }
 
+// GetAllPayments retrieves all payments ordered by creation date descending
+func (s *service) GetAllPayments() ([]models.Payment, error) {
+	var payments []models.Payment
+	if err := s.db.Order("created_at desc").Find(&payments).Error; err != nil {
+		return nil, err
+	}
+	return payments, nil
+}
+
 // FindPaymentByID retrieves a payment by its ID
 func (s *service) FindPaymentByID(id uint) (*models.Payment, error) {
 	var payment models.Payment
@@ -319,4 +335,50 @@ func (s *service) FindActivePromotions() ([]models.Promotion, error) {
 	}
 
 	return promotions, nil
+}
+
+// Gun-related methods implementation
+// FindAllGuns retrieves all guns from the database
+func (s *service) FindAllGuns() ([]models.Gun, error) {
+	var guns []models.Gun
+	if err := s.db.Find(&guns).Error; err != nil {
+		return nil, err
+	}
+	return guns, nil
+}
+
+// FindAllUsers retrieves all users from the database
+func (s *service) FindAllUsers() ([]User, error) {
+	var users []User
+	if err := s.db.Find(&users).Error; err != nil {
+		return nil, err
+	}
+	return users, nil
+}
+
+// CountGunsByUser retrieves the count of guns for a specific user
+func (s *service) CountGunsByUser(userID uint) (int64, error) {
+	var count int64
+	if err := s.db.Model(&models.Gun{}).Where("owner_id = ?", userID).Count(&count).Error; err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
+// FindAllCalibersByIDs retrieves all calibers for a list of IDs
+func (s *service) FindAllCalibersByIDs(ids []uint) ([]models.Caliber, error) {
+	var calibers []models.Caliber
+	if err := s.db.Where("id IN ?", ids).Find(&calibers).Error; err != nil {
+		return nil, err
+	}
+	return calibers, nil
+}
+
+// FindAllWeaponTypesByIDs retrieves all weapon types for a list of IDs
+func (s *service) FindAllWeaponTypesByIDs(ids []uint) ([]models.WeaponType, error) {
+	var weaponTypes []models.WeaponType
+	if err := s.db.Where("id IN ?", ids).Find(&weaponTypes).Error; err != nil {
+		return nil, err
+	}
+	return weaponTypes, nil
 }

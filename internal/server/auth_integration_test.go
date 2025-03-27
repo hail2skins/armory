@@ -273,6 +273,12 @@ func (m *MockDBWithContext) CountUsers() (int64, error) {
 	return args.Get(0).(int64), args.Error(1)
 }
 
+// GetAllPayments retrieves all payments ordered by creation date descending
+func (m *MockDBWithContext) GetAllPayments() ([]models.Payment, error) {
+	args := m.Called()
+	return args.Get(0).([]models.Payment), args.Error(1)
+}
+
 // FindRecentUsers finds recent users with pagination and sorting
 func (m *MockDBWithContext) FindRecentUsers(offset, limit int, sortBy, sortOrder string) ([]database.User, error) {
 	args := m.Called(offset, limit, sortBy, sortOrder)
@@ -672,6 +678,36 @@ func (m *MockDBWithContext) CountNewSubscribersThisMonth() (int64, error) {
 func (m *MockDBWithContext) CountNewSubscribersLastMonth() (int64, error) {
 	args := m.Called()
 	return args.Get(0).(int64), args.Error(1)
+}
+
+// FindAllGuns retrieves all guns
+func (m *MockDBWithContext) FindAllGuns() ([]models.Gun, error) {
+	args := m.Called()
+	return args.Get(0).([]models.Gun), args.Error(1)
+}
+
+// FindAllUsers retrieves all users
+func (m *MockDBWithContext) FindAllUsers() ([]database.User, error) {
+	args := m.Called()
+	return args.Get(0).([]database.User), args.Error(1)
+}
+
+// CountGunsByUser counts the number of guns owned by a user
+func (m *MockDBWithContext) CountGunsByUser(userID uint) (int64, error) {
+	args := m.Called(userID)
+	return args.Get(0).(int64), args.Error(1)
+}
+
+// FindAllCalibersByIDs retrieves all calibers with the given IDs
+func (m *MockDBWithContext) FindAllCalibersByIDs(ids []uint) ([]models.Caliber, error) {
+	args := m.Called(ids)
+	return args.Get(0).([]models.Caliber), args.Error(1)
+}
+
+// FindAllWeaponTypesByIDs retrieves all weapon types with the given IDs
+func (m *MockDBWithContext) FindAllWeaponTypesByIDs(ids []uint) ([]models.WeaponType, error) {
+	args := m.Called(ids)
+	return args.Get(0).([]models.WeaponType), args.Error(1)
 }
 
 // LoginTestSuite is a test suite for login functionality

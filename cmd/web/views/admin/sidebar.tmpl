@@ -1,0 +1,22 @@
+  {{if hasPermission "manufacturers" "read" .User}}
+  <a href="/admin/manufacturers" class="block px-4 py-2 text-base hover:bg-blue-700 rounded {{if contains .CurrentPath "/admin/manufacturers"}}bg-blue-700{{end}}">Manufacturers</a>
+  {{end}}
+  
+  {{if hasPermission "calibers" "read" .User}}
+  <a href="/admin/calibers" class="block px-4 py-2 text-base hover:bg-blue-700 rounded {{if contains .CurrentPath "/admin/calibers"}}bg-blue-700{{end}}">Calibers</a>
+  {{end}}
+  
+  {{if hasPermission "weapon_types" "read" .User}}
+  <a href="/admin/weapon-types" class="block px-4 py-2 text-base hover:bg-blue-700 rounded {{if contains .CurrentPath "/admin/weapon-types"}}bg-blue-700{{end}}">Weapon Types</a>
+  {{end}}
+  
+  {{if hasPermission "promotions" "read" .User}}
+  <a href="/admin/promotions" class="block px-4 py-2 text-base hover:bg-blue-700 rounded {{if contains .CurrentPath "/admin/promotions"}}bg-blue-700{{end}}">Promotions</a>
+  <a href="/admin/payment-history" class="block px-4 py-2 text-base hover:bg-blue-700 rounded {{if contains .CurrentPath "/admin/payment-history"}}bg-blue-700{{end}}">Payment History</a>
+  {{end}}
+  
+  {{if or (hasRole "admin" .User) (hasPermission "permissions" "manage" .User)}}
+  <a href="/admin/permissions" class="block px-4 py-2 text-base hover:bg-blue-700 rounded {{if contains .CurrentPath "/admin/permissions"}}bg-blue-700{{end}}">Permissions</a>
+  {{end}}
+  
+  <a href="/logout" class="block px-4 py-2 text-base hover:bg-blue-700 rounded">Logout</a> 

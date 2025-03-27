@@ -8,6 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/hail2skins/armory/internal/logger"
+	"gorm.io/gorm"
 )
 
 // SetupErrorHandling configures all error handling middleware for a Gin router
@@ -123,6 +124,50 @@ p, viewer, weapon_types, read`
 	return casbinAuth, nil
 }
 
+// SetupCasbinWithDB initializes Casbin RBAC middleware with database support
+func SetupCasbinWithDB(db *gorm.DB) (*CasbinAuth, error) {
+	// Get config directory
+	configDir := filepath.Join("configs", "casbin")
+
+	// Ensure the directory exists
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		return nil, fmt.Errorf("failed to create casbin config directory: %w", err)
+	}
+
+	modelPath := filepath.Join(configDir, "rbac_model.conf")
+
+	// Create default RBAC model file if it doesn't exist
+	if _, err := os.Stat(modelPath); os.IsNotExist(err) {
+		defaultModel := `[request_definition]
+r = sub, obj, act
+
+[policy_definition]
+p = sub, obj, act
+
+[role_definition]
+g = _, _
+
+[policy_effect]
+e = some(where (p.eft == allow))
+
+[matchers]
+m = g(r.sub, p.sub) && (r.obj == p.obj || p.obj == "*") && (r.act == p.act || p.act == "*") || g(r.sub, "admin")`
+
+		if err := os.WriteFile(modelPath, []byte(defaultModel), 0644); err != nil {
+			return nil, fmt.Errorf("failed to create default RBAC model file: %w", err)
+		}
+	}
+
+	// Initialize Casbin with model from file and policies from database
+	casbinAuth, err := NewCasbinAuthWithDB(modelPath, db)
+	if err != nil {
+		logger.Error("Failed to initialize Casbin with database", err, nil)
+		return nil, err
+	}
+
+	return casbinAuth, nil
+}
+
 // SetupAllMiddleware configures all middleware for a Gin router
 func SetupAllMiddleware(router *gin.Engine) (*CasbinAuth, error) {
 	// Set up error handling
@@ -144,6 +189,34 @@ func SetupAllMiddleware(router *gin.Engine) (*CasbinAuth, error) {
 	casbinAuth, err := SetupCasbin()
 	if err != nil {
 		logger.Warn("Casbin setup failed, RBAC will be disabled", map[string]interface{}{
+			"error": err.Error(),
+		})
+	}
+
+	return casbinAuth, err
+}
+
+// SetupAllMiddlewareWithDB configures all middleware for a Gin router with database support for Casbin
+func SetupAllMiddlewareWithDB(router *gin.Engine, db *gorm.DB) (*CasbinAuth, error) {
+	// Set up error handling
+	SetupErrorHandling(router)
+
+	// Set up rate limiting
+	SetupRateLimiting(router)
+
+	// Set up webhook monitoring for /webhook endpoints
+	router.Use(func(c *gin.Context) {
+		if c.Request.URL.Path == "/webhook" {
+			WebhookMonitor()(c)
+		} else {
+			c.Next()
+		}
+	})
+
+	// Initialize Casbin with database (but don't apply it globally - it's applied per route)
+	casbinAuth, err := SetupCasbinWithDB(db)
+	if err != nil {
+		logger.Warn("Casbin setup with database failed, RBAC will be disabled", map[string]interface{}{
 			"error": err.Error(),
 		})
 	}

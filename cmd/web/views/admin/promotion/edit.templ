@@ -120,7 +120,19 @@ templ Edit(data *data.AdminData) {
 						Display on Home Page
 					</label>
 					<input class="mr-2 leading-tight" type="checkbox" id="displayOnHome" name="displayOnHome" value="true" `+displayOnHomeChecked+`>
-					<span class="text-sm">Show this promotion on the home page?</span>
+					<span class="text-sm">Should this promotion be featured on the home page?</span>
+				</div>
+				<div class="mb-4">
+					<label class="block text-gray-700 text-sm font-bold mb-2" for="applyToExistingUsers">
+						Apply to Existing Users
+					</label>
+					<input class="mr-2 leading-tight" type="checkbox" id="applyToExistingUsers" name="applyToExistingUsers" value="true" `+func() string {
+						if val, ok := data.FormData["applyToExistingUsersChecked"].(bool); ok && val {
+							return "checked"
+						}
+						return ""
+					}()+`>
+					<span class="text-sm">Apply this promotion to existing users when they log in?</span>
 				</div>
 				<div class="mb-4">
 					<label class="block text-gray-700 text-sm font-bold mb-2" for="description">

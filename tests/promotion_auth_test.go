@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"testing"
 	"time"
 
@@ -252,6 +253,66 @@ func (s *PromotionAuthTestSuite) TestRegisterWithNoActivePromotion() {
 	s.Equal("/", resp.Header().Get("Location"))
 
 	// Verify mocks were called as expected
+	s.MockDB.AssertExpectations(s.T())
+}
+
+// TestLoginWithActivePromotionForExistingUsers tests that existing users can get active promotions when logging in
+// if the promotion is configured to apply to existing users
+func (s *PromotionAuthTestSuite) TestLoginWithActivePromotionForExistingUsers() {
+	// Set up the auth routes
+	s.Router.POST("/login", s.AuthController.LoginHandler)
+
+	// Setup a promotion that applies to existing users
+	s.ActivePromotion.ApplyToExistingUsers = true
+
+	// Create an existing user
+	existingUser := &database.User{
+		Model:    gorm.Model{ID: 2},
+		Email:    "existing@example.com",
+		Password: "hashedpassword", // Would be properly hashed in real code
+		Verified: true,
+	}
+
+	// Mock AuthenticateUser to return our existing user
+	s.MockDB.On("AuthenticateUser", mock.Anything, "existing@example.com", mock.AnythingOfType("string")).
+		Return(existingUser, nil)
+
+	// Mock FindActivePromotions to return our active promotion
+	s.MockDB.On("FindActivePromotions").Return([]models.Promotion{*s.ActivePromotion}, nil)
+
+	// Mock to check if promotion benefits are applied to the user during login
+	s.MockDB.On("UpdateUser", mock.Anything, mock.MatchedBy(func(u *database.User) bool {
+		// Check that the user has the promotion benefit days applied
+		expectedExpiry := time.Now().AddDate(0, 0, s.ActivePromotion.BenefitDays)
+		expiryDiff := u.SubscriptionEndDate.Sub(expectedExpiry)
+
+		// Allow a small time difference (1 minute) since there's processing time
+		return u.ID == existingUser.ID &&
+			u.SubscriptionTier == "promotion" &&
+			u.PromotionID == s.ActivePromotion.ID &&
+			expiryDiff > -time.Minute && expiryDiff < time.Minute
+	})).Return(nil)
+
+	// Create form data for login
+	form := url.Values{}
+	form.Add("email", "existing@example.com")
+	form.Add("password", "password123")
+
+	// Create a test request
+	req, _ := http.NewRequest("POST", "/login", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	resp := httptest.NewRecorder()
+
+	// Set test flag to bypass certain middleware
+	req.Header.Set("X-Test", "true")
+
+	// Serve the request
+	s.Router.ServeHTTP(resp, req)
+
+	// Assert redirect status (302 Found or 303 See Other)
+	s.True(resp.Code == http.StatusFound || resp.Code == http.StatusSeeOther)
+
+	// Assert that the user was updated with the promotion
 	s.MockDB.AssertExpectations(s.T())
 }
 

@@ -163,7 +163,7 @@ func (c *AdminDashboardController) Dashboard(ctx *gin.Context) {
 	// We'll use a wrapper that implements the models.User interface
 	recentUsers := make([]models.User, len(dbUsers))
 	for i, user := range dbUsers {
-		recentUsers[i] = UserWrapper{User: user}
+		recentUsers[i] = UserWrapper{User: user, DB: c.DB}
 	}
 
 	// Calculate total pages
@@ -214,6 +214,7 @@ func calculateGrowthRate(current, previous int64) float64 {
 // UserWrapper wraps a database.User to implement the models.User interface
 type UserWrapper struct {
 	User database.User
+	DB   database.Service
 }
 
 // GetID implements the User interface
@@ -254,9 +255,6 @@ func (u UserWrapper) IsVerified() bool {
 
 // GetSubscriptionStatus implements the User interface
 func (u UserWrapper) GetSubscriptionStatus() string {
-	if u.User.SubscriptionStatus == "" {
-		return "N/A"
-	}
 	return u.User.SubscriptionStatus
 }
 
@@ -283,6 +281,18 @@ func (u UserWrapper) IsLifetime() bool {
 // GetGrantedByID implements the User interface
 func (u UserWrapper) GetGrantedByID() uint {
 	return u.User.GrantedByID
+}
+
+// GetGunCount returns the number of guns owned by the user
+func (u UserWrapper) GetGunCount() int64 {
+	if u.DB == nil {
+		return 0
+	}
+	count, err := u.DB.CountGunsByUser(u.User.ID)
+	if err != nil {
+		return 0
+	}
+	return count
 }
 
 // WebhookStats contains basic stats about webhooks

@@ -32,16 +32,17 @@ func (s *AdminPromotionControllerTestSuite) SetupTest() {
 
 	// Create a mock promotion for testing
 	s.mockPromotion = &models.Promotion{
-		Model:         gorm.Model{ID: 1},
-		Name:          "Test Free Trial",
-		Type:          "free_trial",
-		Active:        true,
-		StartDate:     now,
-		EndDate:       endDate,
-		BenefitDays:   30,
-		DisplayOnHome: true,
-		Description:   "Test promotion description",
-		Banner:        "/images/banners/test-promotion.jpg",
+		Model:                gorm.Model{ID: 1},
+		Name:                 "Test Free Trial",
+		Type:                 "free_trial",
+		Active:               true,
+		StartDate:            now,
+		EndDate:              endDate,
+		BenefitDays:          30,
+		DisplayOnHome:        true,
+		ApplyToExistingUsers: false, // Default to false in the mock data
+		Description:          "Test promotion description",
+		Banner:               "/images/banners/test-promotion.jpg",
 	}
 }
 
@@ -82,7 +83,10 @@ func (s *AdminPromotionControllerTestSuite) TestCreatePromotion() {
 	adminController := s.CreateAdminPromotionController()
 
 	// Mock DB save behavior
-	s.MockDB.On("CreatePromotion", mock.AnythingOfType("*models.Promotion")).Return(nil).Once()
+	s.MockDB.On("CreatePromotion", mock.MatchedBy(func(p *models.Promotion) bool {
+		// Verify that the ApplyToExistingUsers field is properly set
+		return p.Name == "Test Free Trial" && p.Type == "free_trial" && p.ApplyToExistingUsers == true
+	})).Return(nil).Once()
 
 	// Register routes
 	s.Router.POST("/admin/promotions", adminController.Create)
@@ -92,15 +96,16 @@ func (s *AdminPromotionControllerTestSuite) TestCreatePromotion() {
 	endDate := time.Now().AddDate(0, 1, 0).Format("2006-01-02")
 
 	formData := url.Values{
-		"name":          {"Test Free Trial"},
-		"type":          {"free_trial"},
-		"active":        {"true"},
-		"startDate":     {startDate},
-		"endDate":       {endDate},
-		"benefitDays":   {"30"},
-		"displayOnHome": {"true"},
-		"description":   {"Test promotion description"},
-		"banner":        {"/images/banners/test-promotion.jpg"},
+		"name":                 {"Test Free Trial"},
+		"type":                 {"free_trial"},
+		"active":               {"true"},
+		"startDate":            {startDate},
+		"endDate":              {endDate},
+		"benefitDays":          {"30"},
+		"displayOnHome":        {"true"},
+		"applyToExistingUsers": {"true"},
+		"description":          {"Test promotion description"},
+		"banner":               {"/images/banners/test-promotion.jpg"},
 	}
 
 	// Create a test request
@@ -247,6 +252,9 @@ func (s *AdminPromotionControllerTestSuite) TestEditRoute() {
 	// Create the controller
 	adminController := s.CreateAdminPromotionController()
 
+	// Add the ApplyToExistingUsers field to the mock promotion
+	s.mockPromotion.ApplyToExistingUsers = true
+
 	// Mock DB behavior to return a specific promotion
 	s.MockDB.On("FindPromotionByID", uint(1)).Return(s.mockPromotion, nil).Once()
 
@@ -263,7 +271,8 @@ func (s *AdminPromotionControllerTestSuite) TestEditRoute() {
 	// Assert response
 	s.Equal(http.StatusOK, resp.Code)
 	s.Contains(resp.Body.String(), "Edit Promotion")
-	s.Contains(resp.Body.String(), "Test Free Trial") // Should contain our mock promotion name
+	s.Contains(resp.Body.String(), "Test Free Trial")             // Should contain our mock promotion name
+	s.Contains(resp.Body.String(), "id=\"applyToExistingUsers\"") // Check for the input field ID
 	s.MockDB.AssertExpectations(s.T())
 }
 
@@ -293,7 +302,12 @@ func (s *AdminPromotionControllerTestSuite) TestUpdatePromotion() {
 
 	// Mock DB behavior
 	s.MockDB.On("FindPromotionByID", uint(1)).Return(s.mockPromotion, nil).Once()
-	s.MockDB.On("UpdatePromotion", mock.AnythingOfType("*models.Promotion")).Return(nil).Once()
+
+	// Set expectations for the update
+	s.MockDB.On("UpdatePromotion", mock.MatchedBy(func(p *models.Promotion) bool {
+		// Verify that the ApplyToExistingUsers field is properly updated
+		return p.Name == "Updated Free Trial" && p.ApplyToExistingUsers == true
+	})).Return(nil).Once()
 
 	// Register routes
 	s.Router.POST("/admin/promotions/:id", adminController.Update)
@@ -303,15 +317,16 @@ func (s *AdminPromotionControllerTestSuite) TestUpdatePromotion() {
 	endDate := time.Now().AddDate(0, 1, 0).Format("2006-01-02")
 
 	formData := url.Values{
-		"name":          {"Updated Free Trial"},
-		"type":          {"free_trial"},
-		"active":        {"true"},
-		"startDate":     {startDate},
-		"endDate":       {endDate},
-		"benefitDays":   {"45"}, // Changed from 30 to 45
-		"displayOnHome": {"true"},
-		"description":   {"Updated promotion description"},
-		"banner":        {"/images/banners/updated-promotion.jpg"},
+		"name":                 {"Updated Free Trial"},
+		"type":                 {"free_trial"},
+		"active":               {"true"},
+		"startDate":            {startDate},
+		"endDate":              {endDate},
+		"benefitDays":          {"45"}, // Changed from 30 to 45
+		"displayOnHome":        {"true"},
+		"applyToExistingUsers": {"true"},
+		"description":          {"Updated promotion description"},
+		"banner":               {"/images/banners/updated-promotion.jpg"},
 	}
 
 	// Create a test request

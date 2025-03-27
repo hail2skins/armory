@@ -122,6 +122,15 @@ func (s *Server) RegisterMiddleware(r *gin.Engine, authController *controller.Au
 		})
 	}
 
+	// Initialize Casbin with the database adapter (stored in the server instance for admin routes to use)
+	casbinAuth, err = middleware.SetupCasbinWithDB(s.db.GetDB())
+	if err != nil {
+		// Log the error but continue (admin routes will check for nil)
+		logger.Warn("Casbin setup with database failed, RBAC will be disabled", map[string]interface{}{
+			"error": err.Error(),
+		})
+	}
+
 	// Configure initial admin users
 	adminEmails := getAdminEmails()
 	if casbinAuth != nil && len(adminEmails) > 0 {

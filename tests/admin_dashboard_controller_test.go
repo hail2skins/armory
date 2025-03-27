@@ -73,6 +73,12 @@ func (s *AdminDashboardControllerTestSuite) TestDashboardRoute() {
 	s.MockDB.On("CountNewSubscribersThisMonth").Return(int64(10), nil).Once()
 	s.MockDB.On("CountNewSubscribersLastMonth").Return(int64(8), nil).Once()
 
+	// Mock CountGunsByUser for each user that will be displayed
+	s.MockDB.On("CountGunsByUser", uint(1)).Return(int64(3), nil)
+	s.MockDB.On("CountGunsByUser", uint(2)).Return(int64(1), nil)
+	// Use mock.Anything to catch any other user IDs that might be used
+	s.MockDB.On("CountGunsByUser", mock.Anything).Return(int64(0), nil)
+
 	// Mock FindRecentUsers with proper user data
 	mockUsers := []database.User{
 		{

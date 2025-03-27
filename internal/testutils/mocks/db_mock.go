@@ -125,6 +125,11 @@ func (m *MockDB) GetPaymentsByUserID(userID uint) ([]models.Payment, error) {
 	return args.Get(0).([]models.Payment), args.Error(1)
 }
 
+func (m *MockDB) GetAllPayments() ([]models.Payment, error) {
+	args := m.Called()
+	return args.Get(0).([]models.Payment), args.Error(1)
+}
+
 func (m *MockDB) FindPaymentByID(id uint) (*models.Payment, error) {
 	args := m.Called(id)
 	if args.Get(0) == nil {
@@ -309,4 +314,29 @@ func (m *MockDB) CountNewSubscribersThisMonth() (int64, error) {
 func (m *MockDB) CountNewSubscribersLastMonth() (int64, error) {
 	args := m.Called()
 	return args.Get(0).(int64), args.Error(1)
+}
+
+func (m *MockDB) FindAllGuns() ([]models.Gun, error) {
+	args := m.Called()
+	return args.Get(0).([]models.Gun), args.Error(1)
+}
+
+func (m *MockDB) FindAllUsers() ([]database.User, error) {
+	args := m.Called()
+	return args.Get(0).([]database.User), args.Error(1)
+}
+
+func (m *MockDB) CountGunsByUser(userID uint) (int64, error) {
+	args := m.Called(userID)
+	return args.Get(0).(int64), args.Error(1)
+}
+
+func (m *MockDB) FindAllCalibersByIDs(ids []uint) ([]models.Caliber, error) {
+	args := m.Called(ids)
+	return args.Get(0).([]models.Caliber), args.Error(1)
+}
+
+func (m *MockDB) FindAllWeaponTypesByIDs(ids []uint) ([]models.WeaponType, error) {
+	args := m.Called(ids)
+	return args.Get(0).([]models.WeaponType), args.Error(1)
 }

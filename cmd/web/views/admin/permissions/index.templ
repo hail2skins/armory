@@ -1,0 +1,319 @@
+package permissions
+
+import (
+	"context"
+	"html"
+	"io"
+	"strconv"
+
+	"github.com/hail2skins/armory/cmd/web/views/data"
+	"github.com/hail2skins/armory/cmd/web/views/partials"
+)
+
+templ Index(viewData data.ViewData) {
+	@partials.Base(viewData.AuthData, templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+		permData := viewData.Data.(*data.PermissionsViewData)
+		
+		_, err := io.WriteString(w, `
+			<div class="container mx-auto px-4 py-8">
+				<div class="mb-8">
+					<h1 class="text-2xl font-bold text-gunmetal-800">Role-Based Access Control</h1>
+					<p class="text-gray-600">Manage roles and permissions for users in the system.</p>
+				</div>
+		`)
+		if err != nil {
+			return err
+		}
+
+		if viewData.ErrorMsg != "" {
+			_, err = io.WriteString(w, `
+				<div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4" role="alert">
+					<span class="block sm:inline">`+viewData.ErrorMsg+`</span>
+				</div>
+			`)
+			if err != nil {
+				return err
+			}
+		}
+		
+		// Get flash messages from the session if available
+		if flash, exists := ctx.Value("flash").(string); exists && flash != "" {
+			_, err = io.WriteString(w, `
+				<div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4" role="alert">
+					<span class="block sm:inline">`+flash+`</span>
+				</div>
+			`)
+			if err != nil {
+				return err
+			}
+		}
+
+		// Quick Stats
+		_, err = io.WriteString(w, `
+			<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+				<div class="bg-white rounded-lg shadow p-6">
+					<h3 class="font-semibold text-lg mb-2">Total Roles</h3>
+					<p class="text-3xl font-bold">`+strconv.Itoa(len(permData.Roles))+`</p>
+				</div>
+				<div class="bg-white rounded-lg shadow p-6">
+					<h3 class="font-semibold text-lg mb-2">User Assignments</h3>
+					<p class="text-3xl font-bold">`+strconv.Itoa(len(permData.UserRoles))+`</p>
+				</div>
+				<div class="bg-white rounded-lg shadow p-6">
+					<h3 class="font-semibold text-lg mb-2">Permission Rules</h3>
+					<p class="text-3xl font-bold">`+strconv.Itoa(len(permData.Permissions))+`</p>
+				</div>
+			</div>
+		`)
+		if err != nil {
+			return err
+		}
+
+		// Roles Management Section
+		_, err = io.WriteString(w, `
+			<div class="bg-white rounded-lg shadow mb-8">
+				<div class="px-6 py-4 border-b border-gray-200">
+					<h2 class="text-xl font-semibold">Roles</h2>
+				</div>
+				<div class="p-6">
+					<div class="mb-4 flex justify-between items-center">
+						<p class="text-gray-600">Manage the roles available in the system.</p>
+						<a href="/admin/permissions/roles/create" class="bg-brass-500 hover:bg-brass-600 text-white font-medium py-2 px-4 rounded">
+							Create New Role
+						</a>
+					</div>
+
+					<div class="overflow-x-auto">
+						<table class="min-w-full bg-white">
+							<thead>
+								<tr class="bg-gunmetal-100">
+									<th class="py-3 px-4 text-left">Role</th>
+									<th class="py-3 px-4 text-left">Permissions</th>
+									<th class="py-3 px-4 text-left">Users</th>
+									<th class="py-3 px-4 text-left">Actions</th>
+								</tr>
+							</thead>
+							<tbody>
+		`)
+		if err != nil {
+			return err
+		}
+
+		if len(permData.Roles) == 0 {
+			_, err = io.WriteString(w, `
+								<tr>
+									<td colspan="4" class="py-3 px-4 text-center">No roles found</td>
+								</tr>
+			`)
+			if err != nil {
+				return err
+			}
+		} else {
+			for _, role := range permData.Roles {
+				_, err = io.WriteString(w, `
+								<tr class="border-t border-gray-200">
+									<td class="py-3 px-4">`+html.EscapeString(role)+`</td>
+									<td class="py-3 px-4">
+				`)
+				if err != nil {
+					return err
+				}
+
+				rolePerms, ok := permData.RolePermissions[role]
+				if ok && len(rolePerms) > 0 {
+					for _, perm := range rolePerms {
+						_, err = io.WriteString(w, `
+										<span class="inline-block bg-gunmetal-200 rounded px-2 py-1 text-xs font-semibold text-gunmetal-700 mr-1 mb-1">
+											`+html.EscapeString(perm.Resource)+`:`+html.EscapeString(perm.Action)+`
+										</span>
+						`)
+						if err != nil {
+							return err
+						}
+					}
+				} else {
+					_, err = io.WriteString(w, `<span class="text-gray-500">None</span>`)
+					if err != nil {
+						return err
+					}
+				}
+
+				roleUsers, ok := permData.RoleUsers[role]
+				userCount := 0
+				if ok {
+					userCount = len(roleUsers)
+				}
+
+				_, err = io.WriteString(w, `
+									</td>
+									<td class="py-3 px-4">`+strconv.Itoa(userCount)+`</td>
+									<td class="py-3 px-4">
+				`)
+				if err != nil {
+					return err
+				}
+
+				// Don't allow editing built-in roles
+				if role != "admin" && role != "editor" && role != "viewer" {
+					_, err = io.WriteString(w, `
+										<a href="/admin/permissions/roles/edit/`+html.EscapeString(role)+`" class="text-brass-600 hover:text-brass-700 mr-2">Edit</a>
+										<a href="#" onclick="confirmDelete('`+html.EscapeString(role)+`')" class="text-red-600 hover:text-red-700">Delete</a>
+					`)
+				} else {
+					_, err = io.WriteString(w, `
+										<span class="text-gray-500 italic">Built-in role</span>
+					`)
+				}
+				if err != nil {
+					return err
+				}
+
+				_, err = io.WriteString(w, `
+									</td>
+								</tr>
+				`)
+				if err != nil {
+					return err
+				}
+			}
+		}
+
+		_, err = io.WriteString(w, `
+							</tbody>
+						</table>
+					</div>
+				</div>
+			</div>
+		`)
+		if err != nil {
+			return err
+		}
+
+		// User Role Assignments Section
+		_, err = io.WriteString(w, `
+			<div class="bg-white rounded-lg shadow mb-8">
+				<div class="px-6 py-4 border-b border-gray-200">
+					<h2 class="text-xl font-semibold">User Role Assignments</h2>
+				</div>
+				<div class="p-6">
+					<div class="mb-4 flex justify-between items-center">
+						<p class="text-gray-600">Manage role assignments for users.</p>
+						<a href="/admin/permissions/assign-role" class="bg-brass-500 hover:bg-brass-600 text-white font-medium py-2 px-4 rounded">
+							Assign Role
+						</a>
+					</div>
+
+					<div class="overflow-x-auto">
+						<table class="min-w-full bg-white">
+							<thead>
+								<tr class="bg-gunmetal-100">
+									<th class="py-3 px-4 text-left">User</th>
+									<th class="py-3 px-4 text-left">Role</th>
+									<th class="py-3 px-4 text-left">Actions</th>
+								</tr>
+							</thead>
+							<tbody>
+		`)
+		if err != nil {
+			return err
+		}
+
+		if len(permData.UserRoles) == 0 {
+			_, err = io.WriteString(w, `
+								<tr>
+									<td colspan="3" class="py-3 px-4 text-center">No role assignments found</td>
+								</tr>
+			`)
+			if err != nil {
+				return err
+			}
+		} else {
+			for _, userRole := range permData.UserRoles {
+				_, err = io.WriteString(w, `
+								<tr class="border-t border-gray-200">
+									<td class="py-3 px-4">`+html.EscapeString(userRole.User)+`</td>
+									<td class="py-3 px-4">`+html.EscapeString(userRole.Role)+`</td>
+									<td class="py-3 px-4">
+				`)
+				if err != nil {
+					return err
+				}
+
+				// Don't allow removing admin role from last admin
+				isLastAdmin := false
+				if userRole.Role == "admin" {
+					adminUsers, ok := permData.RoleUsers["admin"]
+					if ok && len(adminUsers) <= 1 && adminUsers[0] == userRole.User {
+						isLastAdmin = true
+					}
+				}
+
+				if !isLastAdmin {
+					_, err = io.WriteString(w, `
+										<form method="POST" action="/admin/permissions/remove-user-role" class="inline"
+											onsubmit="return confirm('Are you sure you want to remove this role from the user?');">
+											<input type="hidden" name="csrf_token" value="`+viewData.AuthData.CSRFToken+`">
+											<input type="hidden" name="user" value="`+html.EscapeString(userRole.User)+`">
+											<input type="hidden" name="role" value="`+html.EscapeString(userRole.Role)+`">
+											<button type="submit" class="text-red-600 hover:text-red-700">Remove</button>
+										</form>
+					`)
+				} else {
+					_, err = io.WriteString(w, `
+										<span class="text-gray-500 italic">Last admin</span>
+					`)
+				}
+				if err != nil {
+					return err
+				}
+
+				_, err = io.WriteString(w, `
+									</td>
+								</tr>
+				`)
+				if err != nil {
+					return err
+				}
+			}
+		}
+
+		_, err = io.WriteString(w, `
+							</tbody>
+						</table>
+					</div>
+				</div>
+			</div>
+		`)
+		if err != nil {
+			return err
+		}
+
+		// Import Default Policies Section
+		_, err = io.WriteString(w, `
+			<div class="bg-white rounded-lg shadow">
+				<div class="px-6 py-4 border-b border-gray-200">
+					<h2 class="text-xl font-semibold">Default Policies</h2>
+				</div>
+				<div class="p-6">
+					<p class="text-gray-600 mb-4">Import default policies to reset the system to its initial state.</p>
+					<form method="POST" action="/admin/permissions/import-default-policies" class="inline"
+						onsubmit="return confirm('This will reset all permissions to default values. Are you sure?');">
+						<input type="hidden" name="csrf_token" value="`+viewData.AuthData.CSRFToken+`">
+						<button type="submit" class="bg-yellow-500 hover:bg-yellow-600 text-white font-medium py-2 px-4 rounded">
+							Import Default Policies
+						</button>
+					</form>
+				</div>
+			</div>
+
+			<script>
+			function confirmDelete(role) {
+				if (confirm('Are you sure you want to delete the "' + role + '" role? This will remove all associated permissions and user assignments.')) {
+					window.location.href = '/admin/permissions/roles/delete/' + role;
+				}
+			}
+			</script>
+		`)
+		return err
+	}))
+} 

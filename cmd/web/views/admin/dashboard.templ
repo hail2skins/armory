@@ -211,6 +211,11 @@ templ Dashboard(data *data.AdminData) {
 											</a>
 										</th>
 										<th class="py-3 px-4 text-left text-gunmetal-800">
+											<span class="flex items-center">
+												Guns
+											</span>
+										</th>
+										<th class="py-3 px-4 text-left text-gunmetal-800">
 											<a href="/admin/dashboard?sortBy=deleted&sortOrder=`+getSortOrder(data.SortBy, "deleted", data.SortOrder)+`&page=`+strconv.Itoa(data.CurrentPage)+`&perPage=`+strconv.Itoa(data.PerPage)+`" class="flex items-center">
 												Deleted
 												`+renderSortIcon(data.SortBy, "deleted", data.SortOrder)+`
@@ -228,7 +233,7 @@ templ Dashboard(data *data.AdminData) {
 		if len(data.RecentUsers) == 0 {
 			_, err = io.WriteString(w, `
 									<tr>
-										<td colspan="6" class="py-4 px-4 text-center text-gunmetal-700">No users found</td>
+										<td colspan="7" class="py-4 px-4 text-center text-gunmetal-700">No users found</td>
 									</tr>
 			`)
 			if err != nil {
@@ -287,6 +292,14 @@ templ Dashboard(data *data.AdminData) {
 				}
 
 				_, err = io.WriteString(w, `
+										</td>
+										<td class="py-3 px-4 text-gunmetal-800">
+											<a href="/admin/guns?user=`+fmt.Sprint(user.GetID())+`" class="text-brass-600 hover:text-brass-700 hover:underline flex items-center">
+												<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+													<path fillRule="evenodd" d="M18 4H10.472l-1.21-2.416A2 2 0 0 0 7.566 0H2a2 2 0 0 0-2 2v9a1 1 0 0 0 1 1h.643c.534 0 1.022.304 1.257.784L3.5 14.316V17a1 1 0 0 0 1 1h1a1 1 0 0 0 1-1v-1h8v1a1 1 0 0 0 1 1h1a1 1 0 0 0 1-1v-2.684l.6-1.532A1.5 1.5 0 0 1 19.357 12H20a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-2z" clip-rule="evenodd" />
+												</svg>
+												`+fmt.Sprintf("%d", user.GetGunCount())+`
+											</a>
 										</td>
 										<td class="py-3 px-4">
 					`)

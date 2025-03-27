@@ -395,6 +395,15 @@ func (s *TestService) GetPaymentsByUserID(userID uint) ([]models.Payment, error)
 	return payments, nil
 }
 
+// GetAllPayments gets all payments
+func (s *TestService) GetAllPayments() ([]models.Payment, error) {
+	var payments []models.Payment
+	if err := s.db.Order("created_at desc").Find(&payments).Error; err != nil {
+		return nil, err
+	}
+	return payments, nil
+}
+
 // FindPaymentByID finds a payment by ID
 func (s *TestService) FindPaymentByID(id uint) (*models.Payment, error) {
 	var payment models.Payment
@@ -624,4 +633,49 @@ func (s *TestService) CountNewSubscribersLastMonth() (int64, error) {
 		Count(&count).Error
 
 	return count, err
+}
+
+// FindAllGuns retrieves all guns
+func (s *TestService) FindAllGuns() ([]models.Gun, error) {
+	var guns []models.Gun
+	if err := s.db.Find(&guns).Error; err != nil {
+		return nil, err
+	}
+	return guns, nil
+}
+
+// FindAllUsers retrieves all users
+func (s *TestService) FindAllUsers() ([]database.User, error) {
+	var users []database.User
+	if err := s.db.Find(&users).Error; err != nil {
+		return nil, err
+	}
+	return users, nil
+}
+
+// CountGunsByUser counts the number of guns owned by a user
+func (s *TestService) CountGunsByUser(userID uint) (int64, error) {
+	var count int64
+	if err := s.db.Model(&models.Gun{}).Where("user_id = ?", userID).Count(&count).Error; err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
+// FindAllCalibersByIDs retrieves all calibers with the given IDs
+func (s *TestService) FindAllCalibersByIDs(ids []uint) ([]models.Caliber, error) {
+	var calibers []models.Caliber
+	if err := s.db.Where("id IN ?", ids).Find(&calibers).Error; err != nil {
+		return nil, err
+	}
+	return calibers, nil
+}
+
+// FindAllWeaponTypesByIDs retrieves all weapon types with the given IDs
+func (s *TestService) FindAllWeaponTypesByIDs(ids []uint) ([]models.WeaponType, error) {
+	var weaponTypes []models.WeaponType
+	if err := s.db.Where("id IN ?", ids).Find(&weaponTypes).Error; err != nil {
+		return nil, err
+	}
+	return weaponTypes, nil
 }
