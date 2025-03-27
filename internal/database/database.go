@@ -49,6 +49,18 @@ type Service interface {
 	DeletePromotion(id uint) error
 	FindActivePromotions() ([]models.Promotion, error)
 
+	// Feature Flag-related methods
+	FindAllFeatureFlags() ([]models.FeatureFlag, error)
+	FindFeatureFlagByID(id uint) (*models.FeatureFlag, error)
+	FindFeatureFlagByName(name string) (*models.FeatureFlag, error)
+	CreateFeatureFlag(flag *models.FeatureFlag) error
+	UpdateFeatureFlag(flag *models.FeatureFlag) error
+	DeleteFeatureFlag(id uint) error
+	AddRoleToFeatureFlag(flagID uint, role string) error
+	RemoveRoleFromFeatureFlag(flagID uint, role string) error
+	IsFeatureEnabled(name string) (bool, error)
+	CanUserAccessFeature(username, featureName string) (bool, error)
+
 	// Additional user methods
 	GetUserByID(id uint) (*User, error)
 	GetUserByStripeCustomerID(customerID string) (*User, error)
@@ -146,6 +158,8 @@ func (s *service) AutoMigrate() error {
 		&models.Gun{},
 		&models.Promotion{},
 		&models.CasbinRule{},
+		&models.FeatureFlag{},
+		&models.FeatureFlagRole{},
 	)
 }
 
@@ -381,4 +395,77 @@ func (s *service) FindAllWeaponTypesByIDs(ids []uint) ([]models.WeaponType, erro
 		return nil, err
 	}
 	return weaponTypes, nil
+}
+
+// Feature Flag-related methods implementation
+// FindAllFeatureFlags retrieves all feature flags
+func (s *service) FindAllFeatureFlags() ([]models.FeatureFlag, error) {
+	var featureFlags []models.FeatureFlag
+	if err := s.db.Find(&featureFlags).Error; err != nil {
+		return nil, err
+	}
+	return featureFlags, nil
+}
+
+// FindFeatureFlagByID retrieves a feature flag by its ID
+func (s *service) FindFeatureFlagByID(id uint) (*models.FeatureFlag, error) {
+	var featureFlag models.FeatureFlag
+	if err := s.db.First(&featureFlag, id).Error; err != nil {
+		return nil, err
+	}
+	return &featureFlag, nil
+}
+
+// FindFeatureFlagByName retrieves a feature flag by its name
+func (s *service) FindFeatureFlagByName(name string) (*models.FeatureFlag, error) {
+	var featureFlag models.FeatureFlag
+	if err := s.db.Where("name = ?", name).First(&featureFlag).Error; err != nil {
+		return nil, err
+	}
+	return &featureFlag, nil
+}
+
+// CreateFeatureFlag creates a new feature flag
+func (s *service) CreateFeatureFlag(flag *models.FeatureFlag) error {
+	return s.db.Create(flag).Error
+}
+
+// UpdateFeatureFlag updates an existing feature flag
+func (s *service) UpdateFeatureFlag(flag *models.FeatureFlag) error {
+	return s.db.Save(flag).Error
+}
+
+// DeleteFeatureFlag deletes a feature flag
+func (s *service) DeleteFeatureFlag(id uint) error {
+	return s.db.Delete(&models.FeatureFlag{}, id).Error
+}
+
+// AddRoleToFeatureFlag adds a role to a feature flag
+func (s *service) AddRoleToFeatureFlag(flagID uint, role string) error {
+	return s.db.Model(&models.FeatureFlagRole{}).Create(&models.FeatureFlagRole{
+		FeatureFlagID: flagID,
+		Role:          role,
+	}).Error
+}
+
+// RemoveRoleFromFeatureFlag removes a role from a feature flag
+func (s *service) RemoveRoleFromFeatureFlag(flagID uint, role string) error {
+	return s.db.Delete(&models.FeatureFlagRole{}, "feature_flag_id = ? AND role = ?", flagID, role).Error
+}
+
+// IsFeatureEnabled checks if a feature is enabled
+func (s *service) IsFeatureEnabled(name string) (bool, error) {
+	var featureFlag models.FeatureFlag
+	if err := s.db.Where("name = ?", name).First(&featureFlag).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return false, nil
+		}
+		return false, err
+	}
+	return featureFlag.Enabled, nil
+}
+
+// CanUserAccessFeature checks if a user can access a feature
+func (s *service) CanUserAccessFeature(username, featureName string) (bool, error) {
+	return models.CanAccessFeature(s.db, username, featureName)
 }

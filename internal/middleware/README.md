@@ -123,4 +123,40 @@ JSON responses have the following format:
 }
 ```
 
-HTML responses will render the error message in a template, or fall back to a simple text response if the template is not available. 
+HTML responses will render the error message in a template, or fall back to a simple text response if the template is not available.
+
+## Feature Flag Middleware
+
+The feature flag system provides a way to control access to features based on user roles through feature flags.
+
+### RequireFeature Middleware
+
+This middleware checks if a user has access to a specific feature based on feature flags and their associated roles.
+
+```go
+// Example usage in route setup
+ownerGroup.Group("/ammo").Use(middleware.RequireFeature("ammo_features")).
+    GET("", ammoController.Index)
+```
+
+If a user doesn't have access, they will be redirected to the dashboard with a flash message.
+
+### CheckFeatureAccessForTemplates Middleware
+
+This middleware adds feature access flags to the context for all registered feature flags, to be used in templates.
+
+```go
+// Example usage in route setup
+router.Use(middleware.CheckFeatureAccessForTemplates())
+```
+
+In templates, you can then check if a user has access to a feature using:
+
+```html
+<!-- In templ templates -->
+if HasFeatureAccess(ctx, "ammo_features") {
+  <!-- Show ammo feature UI elements -->
+}
+```
+
+Admin users automatically have access to all features. 

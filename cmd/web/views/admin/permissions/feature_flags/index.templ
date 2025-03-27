@@ -1,0 +1,182 @@
+package feature_flags
+
+import (
+	"context"
+	"html"
+	"io"
+	"strconv"
+
+	"github.com/hail2skins/armory/cmd/web/views/data"
+	"github.com/hail2skins/armory/cmd/web/views/partials"
+)
+
+templ Index(viewData data.ViewData) {
+	@partials.Base(viewData.AuthData, templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+		flagsData, ok := viewData.Data.(*data.FeatureFlagsViewData)
+		if !ok {
+			flagsData = &data.FeatureFlagsViewData{
+				FeatureFlags: nil,
+				FlagRoles:    make(map[uint][]string),
+			}
+		}
+		
+		_, err := io.WriteString(w, `
+			<div class="container mx-auto px-4 py-8">
+				<div class="mb-8 flex justify-between items-center">
+					<div>
+						<h1 class="text-2xl font-bold text-gunmetal-800">Feature Flags</h1>
+						<p class="text-gray-600">Manage feature flags and control which roles have access to each feature.</p>
+					</div>
+					<div>
+						<a href="/admin/permissions/feature-flags/create" class="bg-brass-500 hover:bg-brass-600 text-white font-medium py-2 px-4 rounded">
+							Create New Feature Flag
+						</a>
+					</div>
+				</div>
+		`)
+		if err != nil {
+			return err
+		}
+
+		if viewData.ErrorMsg != "" {
+			_, err = io.WriteString(w, `
+				<div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4" role="alert">
+					<span class="block sm:inline">`+viewData.ErrorMsg+`</span>
+				</div>
+			`)
+			if err != nil {
+				return err
+			}
+		}
+		
+		// Get flash messages from the session if available
+		if flash, exists := ctx.Value("flash").(string); exists && flash != "" {
+			_, err = io.WriteString(w, `
+				<div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4" role="alert">
+					<span class="block sm:inline">`+flash+`</span>
+				</div>
+			`)
+			if err != nil {
+				return err
+			}
+		}
+
+		// Feature Flags table
+		_, err = io.WriteString(w, `
+			<div class="bg-white rounded-lg shadow mb-8">
+				<div class="px-6 py-4 border-b border-gray-200">
+					<h2 class="text-xl font-semibold">Feature Flags</h2>
+				</div>
+				<div class="p-6">
+					<div class="overflow-x-auto">
+						<table class="min-w-full bg-white">
+							<thead>
+								<tr class="bg-gunmetal-100">
+									<th class="py-3 px-4 text-left">Name</th>
+									<th class="py-3 px-4 text-left">Description</th>
+									<th class="py-3 px-4 text-left">Status</th>
+									<th class="py-3 px-4 text-left">Roles</th>
+									<th class="py-3 px-4 text-left">Actions</th>
+								</tr>
+							</thead>
+							<tbody>
+		`)
+		if err != nil {
+			return err
+		}
+
+		if len(flagsData.FeatureFlags) == 0 {
+			_, err = io.WriteString(w, `
+								<tr>
+									<td colspan="5" class="py-3 px-4 text-center">No feature flags found</td>
+								</tr>
+			`)
+			if err != nil {
+				return err
+			}
+		} else {
+			for _, flag := range flagsData.FeatureFlags {
+				flagID := strconv.FormatUint(uint64(flag.ID), 10)
+				statusBadge := ""
+				if flag.Enabled {
+					statusBadge = `<span class="inline-block bg-green-200 rounded px-2 py-1 text-xs font-semibold text-green-700">Enabled</span>`
+				} else {
+					statusBadge = `<span class="inline-block bg-red-200 rounded px-2 py-1 text-xs font-semibold text-red-700">Disabled</span>`
+				}
+
+				rolesList := ""
+				if roles, ok := flagsData.FlagRoles[flag.ID]; ok && len(roles) > 0 {
+					for _, role := range roles {
+						rolesList += `<span class="inline-block bg-gunmetal-200 rounded px-2 py-1 text-xs font-semibold text-gunmetal-700 mr-1 mb-1">` + 
+							html.EscapeString(role) + `</span>`
+					}
+				} else {
+					rolesList = `<span class="text-gray-500">Available to all</span>`
+				}
+
+				_, err = io.WriteString(w, `
+								<tr class="border-t border-gray-200">
+									<td class="py-3 px-4">`+html.EscapeString(flag.Name)+`</td>
+									<td class="py-3 px-4">`+html.EscapeString(flag.Description)+`</td>
+									<td class="py-3 px-4">`+statusBadge+`</td>
+									<td class="py-3 px-4">`+rolesList+`</td>
+									<td class="py-3 px-4">
+										<a href="/admin/permissions/feature-flags/edit/`+flagID+`" class="text-brass-600 hover:text-brass-700 mr-2">Edit</a>
+										<button onclick="confirmDelete('`+flagID+`', '`+html.EscapeString(flag.Name)+`')" class="text-red-600 hover:text-red-700">Delete</button>
+									</td>
+								</tr>
+				`)
+				if err != nil {
+					return err
+				}
+			}
+		}
+
+		_, err = io.WriteString(w, `
+							</tbody>
+						</table>
+					</div>
+				</div>
+			</div>
+
+			<div class="mt-4">
+				<a href="/admin/permissions" class="text-brass-600 hover:text-brass-700">
+					&larr; Back to Permissions
+				</a>
+			</div>
+
+			<!-- Delete Confirmation Modal -->
+			<div id="deleteModal" class="hidden fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
+				<div class="bg-white rounded-lg p-8 max-w-md mx-auto">
+					<h3 class="text-xl font-semibold mb-4">Confirm Deletion</h3>
+					<p class="mb-6">Are you sure you want to delete the feature flag "<span id="deleteItemName"></span>"? This action cannot be undone.</p>
+					<div class="flex justify-end">
+						<button onclick="hideDeleteModal()" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-medium py-2 px-4 rounded mr-2">
+							Cancel
+						</button>
+						<form id="deleteForm" method="POST" action="/admin/permissions/feature-flags/delete/0">
+							<input type="hidden" name="csrf_token" value="`+viewData.AuthData.CSRFToken+`">
+							<button type="submit" class="bg-red-500 hover:bg-red-600 text-white font-medium py-2 px-4 rounded">
+								Delete
+							</button>
+						</form>
+					</div>
+				</div>
+			</div>
+
+			<script>
+				function confirmDelete(id, name) {
+					document.getElementById('deleteItemName').textContent = name;
+					document.getElementById('deleteForm').action = '/admin/permissions/feature-flags/delete/' + id;
+					document.getElementById('deleteModal').classList.remove('hidden');
+				}
+
+				function hideDeleteModal() {
+					document.getElementById('deleteModal').classList.add('hidden');
+				}
+			</script>
+		</div>
+		`)
+		return err
+	}))
+} 

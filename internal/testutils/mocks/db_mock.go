@@ -340,3 +340,56 @@ func (m *MockDB) FindAllWeaponTypesByIDs(ids []uint) ([]models.WeaponType, error
 	args := m.Called(ids)
 	return args.Get(0).([]models.WeaponType), args.Error(1)
 }
+
+// Feature Flag-related methods for MockDB
+
+func (m *MockDB) FindAllFeatureFlags() ([]models.FeatureFlag, error) {
+	args := m.Called()
+	return args.Get(0).([]models.FeatureFlag), args.Error(1)
+}
+
+func (m *MockDB) FindFeatureFlagByID(id uint) (*models.FeatureFlag, error) {
+	args := m.Called(id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*models.FeatureFlag), args.Error(1)
+}
+
+func (m *MockDB) FindFeatureFlagByName(name string) (*models.FeatureFlag, error) {
+	args := m.Called(name)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*models.FeatureFlag), args.Error(1)
+}
+
+func (m *MockDB) CreateFeatureFlag(flag *models.FeatureFlag) error {
+	return m.Called(flag).Error(0)
+}
+
+func (m *MockDB) UpdateFeatureFlag(flag *models.FeatureFlag) error {
+	return m.Called(flag).Error(0)
+}
+
+func (m *MockDB) DeleteFeatureFlag(id uint) error {
+	return m.Called(id).Error(0)
+}
+
+func (m *MockDB) AddRoleToFeatureFlag(flagID uint, role string) error {
+	return m.Called(flagID, role).Error(0)
+}
+
+func (m *MockDB) RemoveRoleFromFeatureFlag(flagID uint, role string) error {
+	return m.Called(flagID, role).Error(0)
+}
+
+func (m *MockDB) IsFeatureEnabled(name string) (bool, error) {
+	args := m.Called(name)
+	return args.Bool(0), args.Error(1)
+}
+
+func (m *MockDB) CanUserAccessFeature(username, featureName string) (bool, error) {
+	args := m.Called(username, featureName)
+	return args.Bool(0), args.Error(1)
+}

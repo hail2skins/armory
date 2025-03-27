@@ -23,6 +23,7 @@ func (s *Server) RegisterAdminRoutes(r *gin.Engine, authController *controller.A
 	adminPaymentController := controller.NewAdminPaymentController(s.db)
 	adminGunsController := controller.NewAdminGunsController(s.db)
 	adminPermissionsController := controller.NewAdminPermissionsController(s.db)
+	adminFeatureFlagsController := controller.NewAdminFeatureFlagsController(s.db)
 
 	// Create Stripe security controller
 	stripeSecurityController := controller.NewStripeSecurityController(s.ipFilterService)
@@ -294,20 +295,30 @@ func (s *Server) RegisterAdminRoutes(r *gin.Engine, authController *controller.A
 				// Define routes with flexible Casbin authorization
 				permissionsGroup.GET("", casbinAuth.FlexibleAuthorize("permissions", "read"), adminPermissionsController.Index)
 
-				// Role management - using actual controller method names
+				// Role management
 				permissionsGroup.GET("/roles/create", casbinAuth.FlexibleAuthorize("permissions", "write"), adminPermissionsController.CreateRole)
 				permissionsGroup.POST("/roles/create", casbinAuth.FlexibleAuthorize("permissions", "write"), adminPermissionsController.StoreRole)
-				permissionsGroup.GET("/roles/edit/:role", casbinAuth.FlexibleAuthorize("permissions", "update"), adminPermissionsController.EditRole)
-				permissionsGroup.POST("/roles/update", casbinAuth.FlexibleAuthorize("permissions", "update"), adminPermissionsController.UpdateRole)
-				permissionsGroup.GET("/roles/delete/:role", casbinAuth.FlexibleAuthorize("permissions", "delete"), adminPermissionsController.DeleteRole)
+				permissionsGroup.GET("/roles/edit/:role", casbinAuth.FlexibleAuthorize("permissions", "write"), adminPermissionsController.EditRole)
+				permissionsGroup.POST("/roles/update", casbinAuth.FlexibleAuthorize("permissions", "write"), adminPermissionsController.UpdateRole)
+				permissionsGroup.GET("/roles/delete/:role", casbinAuth.FlexibleAuthorize("permissions", "write"), adminPermissionsController.DeleteRole)
 
 				// User role assignment
-				permissionsGroup.GET("/assign-role", casbinAuth.FlexibleAuthorize("permissions", "update"), adminPermissionsController.AssignRole)
-				permissionsGroup.POST("/assign-role", casbinAuth.FlexibleAuthorize("permissions", "update"), adminPermissionsController.StoreAssignRole)
-				permissionsGroup.POST("/remove-user-role", casbinAuth.FlexibleAuthorize("permissions", "delete"), adminPermissionsController.RemoveUserRole)
+				permissionsGroup.GET("/assign-role", casbinAuth.FlexibleAuthorize("permissions", "write"), adminPermissionsController.AssignRole)
+				permissionsGroup.POST("/assign-role", casbinAuth.FlexibleAuthorize("permissions", "write"), adminPermissionsController.StoreAssignRole)
+				permissionsGroup.POST("/remove-user-role", casbinAuth.FlexibleAuthorize("permissions", "write"), adminPermissionsController.RemoveUserRole)
 
 				// Import default policies
-				permissionsGroup.POST("/import-default-policies", casbinAuth.FlexibleAuthorize("permissions", "update"), adminPermissionsController.ImportDefaultPolicies)
+				permissionsGroup.POST("/import-default-policies", casbinAuth.FlexibleAuthorize("permissions", "write"), adminPermissionsController.ImportDefaultPolicies)
+
+				// Feature flags management
+				permissionsGroup.GET("/feature-flags", casbinAuth.FlexibleAuthorize("feature_flags", "read"), adminFeatureFlagsController.Index)
+				permissionsGroup.GET("/feature-flags/create", casbinAuth.FlexibleAuthorize("feature_flags", "write"), adminFeatureFlagsController.Create)
+				permissionsGroup.POST("/feature-flags/create", casbinAuth.FlexibleAuthorize("feature_flags", "write"), adminFeatureFlagsController.Store)
+				permissionsGroup.GET("/feature-flags/edit/:id", casbinAuth.FlexibleAuthorize("feature_flags", "update"), adminFeatureFlagsController.Edit)
+				permissionsGroup.POST("/feature-flags/edit/:id", casbinAuth.FlexibleAuthorize("feature_flags", "update"), adminFeatureFlagsController.Update)
+				permissionsGroup.POST("/feature-flags/delete/:id", casbinAuth.FlexibleAuthorize("feature_flags", "delete"), adminFeatureFlagsController.Delete)
+				permissionsGroup.POST("/feature-flags/:id/roles", casbinAuth.FlexibleAuthorize("feature_flags", "update"), adminFeatureFlagsController.AddRole)
+				permissionsGroup.POST("/feature-flags/:id/roles/remove", casbinAuth.FlexibleAuthorize("feature_flags", "update"), adminFeatureFlagsController.RemoveRole)
 			} else {
 				// Without Casbin, register routes with just authentication middleware
 				permissionsGroup.GET("", adminPermissionsController.Index)
@@ -326,6 +337,16 @@ func (s *Server) RegisterAdminRoutes(r *gin.Engine, authController *controller.A
 
 				// Import default policies
 				permissionsGroup.POST("/import-default-policies", adminPermissionsController.ImportDefaultPolicies)
+
+				// Feature flags management
+				permissionsGroup.GET("/feature-flags", adminFeatureFlagsController.Index)
+				permissionsGroup.GET("/feature-flags/create", adminFeatureFlagsController.Create)
+				permissionsGroup.POST("/feature-flags/create", adminFeatureFlagsController.Store)
+				permissionsGroup.GET("/feature-flags/edit/:id", adminFeatureFlagsController.Edit)
+				permissionsGroup.POST("/feature-flags/edit/:id", adminFeatureFlagsController.Update)
+				permissionsGroup.POST("/feature-flags/delete/:id", adminFeatureFlagsController.Delete)
+				permissionsGroup.POST("/feature-flags/:id/roles", adminFeatureFlagsController.AddRole)
+				permissionsGroup.POST("/feature-flags/:id/roles/remove", adminFeatureFlagsController.RemoveRole)
 			}
 		}
 
