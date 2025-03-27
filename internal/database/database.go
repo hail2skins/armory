@@ -457,6 +457,9 @@ func (s *service) RemoveRoleFromFeatureFlag(flagID uint, role string) error {
 func (s *service) IsFeatureEnabled(name string) (bool, error) {
 	var featureFlag models.FeatureFlag
 	if err := s.db.Where("name = ?", name).First(&featureFlag).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return false, nil
+		}
 		return false, err
 	}
 	return featureFlag.Enabled, nil
