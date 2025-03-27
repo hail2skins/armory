@@ -180,11 +180,16 @@ func ImportDefaultPolicies(enforcer *casbin.Enforcer) error {
 		{"editor", "weapon_types", "create"},
 		{"editor", "weapon_types", "update"},
 		{"editor", "promotions", "read"},
+		// Feature flags permissions for editors
+		{"editor", "feature_flags", "read"},
+		{"editor", "feature_flags", "update"},
 
 		// Viewer role has read-only permissions
 		{"viewer", "manufacturers", "read"},
 		{"viewer", "calibers", "read"},
 		{"viewer", "weapon_types", "read"},
+		// Feature flags read-only permissions for viewers
+		{"viewer", "feature_flags", "read"},
 	}
 
 	// Add the policies
