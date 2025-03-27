@@ -123,7 +123,6 @@ func (c *AdminGunsController) Index(ctx *gin.Context) {
 
 	// Create user map with gun counts
 	userMap := make(map[uint]struct {
-		Name     string
 		Email    string
 		GunCount int64
 	})
@@ -131,11 +130,9 @@ func (c *AdminGunsController) Index(ctx *gin.Context) {
 	for _, u := range users {
 		count, _ := c.db.CountGunsByUser(u.ID)
 		userMap[u.ID] = struct {
-			Name     string
 			Email    string
 			GunCount int64
 		}{
-			Name:     u.Email,
 			Email:    u.Email,
 			GunCount: count,
 		}

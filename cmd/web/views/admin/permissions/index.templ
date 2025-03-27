@@ -2,6 +2,7 @@ package permissions
 
 import (
 	"context"
+	"html"
 	"io"
 	"strconv"
 
@@ -111,7 +112,7 @@ templ Index(viewData data.ViewData) {
 			for _, role := range permData.Roles {
 				_, err = io.WriteString(w, `
 								<tr class="border-t border-gray-200">
-									<td class="py-3 px-4">`+role+`</td>
+									<td class="py-3 px-4">`+html.EscapeString(role)+`</td>
 									<td class="py-3 px-4">
 				`)
 				if err != nil {
@@ -123,7 +124,7 @@ templ Index(viewData data.ViewData) {
 					for _, perm := range rolePerms {
 						_, err = io.WriteString(w, `
 										<span class="inline-block bg-gunmetal-200 rounded px-2 py-1 text-xs font-semibold text-gunmetal-700 mr-1 mb-1">
-											`+perm.Resource+`:`+perm.Action+`
+											`+html.EscapeString(perm.Resource)+`:`+html.EscapeString(perm.Action)+`
 										</span>
 						`)
 						if err != nil {
@@ -155,8 +156,8 @@ templ Index(viewData data.ViewData) {
 				// Don't allow editing built-in roles
 				if role != "admin" && role != "editor" && role != "viewer" {
 					_, err = io.WriteString(w, `
-										<a href="/admin/permissions/roles/edit/`+role+`" class="text-brass-600 hover:text-brass-700 mr-2">Edit</a>
-										<a href="#" onclick="confirmDelete('`+role+`')" class="text-red-600 hover:text-red-700">Delete</a>
+										<a href="/admin/permissions/roles/edit/`+html.EscapeString(role)+`" class="text-brass-600 hover:text-brass-700 mr-2">Edit</a>
+										<a href="#" onclick="confirmDelete('`+html.EscapeString(role)+`')" class="text-red-600 hover:text-red-700">Delete</a>
 					`)
 				} else {
 					_, err = io.WriteString(w, `
@@ -230,8 +231,8 @@ templ Index(viewData data.ViewData) {
 			for _, userRole := range permData.UserRoles {
 				_, err = io.WriteString(w, `
 								<tr class="border-t border-gray-200">
-									<td class="py-3 px-4">`+userRole.User+`</td>
-									<td class="py-3 px-4">`+userRole.Role+`</td>
+									<td class="py-3 px-4">`+html.EscapeString(userRole.User)+`</td>
+									<td class="py-3 px-4">`+html.EscapeString(userRole.Role)+`</td>
 									<td class="py-3 px-4">
 				`)
 				if err != nil {
@@ -252,8 +253,8 @@ templ Index(viewData data.ViewData) {
 										<form method="POST" action="/admin/permissions/remove-user-role" class="inline"
 											onsubmit="return confirm('Are you sure you want to remove this role from the user?');">
 											<input type="hidden" name="csrf_token" value="`+viewData.AuthData.CSRFToken+`">
-											<input type="hidden" name="user" value="`+userRole.User+`">
-											<input type="hidden" name="role" value="`+userRole.Role+`">
+											<input type="hidden" name="user" value="`+html.EscapeString(userRole.User)+`">
+											<input type="hidden" name="role" value="`+html.EscapeString(userRole.Role)+`">
 											<button type="submit" class="text-red-600 hover:text-red-700">Remove</button>
 										</form>
 					`)

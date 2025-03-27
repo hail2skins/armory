@@ -17,7 +17,12 @@ func NewViewData(title string, ctx *gin.Context) ViewData {
 	// Get auth data from context if available
 	var authData AuthData
 	if authDataInterface, exists := ctx.Get("authData"); exists {
-		if ad, ok := authDataInterface.(AuthData); ok {
+		// Handle both pointer and value types of AuthData
+		// This makes the function more flexible and robust when code elsewhere
+		// might store either *AuthData or AuthData in the context
+		if ad, ok := authDataInterface.(*AuthData); ok {
+			authData = *ad
+		} else if ad, ok := authDataInterface.(AuthData); ok {
 			authData = ad
 		} else {
 			authData = NewAuthData()

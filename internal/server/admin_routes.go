@@ -114,6 +114,8 @@ func (s *Server) RegisterAdminRoutes(r *gin.Engine, authController *controller.A
 			c.Next()
 		})
 
+		// TODO: Delete this commented code block in a future cleanup
+		// The FlexibleAuthorize approach used on individual routes makes this global admin check unnecessary
 		// If Casbin auth is available, also apply role-based access control for admin
 		// COMMENTING OUT GLOBAL ADMIN CHECK: This was preventing users with specific resource permissions
 		// from accessing admin routes unless they had the admin role
@@ -121,11 +123,27 @@ func (s *Server) RegisterAdminRoutes(r *gin.Engine, authController *controller.A
 		//     adminGroup.Use(casbinAuth.Authorize("admin"))
 		// }
 
+		// ==================================================================================
+		// SECURITY WARNING: ALL admin routes MUST use FlexibleAuthorize for proper security
+		// When adding new routes, follow this pattern:
+		//
+		// if casbinAuth != nil {
+		//     adminGroup.GET("/route", casbinAuth.FlexibleAuthorize("resource", "action"), controller.Action)
+		// } else {
+		//     adminGroup.GET("/route", controller.Action)
+		// }
+		//
+		// This ensures:
+		// 1. Proper security checks for all admin routes
+		// 2. Consistent permission model throughout the application
+		// 3. Support for both role-based and permission-based access
+		// ==================================================================================
+
 		// Admin dashboard routes
 		if casbinAuth != nil {
-			adminGroup.GET("/dashboard", casbinAuth.Authorize("dashboard", "read"), adminDashboardController.Dashboard)
-			adminGroup.GET("/detailed-health", casbinAuth.Authorize("dashboard", "read"), webhookStatsMiddleware, adminDashboardController.DetailedHealth)
-			adminGroup.GET("/error-metrics", casbinAuth.Authorize("dashboard", "read"), adminDashboardController.ErrorMetrics)
+			adminGroup.GET("/dashboard", casbinAuth.FlexibleAuthorize("dashboard", "read"), adminDashboardController.Dashboard)
+			adminGroup.GET("/detailed-health", casbinAuth.FlexibleAuthorize("dashboard", "read"), webhookStatsMiddleware, adminDashboardController.DetailedHealth)
+			adminGroup.GET("/error-metrics", casbinAuth.FlexibleAuthorize("dashboard", "read"), adminDashboardController.ErrorMetrics)
 		} else {
 			adminGroup.GET("/dashboard", adminDashboardController.Dashboard)
 			adminGroup.GET("/detailed-health", webhookStatsMiddleware, adminDashboardController.DetailedHealth)
@@ -133,11 +151,19 @@ func (s *Server) RegisterAdminRoutes(r *gin.Engine, authController *controller.A
 		}
 
 		// Stripe security routes
-		adminGroup.GET("/stripe-security", stripeSecurityController.Dashboard)
-		adminGroup.POST("/stripe-security/refresh", stripeSecurityController.RefreshIPRanges)
-		adminGroup.POST("/stripe-security/toggle-filtering", stripeSecurityController.ToggleIPFilter)
-		adminGroup.GET("/stripe-security/test-ip", stripeSecurityController.TestIPForm)
-		adminGroup.POST("/stripe-security/check-ip", stripeSecurityController.CheckIP)
+		if casbinAuth != nil {
+			adminGroup.GET("/stripe-security", casbinAuth.FlexibleAuthorize("stripe", "read"), stripeSecurityController.Dashboard)
+			adminGroup.POST("/stripe-security/refresh", casbinAuth.FlexibleAuthorize("stripe", "write"), stripeSecurityController.RefreshIPRanges)
+			adminGroup.POST("/stripe-security/toggle-filtering", casbinAuth.FlexibleAuthorize("stripe", "write"), stripeSecurityController.ToggleIPFilter)
+			adminGroup.GET("/stripe-security/test-ip", casbinAuth.FlexibleAuthorize("stripe", "read"), stripeSecurityController.TestIPForm)
+			adminGroup.POST("/stripe-security/check-ip", casbinAuth.FlexibleAuthorize("stripe", "read"), stripeSecurityController.CheckIP)
+		} else {
+			adminGroup.GET("/stripe-security", stripeSecurityController.Dashboard)
+			adminGroup.POST("/stripe-security/refresh", stripeSecurityController.RefreshIPRanges)
+			adminGroup.POST("/stripe-security/toggle-filtering", stripeSecurityController.ToggleIPFilter)
+			adminGroup.GET("/stripe-security/test-ip", stripeSecurityController.TestIPForm)
+			adminGroup.POST("/stripe-security/check-ip", stripeSecurityController.CheckIP)
+		}
 
 		// Manufacturer routes
 		manufacturerGroup := adminGroup.Group("/manufacturers")
@@ -167,14 +193,14 @@ func (s *Server) RegisterAdminRoutes(r *gin.Engine, authController *controller.A
 		caliberGroup := adminGroup.Group("/calibers")
 		{
 			if casbinAuth != nil {
-				// Define routes with fine-grained Casbin authorization
-				caliberGroup.GET("", casbinAuth.Authorize("calibers", "read"), adminCaliberController.Index)
-				caliberGroup.GET("/new", casbinAuth.Authorize("calibers", "write"), adminCaliberController.New)
-				caliberGroup.POST("", casbinAuth.Authorize("calibers", "write"), adminCaliberController.Create)
-				caliberGroup.GET("/:id", casbinAuth.Authorize("calibers", "read"), adminCaliberController.Show)
-				caliberGroup.GET("/:id/edit", casbinAuth.Authorize("calibers", "update"), adminCaliberController.Edit)
-				caliberGroup.POST("/:id", casbinAuth.Authorize("calibers", "update"), adminCaliberController.Update)
-				caliberGroup.POST("/:id/delete", casbinAuth.Authorize("calibers", "delete"), adminCaliberController.Delete)
+				// Define routes with flexible Casbin authorization
+				caliberGroup.GET("", casbinAuth.FlexibleAuthorize("calibers", "read"), adminCaliberController.Index)
+				caliberGroup.GET("/new", casbinAuth.FlexibleAuthorize("calibers", "write"), adminCaliberController.New)
+				caliberGroup.POST("", casbinAuth.FlexibleAuthorize("calibers", "write"), adminCaliberController.Create)
+				caliberGroup.GET("/:id", casbinAuth.FlexibleAuthorize("calibers", "read"), adminCaliberController.Show)
+				caliberGroup.GET("/:id/edit", casbinAuth.FlexibleAuthorize("calibers", "update"), adminCaliberController.Edit)
+				caliberGroup.POST("/:id", casbinAuth.FlexibleAuthorize("calibers", "update"), adminCaliberController.Update)
+				caliberGroup.POST("/:id/delete", casbinAuth.FlexibleAuthorize("calibers", "delete"), adminCaliberController.Delete)
 			} else {
 				caliberGroup.GET("", adminCaliberController.Index)
 				caliberGroup.GET("/new", adminCaliberController.New)
@@ -190,14 +216,14 @@ func (s *Server) RegisterAdminRoutes(r *gin.Engine, authController *controller.A
 		weaponTypeGroup := adminGroup.Group("/weapon_types")
 		{
 			if casbinAuth != nil {
-				// Define routes with fine-grained Casbin authorization
-				weaponTypeGroup.GET("", casbinAuth.Authorize("weapon_types", "read"), adminWeaponTypeController.Index)
-				weaponTypeGroup.GET("/new", casbinAuth.Authorize("weapon_types", "write"), adminWeaponTypeController.New)
-				weaponTypeGroup.POST("", casbinAuth.Authorize("weapon_types", "write"), adminWeaponTypeController.Create)
-				weaponTypeGroup.GET("/:id", casbinAuth.Authorize("weapon_types", "read"), adminWeaponTypeController.Show)
-				weaponTypeGroup.GET("/:id/edit", casbinAuth.Authorize("weapon_types", "update"), adminWeaponTypeController.Edit)
-				weaponTypeGroup.POST("/:id", casbinAuth.Authorize("weapon_types", "update"), adminWeaponTypeController.Update)
-				weaponTypeGroup.POST("/:id/delete", casbinAuth.Authorize("weapon_types", "delete"), adminWeaponTypeController.Delete)
+				// Define routes with flexible Casbin authorization
+				weaponTypeGroup.GET("", casbinAuth.FlexibleAuthorize("weapon_types", "read"), adminWeaponTypeController.Index)
+				weaponTypeGroup.GET("/new", casbinAuth.FlexibleAuthorize("weapon_types", "write"), adminWeaponTypeController.New)
+				weaponTypeGroup.POST("", casbinAuth.FlexibleAuthorize("weapon_types", "write"), adminWeaponTypeController.Create)
+				weaponTypeGroup.GET("/:id", casbinAuth.FlexibleAuthorize("weapon_types", "read"), adminWeaponTypeController.Show)
+				weaponTypeGroup.GET("/:id/edit", casbinAuth.FlexibleAuthorize("weapon_types", "update"), adminWeaponTypeController.Edit)
+				weaponTypeGroup.POST("/:id", casbinAuth.FlexibleAuthorize("weapon_types", "update"), adminWeaponTypeController.Update)
+				weaponTypeGroup.POST("/:id/delete", casbinAuth.FlexibleAuthorize("weapon_types", "delete"), adminWeaponTypeController.Delete)
 			} else {
 				weaponTypeGroup.GET("", adminWeaponTypeController.Index)
 				weaponTypeGroup.GET("/new", adminWeaponTypeController.New)
@@ -213,15 +239,15 @@ func (s *Server) RegisterAdminRoutes(r *gin.Engine, authController *controller.A
 		promotionGroup := adminGroup.Group("/promotions")
 		{
 			if casbinAuth != nil {
-				// Define routes with fine-grained Casbin authorization
-				promotionGroup.GET("", casbinAuth.Authorize("admin", "read"), adminPromotionController.Index)
-				promotionGroup.GET("/index", casbinAuth.Authorize("admin", "read"), adminPromotionController.Index)
-				promotionGroup.GET("/new", casbinAuth.Authorize("admin", "write"), adminPromotionController.New)
-				promotionGroup.POST("", casbinAuth.Authorize("admin", "write"), adminPromotionController.Create)
-				promotionGroup.GET("/:id", casbinAuth.Authorize("admin", "read"), adminPromotionController.Show)
-				promotionGroup.GET("/:id/edit", casbinAuth.Authorize("admin", "update"), adminPromotionController.Edit)
-				promotionGroup.POST("/:id", casbinAuth.Authorize("admin", "update"), adminPromotionController.Update)
-				promotionGroup.POST("/:id/delete", casbinAuth.Authorize("admin", "delete"), adminPromotionController.Delete)
+				// Define routes with flexible Casbin authorization
+				promotionGroup.GET("", casbinAuth.FlexibleAuthorize("promotions", "read"), adminPromotionController.Index)
+				promotionGroup.GET("/index", casbinAuth.FlexibleAuthorize("promotions", "read"), adminPromotionController.Index)
+				promotionGroup.GET("/new", casbinAuth.FlexibleAuthorize("promotions", "write"), adminPromotionController.New)
+				promotionGroup.POST("", casbinAuth.FlexibleAuthorize("promotions", "write"), adminPromotionController.Create)
+				promotionGroup.GET("/:id", casbinAuth.FlexibleAuthorize("promotions", "read"), adminPromotionController.Show)
+				promotionGroup.GET("/:id/edit", casbinAuth.FlexibleAuthorize("promotions", "update"), adminPromotionController.Edit)
+				promotionGroup.POST("/:id", casbinAuth.FlexibleAuthorize("promotions", "update"), adminPromotionController.Update)
+				promotionGroup.POST("/:id/delete", casbinAuth.FlexibleAuthorize("promotions", "delete"), adminPromotionController.Delete)
 			} else {
 				// Without Casbin, register routes with just authentication middleware
 				promotionGroup.GET("", adminPromotionController.Index)
@@ -239,15 +265,15 @@ func (s *Server) RegisterAdminRoutes(r *gin.Engine, authController *controller.A
 		userGroup := adminGroup.Group("/users")
 		{
 			if casbinAuth != nil {
-				// Define routes with fine-grained Casbin authorization
-				userGroup.GET("", casbinAuth.Authorize("admin", "read"), adminUserController.Index)
-				userGroup.GET("/:id", casbinAuth.Authorize("admin", "read"), adminUserController.Show)
-				userGroup.GET("/:id/edit", casbinAuth.Authorize("admin", "update"), adminUserController.Edit)
-				userGroup.POST("/:id", casbinAuth.Authorize("admin", "update"), adminUserController.Update)
-				userGroup.POST("/:id/delete", casbinAuth.Authorize("admin", "delete"), adminUserController.Delete)
-				userGroup.POST("/:id/restore", casbinAuth.Authorize("admin", "update"), adminUserController.Restore)
-				userGroup.GET("/:id/grant-subscription", casbinAuth.Authorize("admin", "update"), adminUserController.ShowGrantSubscription)
-				userGroup.POST("/:id/grant-subscription", casbinAuth.Authorize("admin", "update"), adminUserController.GrantSubscription)
+				// Define routes with flexible Casbin authorization
+				userGroup.GET("", casbinAuth.FlexibleAuthorize("users", "read"), adminUserController.Index)
+				userGroup.GET("/:id", casbinAuth.FlexibleAuthorize("users", "read"), adminUserController.Show)
+				userGroup.GET("/:id/edit", casbinAuth.FlexibleAuthorize("users", "update"), adminUserController.Edit)
+				userGroup.POST("/:id", casbinAuth.FlexibleAuthorize("users", "update"), adminUserController.Update)
+				userGroup.POST("/:id/delete", casbinAuth.FlexibleAuthorize("users", "delete"), adminUserController.Delete)
+				userGroup.POST("/:id/restore", casbinAuth.FlexibleAuthorize("users", "update"), adminUserController.Restore)
+				userGroup.GET("/:id/grant-subscription", casbinAuth.FlexibleAuthorize("users", "update"), adminUserController.ShowGrantSubscription)
+				userGroup.POST("/:id/grant-subscription", casbinAuth.FlexibleAuthorize("users", "update"), adminUserController.GrantSubscription)
 			} else {
 				// Without Casbin, register routes with just authentication middleware
 				userGroup.GET("", adminUserController.Index)
@@ -265,24 +291,23 @@ func (s *Server) RegisterAdminRoutes(r *gin.Engine, authController *controller.A
 		permissionsGroup := adminGroup.Group("/permissions")
 		{
 			if casbinAuth != nil {
-				// Define routes with fine-grained Casbin authorization
-				// We don't need additional checks for admins since they already have "admin" middleware applied
-				permissionsGroup.GET("", adminPermissionsController.Index)
+				// Define routes with flexible Casbin authorization
+				permissionsGroup.GET("", casbinAuth.FlexibleAuthorize("permissions", "read"), adminPermissionsController.Index)
 
 				// Role management - using actual controller method names
-				permissionsGroup.GET("/roles/create", adminPermissionsController.CreateRole)
-				permissionsGroup.POST("/roles/create", adminPermissionsController.StoreRole)
-				permissionsGroup.GET("/roles/edit/:role", adminPermissionsController.EditRole)
-				permissionsGroup.POST("/roles/update", adminPermissionsController.UpdateRole)
-				permissionsGroup.GET("/roles/delete/:role", adminPermissionsController.DeleteRole)
+				permissionsGroup.GET("/roles/create", casbinAuth.FlexibleAuthorize("permissions", "write"), adminPermissionsController.CreateRole)
+				permissionsGroup.POST("/roles/create", casbinAuth.FlexibleAuthorize("permissions", "write"), adminPermissionsController.StoreRole)
+				permissionsGroup.GET("/roles/edit/:role", casbinAuth.FlexibleAuthorize("permissions", "update"), adminPermissionsController.EditRole)
+				permissionsGroup.POST("/roles/update", casbinAuth.FlexibleAuthorize("permissions", "update"), adminPermissionsController.UpdateRole)
+				permissionsGroup.GET("/roles/delete/:role", casbinAuth.FlexibleAuthorize("permissions", "delete"), adminPermissionsController.DeleteRole)
 
 				// User role assignment
-				permissionsGroup.GET("/assign-role", adminPermissionsController.AssignRole)
-				permissionsGroup.POST("/assign-role", adminPermissionsController.StoreAssignRole)
-				permissionsGroup.POST("/remove-user-role", adminPermissionsController.RemoveUserRole)
+				permissionsGroup.GET("/assign-role", casbinAuth.FlexibleAuthorize("permissions", "update"), adminPermissionsController.AssignRole)
+				permissionsGroup.POST("/assign-role", casbinAuth.FlexibleAuthorize("permissions", "update"), adminPermissionsController.StoreAssignRole)
+				permissionsGroup.POST("/remove-user-role", casbinAuth.FlexibleAuthorize("permissions", "delete"), adminPermissionsController.RemoveUserRole)
 
 				// Import default policies
-				permissionsGroup.POST("/import-default-policies", adminPermissionsController.ImportDefaultPolicies)
+				permissionsGroup.POST("/import-default-policies", casbinAuth.FlexibleAuthorize("permissions", "update"), adminPermissionsController.ImportDefaultPolicies)
 			} else {
 				// Without Casbin, register routes with just authentication middleware
 				permissionsGroup.GET("", adminPermissionsController.Index)
@@ -306,12 +331,24 @@ func (s *Server) RegisterAdminRoutes(r *gin.Engine, authController *controller.A
 
 		// ===== Payment Management Routes =====
 		// Payments history
-		adminGroup.GET("/payments-history", adminPaymentController.ShowPaymentsHistory)
+		if casbinAuth != nil {
+			adminGroup.GET("/payments-history", casbinAuth.FlexibleAuthorize("payments", "read"), adminPaymentController.ShowPaymentsHistory)
+		} else {
+			adminGroup.GET("/payments-history", adminPaymentController.ShowPaymentsHistory)
+		}
 
 		// ===== Guns Management Routes =====
-		adminGroup.GET("/guns", adminGunsController.Index)
+		if casbinAuth != nil {
+			adminGroup.GET("/guns", casbinAuth.FlexibleAuthorize("guns", "read"), adminGunsController.Index)
+		} else {
+			adminGroup.GET("/guns", adminGunsController.Index)
+		}
 
 		// ===== Dashboard Routes =====
-		adminGroup.GET("", adminDashboardController.Dashboard)
+		if casbinAuth != nil {
+			adminGroup.GET("", casbinAuth.FlexibleAuthorize("dashboard", "read"), adminDashboardController.Dashboard)
+		} else {
+			adminGroup.GET("", adminDashboardController.Dashboard)
+		}
 	}
 }

@@ -15,7 +15,6 @@ type GunsIndexData struct {
 	*data.AdminData
 	Guns            []models.Gun
 	UserMap         map[uint]struct {
-		Name     string
 		Email    string
 		GunCount int64
 	}
@@ -134,7 +133,7 @@ templ GunsIndex(data *GunsIndexData) {
 				// Get owner name
 				ownerName := "Unknown"
 				if userInfo, ok := data.UserMap[gun.OwnerID]; ok {
-					ownerName = userInfo.Name
+					ownerName = userInfo.Email
 				}
 
 				// Get weapon type name

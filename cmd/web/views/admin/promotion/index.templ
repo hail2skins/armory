@@ -185,7 +185,7 @@ templ Index(data *data.AdminData) {
 					
 					// Check if the two rows should switch place based on direction
 					if (dir == "asc") {
-						if (n === 3 || n === 4) { // Date columns - date sort
+						if (n === 4 || n === 5) { // Date columns - date sort
 							var xDate = new Date(x.innerHTML.split('/').reverse().join('-'));
 							var yDate = new Date(y.innerHTML.split('/').reverse().join('-'));
 							if (xDate > yDate) {
@@ -199,7 +199,7 @@ templ Index(data *data.AdminData) {
 							}
 						}
 					} else if (dir == "desc") {
-						if (n === 3 || n === 4) { // Date columns - date sort
+						if (n === 4 || n === 5) { // Date columns - date sort
 							var xDate = new Date(x.innerHTML.split('/').reverse().join('-'));
 							var yDate = new Date(y.innerHTML.split('/').reverse().join('-'));
 							if (xDate < yDate) {
