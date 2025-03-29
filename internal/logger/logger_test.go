@@ -18,6 +18,13 @@ func TestLogger(t *testing.T) {
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 
+	// Reset logWriter to nil for testing to use direct stdout
+	originalNrWriter := nrWriter
+	nrWriter = nil
+	defer func() {
+		nrWriter = originalNrWriter
+	}()
+
 	// Restore original output when done
 	defer func() {
 		os.Stdout = oldOutput
@@ -27,7 +34,7 @@ func TestLogger(t *testing.T) {
 	testCases := []struct {
 		name     string
 		logFunc  func()
-		expected LogLevel
+		expected string // Changed from LogLevel to string to match our New Relic formatting
 		message  string
 	}{
 		{
@@ -35,7 +42,7 @@ func TestLogger(t *testing.T) {
 			logFunc: func() {
 				Debug("Debug message", nil)
 			},
-			expected: DEBUG,
+			expected: "DEBUG",
 			message:  "Debug message",
 		},
 		{
@@ -43,7 +50,7 @@ func TestLogger(t *testing.T) {
 			logFunc: func() {
 				Info("Info message", nil)
 			},
-			expected: INFO,
+			expected: "INFO",
 			message:  "Info message",
 		},
 		{
@@ -51,7 +58,7 @@ func TestLogger(t *testing.T) {
 			logFunc: func() {
 				Warn("Warning message", nil)
 			},
-			expected: WARN,
+			expected: "WARNING", // Changed from WARN to WARNING for New Relic format
 			message:  "Warning message",
 		},
 		{
@@ -59,7 +66,7 @@ func TestLogger(t *testing.T) {
 			logFunc: func() {
 				Error("Error message", errors.New("test error"), nil)
 			},
-			expected: ERROR,
+			expected: "ERROR",
 			message:  "Error message",
 		},
 	}
@@ -81,17 +88,17 @@ func TestLogger(t *testing.T) {
 			os.Stdout = w
 
 			// Parse the JSON log entry
-			var entry LogEntry
+			var entry map[string]interface{}
 			err := json.Unmarshal(buf.Bytes(), &entry)
 
 			// Verify the log entry
 			assert.NoError(t, err)
-			assert.Equal(t, tc.expected, entry.Level)
-			assert.Equal(t, tc.message, entry.Message)
+			assert.Equal(t, tc.expected, entry["level"])
+			assert.Equal(t, tc.message, entry["message"])
 
 			// For error logs, verify the error message
-			if tc.expected == ERROR {
-				assert.Equal(t, "test error", entry.Error)
+			if tc.expected == "ERROR" {
+				assert.Equal(t, "test error", entry["error"])
 			}
 		})
 	}
@@ -102,6 +109,13 @@ func TestLoggerWithFields(t *testing.T) {
 	oldOutput := os.Stdout
 	r, w, _ := os.Pipe()
 	os.Stdout = w
+
+	// Reset logWriter to nil for testing to use direct stdout
+	originalNrWriter := nrWriter
+	nrWriter = nil
+	defer func() {
+		nrWriter = originalNrWriter
+	}()
 
 	// Restore original output when done
 	defer func() {
@@ -136,6 +150,9 @@ func TestLoggerWithFields(t *testing.T) {
 	assert.Equal(t, float64(123), entry["user_id"]) // JSON numbers are float64
 	assert.Equal(t, "/api/test", entry["path"])
 	assert.Equal(t, "abc123", entry["trace_id"])
+
+	// Check that logtype exists
+	assert.Equal(t, "application", entry["logtype"])
 }
 
 func TestSetupFileLogging(t *testing.T) {
