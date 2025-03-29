@@ -19,7 +19,8 @@ func mockServer(t *testing.T) (*gin.Engine, database.Service) {
 	gin.SetMode(gin.TestMode)
 
 	// Create test database service
-	db := testutils.NewTestService()
+	testDB := testutils.NewTestDB()
+	db := testutils.NewTestService(testDB.DB)
 
 	// Create a new gin router
 	r := gin.New()

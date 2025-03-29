@@ -74,6 +74,13 @@ type Service interface {
 	FindAllCalibersByIDs(ids []uint) ([]models.Caliber, error)
 	FindAllWeaponTypesByIDs(ids []uint) ([]models.WeaponType, error)
 
+	// Casing-related methods
+	FindAllCasings() ([]models.Casing, error)
+	CreateCasing(casing *models.Casing) error
+	FindCasingByID(id uint) (*models.Casing, error)
+	UpdateCasing(casing *models.Casing) error
+	DeleteCasing(id uint) error
+
 	// GetDB returns the underlying *gorm.DB instance
 	GetDB() *gorm.DB
 }
@@ -161,6 +168,7 @@ func (s *service) AutoMigrate() error {
 		&models.CasbinRule{},
 		&models.FeatureFlag{},
 		&models.FeatureFlagRole{},
+		&models.Casing{},
 	)
 }
 
@@ -469,4 +477,53 @@ func (s *service) IsFeatureEnabled(name string) (bool, error) {
 // CanUserAccessFeature checks if a user can access a feature
 func (s *service) CanUserAccessFeature(username, featureName string) (bool, error) {
 	return models.CanAccessFeature(s.db, username, featureName)
+}
+
+// Casing-related methods implementation
+// FindAllCasings retrieves all casings from the database
+func (s *service) FindAllCasings() ([]models.Casing, error) {
+	var casings []models.Casing
+	// Order by Popularity descending, then by Type ascending for consistent ordering
+	if err := s.db.Order("popularity DESC, type ASC").Find(&casings).Error; err != nil {
+		return nil, err
+	}
+	return casings, nil
+}
+
+// CreateCasing creates a new casing record
+func (s *service) CreateCasing(casing *models.Casing) error {
+	// Check if there's a soft-deleted casing with the same type
+	var existingCasing models.Casing
+	result := s.db.Unscoped().Where("type = ?", casing.Type).First(&existingCasing)
+
+	if result.Error == nil && existingCasing.DeletedAt.Valid {
+		// Record exists and is soft-deleted, restore it
+		existingCasing.DeletedAt.Valid = false // Clear the deleted_at timestamp
+		existingCasing.DeletedAt.Time = time.Time{}
+		existingCasing.Popularity = casing.Popularity // Update with new values
+
+		// Update the existing record (restore it)
+		return s.db.Unscoped().Save(&existingCasing).Error
+	} else if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		// Some error other than "record not found" occurred
+		return result.Error
+	}
+
+	// No soft-deleted record found with this type, create a new one
+	return s.db.Create(casing).Error
+}
+
+// FindCasingByID finds a casing by its ID using the models function
+func (s *service) FindCasingByID(id uint) (*models.Casing, error) {
+	return models.FindCasingByID(s.db, id)
+}
+
+// UpdateCasing updates an existing casing in the database
+func (s *service) UpdateCasing(casing *models.Casing) error {
+	return s.db.Save(casing).Error
+}
+
+// DeleteCasing deletes a casing from the database
+func (s *service) DeleteCasing(id uint) error {
+	return s.db.Delete(&models.Casing{}, id).Error
 }

@@ -7,66 +7,96 @@ import (
 	"gorm.io/gorm"
 )
 
-// RunSeeds executes all seed functions
+// RunSeeds executes seed functions for core data tables *only* if the respective table is empty.
 func RunSeeds(db *gorm.DB) {
-	// Check if database already contains data
-	if !NeedsSeeding(db) {
-		log.Println("Database already contains data, skipping seed")
-		return
+	log.Println("Checking if seeding is needed for individual tables...")
+
+	// Seed Manufacturers if the table is empty
+	var manufacturerCount int64
+	if err := db.Model(&models.Manufacturer{}).Count(&manufacturerCount).Error; err != nil {
+		log.Printf("Error checking manufacturers count: %v", err)
+	} else if manufacturerCount == 0 {
+		log.Println("Seeding manufacturers...")
+		SeedManufacturers(db)
+	} else {
+		log.Printf("Manufacturers table already seeded (count: %d), skipping.", manufacturerCount)
 	}
 
-	log.Println("Starting database seeding...")
+	// Seed Calibers if the table is empty
+	var caliberCount int64
+	if err := db.Model(&models.Caliber{}).Count(&caliberCount).Error; err != nil {
+		log.Printf("Error checking calibers count: %v", err)
+	} else if caliberCount == 0 {
+		log.Println("Seeding calibers...")
+		SeedCalibers(db)
+	} else {
+		log.Printf("Calibers table already seeded (count: %d), skipping.", caliberCount)
+	}
 
-	// Run manufacturer seeds
-	log.Println("Seeding manufacturers...")
-	SeedManufacturers(db)
+	// Seed Weapon Types if the table is empty
+	var weaponTypeCount int64
+	if err := db.Model(&models.WeaponType{}).Count(&weaponTypeCount).Error; err != nil {
+		log.Printf("Error checking weapon types count: %v", err)
+	} else if weaponTypeCount == 0 {
+		log.Println("Seeding weapon types...")
+		SeedWeaponTypes(db)
+	} else {
+		log.Printf("Weapon Types table already seeded (count: %d), skipping.", weaponTypeCount)
+	}
 
-	// Run caliber seeds
-	log.Println("Seeding calibers...")
-	SeedCalibers(db)
+	// Seed Casings if the table is empty
+	var casingCount int64
+	if err := db.Model(&models.Casing{}).Count(&casingCount).Error; err != nil {
+		log.Printf("Error checking casings count: %v", err)
+	} else if casingCount == 0 {
+		log.Println("Seeding casings...")
+		SeedCasings(db)
+	} else {
+		log.Printf("Casings table already seeded (count: %d), skipping.", casingCount)
+	}
 
-	// Run weapon type seeds
-	log.Println("Seeding weapon types...")
-	SeedWeaponTypes(db)
+	// Add more seed functions here following the same pattern
 
-	// Add more seed functions here as needed
-
-	log.Println("Database seeding completed")
+	log.Println("Individual table seeding checks completed.")
 }
 
-// NeedsSeeding checks if the database needs to be seeded by checking
-// if any essential reference data already exists
+// NeedsSeeding function is likely redundant with the new RunSeeds logic, but kept for now
+// in case it's used elsewhere or for potential future refactoring.
 func NeedsSeeding(db *gorm.DB) bool {
-	// Check weapon types (if any exist, we'll assume the database has been seeded)
+	// Check weapon types
 	var weaponTypeCount int64
 	if err := db.Model(&models.WeaponType{}).Count(&weaponTypeCount).Error; err != nil {
 		log.Printf("Error checking weapon types: %v", err)
-		return true // If there's an error, assume we need to seed
-	}
-	if weaponTypeCount > 0 {
-		return false
+		// return true // If there's an error, don't assume seeding is needed if other tables might have data
+	} else if weaponTypeCount > 0 {
+		return false // Data found, no need to seed
 	}
 
 	// Check calibers
 	var caliberCount int64
 	if err := db.Model(&models.Caliber{}).Count(&caliberCount).Error; err != nil {
 		log.Printf("Error checking calibers: %v", err)
-		return true
-	}
-	if caliberCount > 0 {
-		return false
+	} else if caliberCount > 0 {
+		return false // Data found, no need to seed
 	}
 
 	// Check manufacturers
 	var manufacturerCount int64
 	if err := db.Model(&models.Manufacturer{}).Count(&manufacturerCount).Error; err != nil {
 		log.Printf("Error checking manufacturers: %v", err)
-		return true
-	}
-	if manufacturerCount > 0 {
-		return false
+	} else if manufacturerCount > 0 {
+		return false // Data found, no need to seed
 	}
 
-	// If we reach here, no data exists, so we need to seed
+	// Check casings <--- NEW CHECK
+	var casingCount int64
+	if err := db.Model(&models.Casing{}).Count(&casingCount).Error; err != nil {
+		log.Printf("Error checking casings: %v", err)
+	} else if casingCount > 0 {
+		return false // Data found, no need to seed
+	}
+
+	// If we reach here, NONE of the checked tables contained data, so we need to seed.
+	log.Println("No data found in Manufacturers, Calibers, WeaponTypes, or Casings. Proceeding with seed.")
 	return true
 }
