@@ -8,9 +8,16 @@ import (
 
 // InitializeNewRelic creates and configures a new New Relic application instance
 func InitializeNewRelic() (*newrelic.Application, error) {
+	appName := os.Getenv("NEW_RELIC_APP_NAME")
+	licenseKey := os.Getenv("NEW_RELIC_LICENSE_KEY")
+	
+	if appName == "" || licenseKey == "" {
+		return nil, fmt.Errorf("New Relic environment variables not properly configured: NEW_RELIC_APP_NAME and NEW_RELIC_LICENSE_KEY must be set")
+	}
+
 	app, err := newrelic.NewApplication(
-		newrelic.ConfigAppName(os.Getenv("NEW_RELIC_APP_NAME")),
-		newrelic.ConfigLicense(os.Getenv("NEW_RELIC_LICENSE_KEY")),
+		newrelic.ConfigAppName(appName),
+		newrelic.ConfigLicense(licenseKey),
 	)
 	if err != nil {
 		return nil, err
