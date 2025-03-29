@@ -1,6 +1,7 @@
 package newrelic
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/newrelic/go-agent/v3/newrelic"
@@ -10,7 +11,7 @@ import (
 func InitializeNewRelic() (*newrelic.Application, error) {
 	appName := os.Getenv("NEW_RELIC_APP_NAME")
 	licenseKey := os.Getenv("NEW_RELIC_LICENSE_KEY")
-	
+
 	if appName == "" || licenseKey == "" {
 		return nil, fmt.Errorf("New Relic environment variables not properly configured: NEW_RELIC_APP_NAME and NEW_RELIC_LICENSE_KEY must be set")
 	}
