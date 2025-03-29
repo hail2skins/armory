@@ -2,11 +2,16 @@ package logger
 
 import (
 	"encoding/json"
+	"io"
 	"log"
 	"os"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/gin-gonic/gin"
+	"github.com/newrelic/go-agent/v3/integrations/logcontext-v2/logWriter"
+	"github.com/newrelic/go-agent/v3/newrelic"
 )
 
 type LogLevel string
@@ -33,6 +38,8 @@ var (
 	botAttemptsMap             = make(map[string]int)
 	mapMutex       sync.RWMutex
 	lastCleanup    = time.Now()
+	nrWriter       *logWriter.LogWriter
+	stdLogger      *log.Logger
 )
 
 // Configure sets up the logger configuration
@@ -48,17 +55,32 @@ func Configure(env Environment) {
 	case Development:
 		minLevel = DEBUG
 	}
+
+	// Initialize standard logger
+	stdLogger = log.New(os.Stdout, "", 0)
+}
+
+// ConfigureNewRelic sets up New Relic logging
+func ConfigureNewRelic(app *newrelic.Application) {
+	if app != nil {
+		// Create a base logWriter that writes to stdout
+		writer := logWriter.New(os.Stdout, app)
+		nrWriter = &writer
+	}
 }
 
 type LogEntry struct {
-	Timestamp time.Time              `json:"timestamp"`
-	Level     LogLevel               `json:"level"`
-	Message   string                 `json:"message"`
-	Error     string                 `json:"error,omitempty"`
-	UserID    uint                   `json:"user_id,omitempty"`
-	Path      string                 `json:"path,omitempty"`
-	TraceID   string                 `json:"trace_id,omitempty"`
-	Fields    map[string]interface{} `json:"fields,omitempty"`
+	Timestamp   time.Time              `json:"timestamp"`
+	Level       LogLevel               `json:"level"`
+	Message     string                 `json:"message"`
+	Error       string                 `json:"error,omitempty"`
+	UserID      uint                   `json:"user_id,omitempty"`
+	Path        string                 `json:"path,omitempty"`
+	TraceID     string                 `json:"trace_id,omitempty"`
+	Fields      map[string]interface{} `json:"attributes,omitempty"`
+	LogType     string                 `json:"logtype,omitempty"`
+	EntityName  string                 `json:"entity.name,omitempty"`
+	ServiceName string                 `json:"service.name,omitempty"`
 }
 
 // shouldLog determines if the entry should be logged based on environment and content
@@ -217,8 +239,25 @@ func addFields(entry *LogEntry, fields map[string]interface{}) {
 	}
 }
 
-// writeLog writes the log entry to the configured output
+// writeLog writes a log entry
 func writeLog(entry LogEntry) {
+	// Set New Relic specific fields
+	entry.LogType = "application"
+	entry.EntityName = os.Getenv("NEW_RELIC_APP_NAME")
+	entry.ServiceName = os.Getenv("NEW_RELIC_APP_NAME")
+
+	// Map our log levels to New Relic's expected format
+	switch entry.Level {
+	case DEBUG:
+		entry.Level = "DEBUG"
+	case INFO:
+		entry.Level = "INFO"
+	case WARN:
+		entry.Level = "WARNING"
+	case ERROR:
+		entry.Level = "ERROR"
+	}
+
 	// Convert to JSON
 	jsonBytes, err := json.Marshal(entry)
 	if err != nil {
@@ -226,9 +265,14 @@ func writeLog(entry LogEntry) {
 		return
 	}
 
-	// Write to stdout (can be replaced with file output or other destinations)
-	os.Stdout.Write(jsonBytes)
-	os.Stdout.Write([]byte("\n"))
+	// Get the appropriate writer
+	var writer io.Writer = os.Stdout
+	if nrWriter != nil {
+		writer = nrWriter
+	}
+
+	// Write the log entry
+	writer.Write(append(jsonBytes, '\n'))
 }
 
 // SetupFileLogging configures logging to a file
@@ -248,4 +292,32 @@ func SetupFileLogging(filePath string) error {
 // ResetLogging resets logging to stdout
 func ResetLogging() {
 	log.SetOutput(os.Stdout)
+}
+
+// GetContextLogger returns a new logger with the given gin context
+func GetContextLogger(c *gin.Context) *log.Logger {
+	if nrWriter == nil || c == nil {
+		return stdLogger
+	}
+
+	// Get transaction from context
+	txn := newrelic.FromContext(c.Request.Context())
+	if txn != nil {
+		// Create a new writer with the transaction
+		txnWriter := nrWriter.WithTransaction(txn)
+		return log.New(txnWriter, "", 0)
+	}
+
+	return stdLogger
+}
+
+// GetTransactionLogger returns a new logger with the given transaction
+func GetTransactionLogger(txn *newrelic.Transaction) *log.Logger {
+	if nrWriter == nil || txn == nil {
+		return stdLogger
+	}
+
+	// Create a new writer with the transaction
+	txnWriter := nrWriter.WithTransaction(txn)
+	return log.New(txnWriter, "", 0)
 }

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	_ "github.com/joho/godotenv/autoload"
+	"github.com/newrelic/go-agent/v3/newrelic"
 
 	"github.com/hail2skins/armory/internal/database"
 	"github.com/hail2skins/armory/internal/logger"
@@ -23,6 +24,7 @@ type Server struct {
 	casbinAuth      *middleware.CasbinAuth
 	ipFilterService stripe.IPFilterService
 	ipFilterStop    chan struct{} // Channel to stop the IP filter background refresh
+	newRelicApp     *newrelic.Application
 }
 
 // New creates a new server
@@ -50,12 +52,38 @@ func New() *Server {
 	// Create the stop channel for background refresh
 	ipFilterStop := make(chan struct{})
 
+	// Initialize New Relic
+	var newRelicApp *newrelic.Application
+	logger.Info("Starting New Relic initialization", map[string]interface{}{
+		"app_name":           os.Getenv("NEW_RELIC_APP_NAME"),
+		"license_key_length": len(os.Getenv("NEW_RELIC_LICENSE_KEY")),
+	})
+
+	nrApp, err := newrelic.NewApplication(
+		newrelic.ConfigAppName(os.Getenv("NEW_RELIC_APP_NAME")),
+		newrelic.ConfigLicense(os.Getenv("NEW_RELIC_LICENSE_KEY")),
+		newrelic.ConfigAppLogDecoratingEnabled(true),
+		newrelic.ConfigAppLogForwardingEnabled(true),
+		newrelic.ConfigDebugLogger(os.Stdout),
+	)
+	if err != nil {
+		logger.Error("Failed to initialize New Relic", err, map[string]interface{}{
+			"app_name": os.Getenv("NEW_RELIC_APP_NAME"),
+		})
+	} else {
+		logger.Info("New Relic initialized successfully", nil)
+		newRelicApp = nrApp
+		// Configure New Relic logging
+		logger.ConfigureNewRelic(newRelicApp)
+	}
+
 	// Create the server
 	server := &Server{
 		port:            port,
 		db:              dbService,
 		ipFilterService: ipFilterService,
 		ipFilterStop:    ipFilterStop,
+		newRelicApp:     newRelicApp,
 	}
 
 	return server
@@ -99,6 +127,12 @@ func (s *Server) Shutdown() {
 
 		// Give it a moment to clean up
 		time.Sleep(100 * time.Millisecond)
+	}
+
+	// Shutdown New Relic
+	if s.newRelicApp != nil {
+		logger.Info("Shutting down New Relic...", nil)
+		s.newRelicApp.Shutdown(10 * time.Second)
 	}
 
 	logger.Info("Server shutdown complete", nil)

@@ -12,6 +12,7 @@ import (
 	"github.com/hail2skins/armory/internal/controller"
 	"github.com/hail2skins/armory/internal/logger"
 	"github.com/hail2skins/armory/internal/middleware"
+	"github.com/newrelic/go-agent/v3/integrations/nrgin"
 )
 
 // securityHeaders applies security headers to all responses
@@ -54,6 +55,20 @@ func getCorsOrigins() []string {
 func (s *Server) RegisterMiddleware(r *gin.Engine, authController *controller.AuthController) {
 	// Set up error handling middleware
 	middleware.SetupErrorHandling(r)
+
+	// Add New Relic middleware first to ensure transaction is available
+	if s.newRelicApp != nil {
+		r.Use(nrgin.Middleware(s.newRelicApp))
+	}
+
+	// Add logging middleware to set up transaction-aware logger
+	r.Use(func(c *gin.Context) {
+		// Get a transaction-aware logger
+		txnLogger := logger.GetContextLogger(c)
+		// Store it in the context
+		c.Set("logger", txnLogger)
+		c.Next()
+	})
 
 	// Add error metrics to the context for admin routes
 	r.Use(func(c *gin.Context) {

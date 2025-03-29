@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/hail2skins/armory/internal/logger"
+	"github.com/hail2skins/armory/internal/monitoring/newrelic"
 	"github.com/hail2skins/armory/internal/server"
 )
 
@@ -39,6 +40,14 @@ func gracefulShutdown(apiServer *http.Server, done chan bool) {
 }
 
 func main() {
+	// Initialize New Relic
+	nrApp, err := newrelic.InitializeNewRelic()
+	if err != nil {
+		logger.Error("Failed to initialize New Relic", err, nil)
+	} else {
+		defer nrApp.Shutdown(10 * time.Second)
+	}
+
 	// Configure logger based on environment
 	env := os.Getenv("APP_ENV")
 	switch strings.ToLower(env) {
@@ -61,7 +70,7 @@ func main() {
 		"environment": env,
 	})
 
-	err := s.Start()
+	err = s.Start()
 	if err != nil {
 		logger.Error("Server error", err, nil)
 		panic(fmt.Sprintf("server error: %s", err))
