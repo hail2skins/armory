@@ -161,6 +161,7 @@ func (s *service) AutoMigrate() error {
 		&models.CasbinRule{},
 		&models.FeatureFlag{},
 		&models.FeatureFlagRole{},
+		&models.Casing{},
 	)
 }
 
