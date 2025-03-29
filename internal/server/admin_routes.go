@@ -24,6 +24,7 @@ func (s *Server) RegisterAdminRoutes(r *gin.Engine, authController *controller.A
 	adminGunsController := controller.NewAdminGunsController(s.db)
 	adminPermissionsController := controller.NewAdminPermissionsController(s.db)
 	adminFeatureFlagsController := controller.NewAdminFeatureFlagsController(s.db)
+	adminCasingController := controller.NewAdminCasingController(s.db)
 
 	// Create Stripe security controller
 	stripeSecurityController := controller.NewStripeSecurityController(s.ipFilterService)
@@ -233,6 +234,30 @@ func (s *Server) RegisterAdminRoutes(r *gin.Engine, authController *controller.A
 				weaponTypeGroup.GET("/:id/edit", adminWeaponTypeController.Edit)
 				weaponTypeGroup.POST("/:id", adminWeaponTypeController.Update)
 				weaponTypeGroup.POST("/:id/delete", adminWeaponTypeController.Delete)
+			}
+		}
+
+		// Casing routes
+		casingGroup := adminGroup.Group("/casings")
+		{
+			if casbinAuth != nil {
+				// Define routes with flexible Casbin authorization
+				casingGroup.GET("", casbinAuth.FlexibleAuthorize("casings", "read"), adminCasingController.Index)
+				casingGroup.GET("/new", casbinAuth.FlexibleAuthorize("casings", "write"), adminCasingController.New)
+				casingGroup.POST("", casbinAuth.FlexibleAuthorize("casings", "write"), adminCasingController.Create)
+				casingGroup.GET("/:id", casbinAuth.FlexibleAuthorize("casings", "read"), adminCasingController.Show)
+				casingGroup.GET("/:id/edit", casbinAuth.FlexibleAuthorize("casings", "write"), adminCasingController.Edit)
+				casingGroup.POST("/:id", casbinAuth.FlexibleAuthorize("casings", "write"), adminCasingController.Update)
+				casingGroup.POST("/:id/delete", casbinAuth.FlexibleAuthorize("casings", "write"), adminCasingController.Delete)
+			} else {
+				// Without Casbin, register routes with just authentication middleware
+				casingGroup.GET("", adminCasingController.Index)
+				casingGroup.GET("/new", adminCasingController.New)
+				casingGroup.POST("", adminCasingController.Create)
+				casingGroup.GET("/:id", adminCasingController.Show)
+				casingGroup.GET("/:id/edit", adminCasingController.Edit)
+				casingGroup.POST("/:id", adminCasingController.Update)
+				casingGroup.POST("/:id/delete", adminCasingController.Delete)
 			}
 		}
 

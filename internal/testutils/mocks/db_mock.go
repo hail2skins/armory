@@ -393,3 +393,30 @@ func (m *MockDB) CanUserAccessFeature(username, featureName string) (bool, error
 	args := m.Called(username, featureName)
 	return args.Bool(0), args.Error(1)
 }
+
+// --- Casing-related methods ---
+
+func (m *MockDB) FindAllCasings() ([]models.Casing, error) {
+	args := m.Called()
+	return args.Get(0).([]models.Casing), args.Error(1)
+}
+
+func (m *MockDB) CreateCasing(casing *models.Casing) error {
+	return m.Called(casing).Error(0)
+}
+
+func (m *MockDB) FindCasingByID(id uint) (*models.Casing, error) {
+	args := m.Called(id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*models.Casing), args.Error(1)
+}
+
+func (m *MockDB) UpdateCasing(casing *models.Casing) error {
+	return m.Called(casing).Error(0)
+}
+
+func (m *MockDB) DeleteCasing(id uint) error {
+	return m.Called(id).Error(0)
+}

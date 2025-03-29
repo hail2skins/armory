@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -90,10 +91,10 @@ func (tdb *TestDB) Close() error {
 	return nil
 }
 
-// NewTestService creates a new test database service
-func NewTestService() database.Service {
+// NewTestService creates a new test database service using the provided db connection
+func NewTestService(db *gorm.DB) database.Service {
 	return &TestService{
-		db: NewTestDB().DB,
+		db: db,
 	}
 }
 
@@ -115,8 +116,12 @@ var (
 //	defer db.Close() // Close is a no-op for the shared service, so it's safe to call
 func SharedTestService() database.Service {
 	if !sharedDBInitialized {
-		sharedDBInstance = NewTestService()
+		// Create the DB instance first
+		testDB := NewTestDB()
+		// Pass the DB connection to NewTestService
+		sharedDBInstance = NewTestService(testDB.DB)
 		sharedDBInitialized = true
+		// Note: We might need a mechanism to close testDB.DB when tests are done, but let's address the primary issue first.
 	}
 	return sharedDBInstance
 }
@@ -124,6 +129,12 @@ func SharedTestService() database.Service {
 // TestService is a test implementation of the database.Service interface
 type TestService struct {
 	db *gorm.DB
+	// Mock data
+	Users         []database.User
+	Manufacturers []models.Manufacturer
+	Calibers      []models.Caliber
+	WeaponTypes   []models.WeaponType
+	Casings       []models.Casing
 }
 
 // Health returns a map of health status information
@@ -761,4 +772,77 @@ func (s *TestService) IsFeatureEnabled(name string) (bool, error) {
 // CanUserAccessFeature checks if a user can access a feature
 func (s *TestService) CanUserAccessFeature(username, featureName string) (bool, error) {
 	return models.CanAccessFeature(s.db, username, featureName)
+}
+
+// Casing-related methods implementation
+
+// FindAllCasings retrieves all casings
+func (s *TestService) FindAllCasings() ([]models.Casing, error) {
+	return s.Casings, nil
+}
+
+// CreateCasing creates a new casing
+func (s *TestService) CreateCasing(casing *models.Casing) error {
+	// Check if there's a soft-deleted casing with the same type
+	for i, existingCasing := range s.Casings {
+		if existingCasing.Type == casing.Type && existingCasing.DeletedAt.Valid {
+			// Found a soft-deleted casing with the same type, restore it
+			s.Casings[i].DeletedAt.Valid = false
+			s.Casings[i].DeletedAt.Time = time.Time{}
+			s.Casings[i].Popularity = casing.Popularity // Update with new values
+			*casing = s.Casings[i]                      // Return the updated casing
+			return nil
+		}
+	}
+
+	// If reaching here, check for unique constraint
+	for _, existingCasing := range s.Casings {
+		if existingCasing.Type == casing.Type && !existingCasing.DeletedAt.Valid {
+			// Active casing with same type already exists
+			return fmt.Errorf("ERROR: duplicate key value violates unique constraint \"uni_casings_type\"")
+		}
+	}
+
+	// Set an ID if it doesn't have one
+	if casing.ID == 0 {
+		casing.ID = uint(len(s.Casings) + 1)
+	}
+	s.Casings = append(s.Casings, *casing)
+	return nil
+}
+
+// FindCasingByID is a mock implementation for testing
+func (s *TestService) FindCasingByID(id uint) (*models.Casing, error) {
+	for _, casing := range s.Casings {
+		if casing.ID == id {
+			return &casing, nil
+		}
+	}
+	return nil, gorm.ErrRecordNotFound
+}
+
+// UpdateCasing is a mock implementation for testing
+func (s *TestService) UpdateCasing(casing *models.Casing) error {
+	for i, existingCasing := range s.Casings {
+		if existingCasing.ID == casing.ID {
+			// Update the casing in the array
+			s.Casings[i] = *casing
+			return nil
+		}
+	}
+	return gorm.ErrRecordNotFound
+}
+
+// DeleteCasing is a mock implementation for testing
+func (s *TestService) DeleteCasing(id uint) error {
+	for i, casing := range s.Casings {
+		if casing.ID == id {
+			// Remove the casing from the array by replacing it with the last element
+			// and then truncating the slice
+			s.Casings[i] = s.Casings[len(s.Casings)-1]
+			s.Casings = s.Casings[:len(s.Casings)-1]
+			return nil
+		}
+	}
+	return gorm.ErrRecordNotFound
 }
