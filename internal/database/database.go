@@ -81,6 +81,13 @@ type Service interface {
 	UpdateCasing(casing *models.Casing) error
 	DeleteCasing(id uint) error
 
+	// BulletStyle-related methods
+	FindAllBulletStyles() ([]models.BulletStyle, error)
+	CreateBulletStyle(bulletStyle *models.BulletStyle) error
+	FindBulletStyleByID(id uint) (*models.BulletStyle, error)
+	UpdateBulletStyle(bulletStyle *models.BulletStyle) error
+	DeleteBulletStyle(id uint) error
+
 	// GetDB returns the underlying *gorm.DB instance
 	GetDB() *gorm.DB
 }
@@ -169,6 +176,7 @@ func (s *service) AutoMigrate() error {
 		&models.FeatureFlag{},
 		&models.FeatureFlagRole{},
 		&models.Casing{},
+		&models.BulletStyle{},
 	)
 }
 
@@ -526,4 +534,58 @@ func (s *service) UpdateCasing(casing *models.Casing) error {
 // DeleteCasing deletes a casing from the database
 func (s *service) DeleteCasing(id uint) error {
 	return s.db.Delete(&models.Casing{}, id).Error
+}
+
+// BulletStyle-related methods implementation
+// FindAllBulletStyles retrieves all bullet styles from the database
+func (s *service) FindAllBulletStyles() ([]models.BulletStyle, error) {
+	var bulletStyles []models.BulletStyle
+	// Order by Popularity descending, then by Type ascending for consistent ordering
+	if err := s.db.Order("popularity DESC, type ASC").Find(&bulletStyles).Error; err != nil {
+		return nil, err
+	}
+	return bulletStyles, nil
+}
+
+// CreateBulletStyle creates a new bullet style record
+func (s *service) CreateBulletStyle(bulletStyle *models.BulletStyle) error {
+	// Check if there's a soft-deleted bullet style with the same type
+	var existingBulletStyle models.BulletStyle
+	result := s.db.Unscoped().Where("type = ?", bulletStyle.Type).First(&existingBulletStyle)
+
+	if result.Error == nil && existingBulletStyle.DeletedAt.Valid {
+		// Record exists and is soft-deleted, restore it
+		existingBulletStyle.DeletedAt.Valid = false // Clear the deleted_at timestamp
+		existingBulletStyle.DeletedAt.Time = time.Time{}
+		existingBulletStyle.Nickname = bulletStyle.Nickname     // Update with new values
+		existingBulletStyle.Popularity = bulletStyle.Popularity // Update with new values
+
+		// Update the existing record (restore it)
+		return s.db.Unscoped().Save(&existingBulletStyle).Error
+	} else if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		// Some error other than "record not found" occurred
+		return result.Error
+	}
+
+	// No soft-deleted record found with this type, create a new one
+	return s.db.Create(bulletStyle).Error
+}
+
+// FindBulletStyleByID retrieves a bullet style by its ID
+func (s *service) FindBulletStyleByID(id uint) (*models.BulletStyle, error) {
+	var bulletStyle models.BulletStyle
+	if err := s.db.First(&bulletStyle, id).Error; err != nil {
+		return nil, err
+	}
+	return &bulletStyle, nil
+}
+
+// UpdateBulletStyle updates an existing bullet style in the database
+func (s *service) UpdateBulletStyle(bulletStyle *models.BulletStyle) error {
+	return s.db.Save(bulletStyle).Error
+}
+
+// DeleteBulletStyle deletes a bullet style from the database
+func (s *service) DeleteBulletStyle(id uint) error {
+	return s.db.Delete(&models.BulletStyle{}, id).Error
 }

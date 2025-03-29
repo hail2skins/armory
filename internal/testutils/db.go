@@ -63,6 +63,7 @@ func NewTestDB() *TestDB {
 		&models.Payment{},
 		&models.Promotion{},
 		&models.Casing{},
+		&models.BulletStyle{},
 	); err != nil {
 		log.Fatalf("Error auto migrating schema: %v", err)
 	}
@@ -135,6 +136,7 @@ type TestService struct {
 	Calibers      []models.Caliber
 	WeaponTypes   []models.WeaponType
 	Casings       []models.Casing
+	BulletStyles  []models.BulletStyle
 }
 
 // Health returns a map of health status information
@@ -841,6 +843,80 @@ func (s *TestService) DeleteCasing(id uint) error {
 			// and then truncating the slice
 			s.Casings[i] = s.Casings[len(s.Casings)-1]
 			s.Casings = s.Casings[:len(s.Casings)-1]
+			return nil
+		}
+	}
+	return gorm.ErrRecordNotFound
+}
+
+// BulletStyle-related methods implementation
+
+// FindAllBulletStyles retrieves all bullet styles
+func (s *TestService) FindAllBulletStyles() ([]models.BulletStyle, error) {
+	return s.BulletStyles, nil
+}
+
+// CreateBulletStyle creates a new bullet style
+func (s *TestService) CreateBulletStyle(bulletStyle *models.BulletStyle) error {
+	// Check if there's a soft-deleted bullet style with the same type
+	for i, existingBulletStyle := range s.BulletStyles {
+		if existingBulletStyle.Type == bulletStyle.Type && existingBulletStyle.DeletedAt.Valid {
+			// Found a soft-deleted bullet style with the same type, restore it
+			s.BulletStyles[i].DeletedAt.Valid = false
+			s.BulletStyles[i].DeletedAt.Time = time.Time{}
+			s.BulletStyles[i].Nickname = bulletStyle.Nickname
+			s.BulletStyles[i].Popularity = bulletStyle.Popularity
+			*bulletStyle = s.BulletStyles[i] // Return the updated bullet style
+			return nil
+		}
+	}
+
+	// If reaching here, check for unique constraint
+	for _, existingBulletStyle := range s.BulletStyles {
+		if existingBulletStyle.Type == bulletStyle.Type && !existingBulletStyle.DeletedAt.Valid {
+			// Active bullet style with same type already exists
+			return fmt.Errorf("ERROR: duplicate key value violates unique constraint \"uni_bullet_styles_type\"")
+		}
+	}
+
+	// Set an ID if it doesn't have one
+	if bulletStyle.ID == 0 {
+		bulletStyle.ID = uint(len(s.BulletStyles) + 1)
+	}
+	s.BulletStyles = append(s.BulletStyles, *bulletStyle)
+	return nil
+}
+
+// FindBulletStyleByID is a mock implementation for testing
+func (s *TestService) FindBulletStyleByID(id uint) (*models.BulletStyle, error) {
+	for _, bulletStyle := range s.BulletStyles {
+		if bulletStyle.ID == id {
+			return &bulletStyle, nil
+		}
+	}
+	return nil, gorm.ErrRecordNotFound
+}
+
+// UpdateBulletStyle is a mock implementation for testing
+func (s *TestService) UpdateBulletStyle(bulletStyle *models.BulletStyle) error {
+	for i, existingBulletStyle := range s.BulletStyles {
+		if existingBulletStyle.ID == bulletStyle.ID {
+			// Update the bullet style in the array
+			s.BulletStyles[i] = *bulletStyle
+			return nil
+		}
+	}
+	return gorm.ErrRecordNotFound
+}
+
+// DeleteBulletStyle is a mock implementation for testing
+func (s *TestService) DeleteBulletStyle(id uint) error {
+	for i, bulletStyle := range s.BulletStyles {
+		if bulletStyle.ID == id {
+			// Remove the bullet style from the array by replacing it with the last element
+			// and then truncating the slice
+			s.BulletStyles[i] = s.BulletStyles[len(s.BulletStyles)-1]
+			s.BulletStyles = s.BulletStyles[:len(s.BulletStyles)-1]
 			return nil
 		}
 	}
