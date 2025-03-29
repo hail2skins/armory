@@ -12,6 +12,8 @@ require (
 	github.com/justinas/nosurf v1.1.1
 	github.com/mailjet/mailjet-apiv3-go/v4 v4.0.7
 	github.com/newrelic/go-agent/v3 v3.38.0
+	github.com/newrelic/go-agent/v3/integrations/logcontext-v2/logWriter v1.0.1
+	github.com/newrelic/go-agent/v3/integrations/nrgin v1.3.3
 	github.com/shaj13/go-guardian/v2 v2.11.6
 	github.com/shaj13/libcache v1.2.1
 	github.com/stretchr/testify v1.10.0
@@ -52,9 +54,7 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.22 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
-	github.com/newrelic/go-agent/v3/integrations/logcontext-v2/logWriter v1.0.1 // indirect
 	github.com/newrelic/go-agent/v3/integrations/logcontext-v2/nrwriter v1.0.0 // indirect
-	github.com/newrelic/go-agent/v3/integrations/nrgin v1.3.3 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.3 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rogpeppe/go-internal v1.8.1 // indirect

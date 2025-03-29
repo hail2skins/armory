@@ -22,6 +22,10 @@ type AdminData struct {
 	WeaponTypes []models.WeaponType
 	WeaponType  *models.WeaponType
 
+	// For casings
+	Casings []models.Casing
+	Casing  *models.Casing
+
 	// For promotions
 	Promotions []models.Promotion
 	Promotion  *models.Promotion
@@ -156,6 +160,18 @@ func (a *AdminData) WithWeaponTypes(weaponTypes []models.WeaponType) *AdminData 
 // WithWeaponType returns a copy of the AdminData with a weapon type
 func (a *AdminData) WithWeaponType(weaponType *models.WeaponType) *AdminData {
 	a.WeaponType = weaponType
+	return a
+}
+
+// WithCasings returns a copy of the AdminData with casings
+func (a *AdminData) WithCasings(casings []models.Casing) *AdminData {
+	a.Casings = casings
+	return a
+}
+
+// WithCasing returns a copy of the AdminData with a single casing
+func (a *AdminData) WithCasing(casing *models.Casing) *AdminData {
+	a.Casing = casing
 	return a
 }
 

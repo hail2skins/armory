@@ -15,6 +15,7 @@ import (
 	"github.com/hail2skins/armory/cmd/web/views/data"
 	"github.com/hail2skins/armory/internal/controller"
 	"github.com/hail2skins/armory/internal/database"
+	"github.com/hail2skins/armory/internal/database/seed"
 	"github.com/hail2skins/armory/internal/middleware"
 	"github.com/hail2skins/armory/internal/testutils"
 	"github.com/hail2skins/armory/internal/testutils/mocks"
@@ -48,6 +49,9 @@ func (s *IntegrationSuite) SetupSuite() {
 	// Create a test database service
 	s.Service = testutils.SharedTestService()
 	s.DB = s.Service.GetDB()
+
+	// Explicitly seed the database since SharedTestService no longer does it automatically
+	seed.RunSeeds(s.DB)
 
 	// Create mock for email service only (as it's an external service)
 	s.MockEmail = new(mocks.MockEmailService)
