@@ -70,14 +70,17 @@ func ConfigureNewRelic(app *newrelic.Application) {
 }
 
 type LogEntry struct {
-	Timestamp time.Time              `json:"timestamp"`
-	Level     LogLevel               `json:"level"`
-	Message   string                 `json:"message"`
-	Error     string                 `json:"error,omitempty"`
-	UserID    uint                   `json:"user_id,omitempty"`
-	Path      string                 `json:"path,omitempty"`
-	TraceID   string                 `json:"trace_id,omitempty"`
-	Fields    map[string]interface{} `json:"fields,omitempty"`
+	Timestamp   time.Time              `json:"timestamp"`
+	Level       LogLevel               `json:"level"`
+	Message     string                 `json:"message"`
+	Error       string                 `json:"error,omitempty"`
+	UserID      uint                   `json:"user_id,omitempty"`
+	Path        string                 `json:"path,omitempty"`
+	TraceID     string                 `json:"trace_id,omitempty"`
+	Fields      map[string]interface{} `json:"attributes,omitempty"`
+	LogType     string                 `json:"logtype,omitempty"`
+	EntityName  string                 `json:"entity.name,omitempty"`
+	ServiceName string                 `json:"service.name,omitempty"`
 }
 
 // shouldLog determines if the entry should be logged based on environment and content
@@ -238,6 +241,23 @@ func addFields(entry *LogEntry, fields map[string]interface{}) {
 
 // writeLog writes a log entry
 func writeLog(entry LogEntry) {
+	// Set New Relic specific fields
+	entry.LogType = "application"
+	entry.EntityName = os.Getenv("NEW_RELIC_APP_NAME")
+	entry.ServiceName = os.Getenv("NEW_RELIC_APP_NAME")
+
+	// Map our log levels to New Relic's expected format
+	switch entry.Level {
+	case DEBUG:
+		entry.Level = "DEBUG"
+	case INFO:
+		entry.Level = "INFO"
+	case WARN:
+		entry.Level = "WARNING"
+	case ERROR:
+		entry.Level = "ERROR"
+	}
+
 	// Convert to JSON
 	jsonBytes, err := json.Marshal(entry)
 	if err != nil {
