@@ -25,6 +25,7 @@ func (s *Server) RegisterAdminRoutes(r *gin.Engine, authController *controller.A
 	adminPermissionsController := controller.NewAdminPermissionsController(s.db)
 	adminFeatureFlagsController := controller.NewAdminFeatureFlagsController(s.db)
 	adminCasingController := controller.NewAdminCasingController(s.db)
+	adminBulletStyleController := controller.NewAdminBulletStyleController(s.db)
 
 	// Create Stripe security controller
 	stripeSecurityController := controller.NewStripeSecurityController(s.ipFilterService)
@@ -258,6 +259,30 @@ func (s *Server) RegisterAdminRoutes(r *gin.Engine, authController *controller.A
 				casingGroup.GET("/:id/edit", adminCasingController.Edit)
 				casingGroup.POST("/:id", adminCasingController.Update)
 				casingGroup.POST("/:id/delete", adminCasingController.Delete)
+			}
+		}
+
+		// Bullet style routes
+		bulletStyleGroup := adminGroup.Group("/bullet_styles")
+		{
+			if casbinAuth != nil {
+				// Define routes with flexible Casbin authorization
+				bulletStyleGroup.GET("", casbinAuth.FlexibleAuthorize("bullet_styles", "read"), adminBulletStyleController.Index)
+				bulletStyleGroup.GET("/new", casbinAuth.FlexibleAuthorize("bullet_styles", "write"), adminBulletStyleController.New)
+				bulletStyleGroup.POST("", casbinAuth.FlexibleAuthorize("bullet_styles", "write"), adminBulletStyleController.Create)
+				bulletStyleGroup.GET("/:id", casbinAuth.FlexibleAuthorize("bullet_styles", "read"), adminBulletStyleController.Show)
+				bulletStyleGroup.GET("/:id/edit", casbinAuth.FlexibleAuthorize("bullet_styles", "write"), adminBulletStyleController.Edit)
+				bulletStyleGroup.POST("/:id", casbinAuth.FlexibleAuthorize("bullet_styles", "write"), adminBulletStyleController.Update)
+				bulletStyleGroup.POST("/:id/delete", casbinAuth.FlexibleAuthorize("bullet_styles", "write"), adminBulletStyleController.Delete)
+			} else {
+				// Without Casbin, register routes with just authentication middleware
+				bulletStyleGroup.GET("", adminBulletStyleController.Index)
+				bulletStyleGroup.GET("/new", adminBulletStyleController.New)
+				bulletStyleGroup.POST("", adminBulletStyleController.Create)
+				bulletStyleGroup.GET("/:id", adminBulletStyleController.Show)
+				bulletStyleGroup.GET("/:id/edit", adminBulletStyleController.Edit)
+				bulletStyleGroup.POST("/:id", adminBulletStyleController.Update)
+				bulletStyleGroup.POST("/:id/delete", adminBulletStyleController.Delete)
 			}
 		}
 
