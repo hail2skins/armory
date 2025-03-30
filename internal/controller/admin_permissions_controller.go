@@ -107,6 +107,7 @@ func (c *AdminPermissionsController) NewRole(ctx *gin.Context) {
 		"payments",
 		"guns",
 		"permissions",
+		"ammo",
 		"*", // Wildcard for all resources
 	}
 
@@ -141,7 +142,7 @@ func (c *AdminPermissionsController) CreateRole(ctx *gin.Context) {
 	// Create form data
 	formData := &data.CreateRoleViewData{
 		Resources: []string{
-			"manufacturers", "calibers", "weapon_types", "promotions", "permissions",
+			"manufacturers", "calibers", "weapon_types", "promotions", "permissions", "ammo",
 		},
 		Actions: []string{
 			"read", "create", "update", "delete", "manage",
