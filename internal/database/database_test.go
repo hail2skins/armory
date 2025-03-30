@@ -90,6 +90,7 @@ func initTestSchema(db *gorm.DB) {
 		&models.Manufacturer{},
 		&models.Gun{},
 		&models.Payment{},
+		&models.Brand{},
 	); err != nil {
 		log.Fatalf("Failed to migrate test database: %v", err)
 	}
@@ -202,6 +203,7 @@ func prepareTestDB(t *testing.T) {
 		&models.Manufacturer{},
 		&models.Gun{},
 		&models.Payment{},
+		&models.Brand{},
 	)
 
 	if err != nil {

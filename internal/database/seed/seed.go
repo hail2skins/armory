@@ -77,6 +77,17 @@ func RunSeeds(db *gorm.DB) {
 		log.Printf("Grain weights table already seeded (count: %d), skipping.", grainCount)
 	}
 
+	// Seed Brands if the table is empty
+	var brandCount int64
+	if err := db.Model(&models.Brand{}).Count(&brandCount).Error; err != nil {
+		log.Printf("Error checking brands count: %v", err)
+	} else if brandCount == 0 {
+		log.Println("Seeding brands...")
+		SeedBrands(db)
+	} else {
+		log.Printf("Brands table already seeded (count: %d), skipping.", brandCount)
+	}
+
 	// Add more seed functions here following the same pattern
 
 	log.Println("Individual table seeding checks completed.")
@@ -131,6 +142,14 @@ func NeedsSeeding(db *gorm.DB) bool {
 	if err := db.Model(&models.Grain{}).Count(&grainCount).Error; err != nil {
 		log.Printf("Error checking grain weights: %v", err)
 	} else if grainCount > 0 {
+		return false // Data found, no need to seed
+	}
+
+	// Check brands
+	var brandCount int64
+	if err := db.Model(&models.Brand{}).Count(&brandCount).Error; err != nil {
+		log.Printf("Error checking brands: %v", err)
+	} else if brandCount > 0 {
 		return false // Data found, no need to seed
 	}
 

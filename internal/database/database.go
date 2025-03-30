@@ -185,6 +185,7 @@ func (s *service) AutoMigrate() error {
 		&models.Casing{},
 		&models.BulletStyle{},
 		&models.Grain{},
+		&models.Brand{},
 	)
 }
 
