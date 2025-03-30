@@ -56,6 +56,9 @@ func GetTestDB() *gorm.DB {
 			&Manufacturer{},
 			&Gun{},
 			&Promotion{},
+			&Casing{},
+			&BulletStyle{},
+			&Grain{},
 		); err != nil {
 			log.Fatalf("Error auto migrating schema: %v", err)
 		}

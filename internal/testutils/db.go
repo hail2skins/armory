@@ -64,6 +64,7 @@ func NewTestDB() *TestDB {
 		&models.Promotion{},
 		&models.Casing{},
 		&models.BulletStyle{},
+		&models.Grain{},
 	); err != nil {
 		log.Fatalf("Error auto migrating schema: %v", err)
 	}
@@ -137,6 +138,7 @@ type TestService struct {
 	WeaponTypes   []models.WeaponType
 	Casings       []models.Casing
 	BulletStyles  []models.BulletStyle
+	Grains        []models.Grain
 }
 
 // Health returns a map of health status information
@@ -917,6 +919,79 @@ func (s *TestService) DeleteBulletStyle(id uint) error {
 			// and then truncating the slice
 			s.BulletStyles[i] = s.BulletStyles[len(s.BulletStyles)-1]
 			s.BulletStyles = s.BulletStyles[:len(s.BulletStyles)-1]
+			return nil
+		}
+	}
+	return gorm.ErrRecordNotFound
+}
+
+// Grain-related methods implementation
+
+// FindAllGrains retrieves all grains
+func (s *TestService) FindAllGrains() ([]models.Grain, error) {
+	return s.Grains, nil
+}
+
+// CreateGrain creates a new grain
+func (s *TestService) CreateGrain(grain *models.Grain) error {
+	// Check if there's a soft-deleted grain with the same weight
+	for i, existingGrain := range s.Grains {
+		if existingGrain.Weight == grain.Weight && existingGrain.DeletedAt.Valid {
+			// Found a soft-deleted grain with the same weight, restore it
+			s.Grains[i].DeletedAt.Valid = false
+			s.Grains[i].DeletedAt.Time = time.Time{}
+			s.Grains[i].Popularity = grain.Popularity
+			*grain = s.Grains[i] // Return the updated grain
+			return nil
+		}
+	}
+
+	// If reaching here, check for unique constraint
+	for _, existingGrain := range s.Grains {
+		if existingGrain.Weight == grain.Weight && !existingGrain.DeletedAt.Valid {
+			// Active grain with same weight already exists
+			return fmt.Errorf("ERROR: duplicate key value violates unique constraint \"uni_grains_weight\"")
+		}
+	}
+
+	// Set an ID if it doesn't have one
+	if grain.ID == 0 {
+		grain.ID = uint(len(s.Grains) + 1)
+	}
+	s.Grains = append(s.Grains, *grain)
+	return nil
+}
+
+// FindGrainByID is a mock implementation for testing
+func (s *TestService) FindGrainByID(id uint) (*models.Grain, error) {
+	for _, grain := range s.Grains {
+		if grain.ID == id {
+			return &grain, nil
+		}
+	}
+	return nil, gorm.ErrRecordNotFound
+}
+
+// UpdateGrain is a mock implementation for testing
+func (s *TestService) UpdateGrain(grain *models.Grain) error {
+	for i, existingGrain := range s.Grains {
+		if existingGrain.ID == grain.ID {
+			// Update the grain in the array
+			s.Grains[i] = *grain
+			return nil
+		}
+	}
+	return gorm.ErrRecordNotFound
+}
+
+// DeleteGrain is a mock implementation for testing
+func (s *TestService) DeleteGrain(id uint) error {
+	for i, grain := range s.Grains {
+		if grain.ID == id {
+			// Remove the grain from the array by replacing it with the last element
+			// and then truncating the slice
+			s.Grains[i] = s.Grains[len(s.Grains)-1]
+			s.Grains = s.Grains[:len(s.Grains)-1]
 			return nil
 		}
 	}

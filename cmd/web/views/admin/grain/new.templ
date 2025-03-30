@@ -1,0 +1,74 @@
+package grain
+
+import (
+	"context"
+	"fmt"
+	"io"
+
+	"github.com/hail2skins/armory/cmd/web/views/data"
+	"github.com/hail2skins/armory/cmd/web/views/partials"
+)
+
+templ New(data *data.AdminData) {
+	@partials.Base(data.AuthData, templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+		_, err := io.WriteString(w, `
+		<div class="container mx-auto px-4 py-8">
+			<div class="flex justify-between items-center mb-6">
+				<h1 class="text-3xl font-bold text-gunmetal-800">New Grain</h1>
+				<a href="/admin/grains" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded">
+					Back to List
+				</a>
+			</div>
+		`)
+		if err != nil {
+			return err
+		}
+
+		if data.Error != "" {
+			_, err = io.WriteString(w, `
+			<div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+				<span class="block sm:inline">`+data.Error+`</span>
+			</div>
+			`)
+			if err != nil {
+				return err
+			}
+		}
+
+		_, err = io.WriteString(w, fmt.Sprintf(`
+		<div class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
+			<form action="/admin/grains" method="post">
+				<input type="hidden" name="csrf_token" value="%s">
+				<div class="mb-6">
+					<label class="block text-gray-700 text-sm font-bold mb-2" for="weight">
+						Weight (0 for "Other")
+					</label>
+					<input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" 
+						id="weight" type="number" name="weight" min="0" placeholder="Enter grain weight" required>
+					<p class="text-gray-600 text-xs italic mt-1">Enter 0 for "Other"</p>
+				</div>
+				<div class="mb-6">
+					<label class="block text-gray-700 text-sm font-bold mb-2" for="popularity">
+						Popularity
+					</label>
+					<input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" 
+						id="popularity" type="number" name="popularity" min="0" placeholder="Enter popularity" required>
+				</div>
+				<div class="flex items-center justify-between">
+					<button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline" type="submit">
+						Create Grain
+					</button>
+				</div>
+			</form>
+		</div>
+		`, data.AuthData.CSRFToken))
+		if err != nil {
+			return err
+		}
+
+		_, err = io.WriteString(w, `
+		</div>
+		`)
+		return err
+	}))
+} 

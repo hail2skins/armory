@@ -30,6 +30,10 @@ type AdminData struct {
 	BulletStyles []models.BulletStyle
 	BulletStyle  *models.BulletStyle
 
+	// For grains
+	Grains []models.Grain
+	Grain  *models.Grain
+
 	// For promotions
 	Promotions []models.Promotion
 	Promotion  *models.Promotion
@@ -188,6 +192,18 @@ func (a *AdminData) WithBulletStyles(bulletStyles []models.BulletStyle) *AdminDa
 // WithBulletStyle returns a copy of the AdminData with a single bullet style
 func (a *AdminData) WithBulletStyle(bulletStyle *models.BulletStyle) *AdminData {
 	a.BulletStyle = bulletStyle
+	return a
+}
+
+// WithGrains returns a copy of the AdminData with grains
+func (a *AdminData) WithGrains(grains []models.Grain) *AdminData {
+	a.Grains = grains
+	return a
+}
+
+// WithGrain returns a copy of the AdminData with a grain
+func (a *AdminData) WithGrain(grain *models.Grain) *AdminData {
+	a.Grain = grain
 	return a
 }
 
