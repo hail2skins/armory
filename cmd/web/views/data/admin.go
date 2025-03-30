@@ -77,6 +77,10 @@ type AdminData struct {
 
 	// For system health
 	SystemInfo map[string]string
+
+	// For brands
+	Brands []models.Brand
+	Brand  *models.Brand
 }
 
 // ErrorEntry represents a simplified error record for views
@@ -204,6 +208,18 @@ func (a *AdminData) WithGrains(grains []models.Grain) *AdminData {
 // WithGrain returns a copy of the AdminData with a grain
 func (a *AdminData) WithGrain(grain *models.Grain) *AdminData {
 	a.Grain = grain
+	return a
+}
+
+// WithBrands returns a copy of the AdminData with brands
+func (a *AdminData) WithBrands(brands []models.Brand) *AdminData {
+	a.Brands = brands
+	return a
+}
+
+// WithBrand returns a copy of the AdminData with a brand
+func (a *AdminData) WithBrand(brand *models.Brand) *AdminData {
+	a.Brand = brand
 	return a
 }
 

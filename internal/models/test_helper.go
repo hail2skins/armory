@@ -59,6 +59,7 @@ func GetTestDB() *gorm.DB {
 			&Casing{},
 			&BulletStyle{},
 			&Grain{},
+			&Brand{},
 		); err != nil {
 			log.Fatalf("Error auto migrating schema: %v", err)
 		}
@@ -105,5 +106,15 @@ func SeedTestData(db *gorm.DB) {
 
 	for i := range manufacturers {
 		db.Where(Manufacturer{Name: manufacturers[i].Name}).FirstOrCreate(&manufacturers[i])
+	}
+
+	// Create test brands
+	brands := []Brand{
+		{Name: "Test Federal", Nickname: "Test Federal", Popularity: 85},
+		{Name: "Test Winchester", Nickname: "Test Winchester", Popularity: 80},
+	}
+
+	for i := range brands {
+		db.Where(Brand{Name: brands[i].Name}).FirstOrCreate(&brands[i])
 	}
 }

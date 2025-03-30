@@ -95,6 +95,13 @@ type Service interface {
 	UpdateGrain(grain *models.Grain) error
 	DeleteGrain(id uint) error
 
+	// Brand-related methods
+	FindAllBrands() ([]models.Brand, error)
+	CreateBrand(brand *models.Brand) error
+	FindBrandByID(id uint) (*models.Brand, error)
+	UpdateBrand(brand *models.Brand) error
+	DeleteBrand(id uint) error
+
 	// GetDB returns the underlying *gorm.DB instance
 	GetDB() *gorm.DB
 }
@@ -185,6 +192,7 @@ func (s *service) AutoMigrate() error {
 		&models.Casing{},
 		&models.BulletStyle{},
 		&models.Grain{},
+		&models.Brand{},
 	)
 }
 
@@ -649,4 +657,38 @@ func (s *service) UpdateGrain(grain *models.Grain) error {
 // DeleteGrain deletes a grain from the database
 func (s *service) DeleteGrain(id uint) error {
 	return s.db.Delete(&models.Grain{}, id).Error
+}
+
+// Brand-related methods implementation
+// FindAllBrands retrieves all brands from the database
+func (s *service) FindAllBrands() ([]models.Brand, error) {
+	var brands []models.Brand
+	if err := s.db.Find(&brands).Error; err != nil {
+		return nil, err
+	}
+	return brands, nil
+}
+
+// CreateBrand creates a new brand record
+func (s *service) CreateBrand(brand *models.Brand) error {
+	return s.db.Create(brand).Error
+}
+
+// FindBrandByID retrieves a brand by its ID
+func (s *service) FindBrandByID(id uint) (*models.Brand, error) {
+	var brand models.Brand
+	if err := s.db.First(&brand, id).Error; err != nil {
+		return nil, err
+	}
+	return &brand, nil
+}
+
+// UpdateBrand updates an existing brand in the database
+func (s *service) UpdateBrand(brand *models.Brand) error {
+	return s.db.Save(brand).Error
+}
+
+// DeleteBrand deletes a brand from the database
+func (s *service) DeleteBrand(id uint) error {
+	return s.db.Delete(&models.Brand{}, id).Error
 }
