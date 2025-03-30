@@ -60,6 +60,7 @@ func GetTestDB() *gorm.DB {
 			&BulletStyle{},
 			&Grain{},
 			&Brand{},
+			&Ammo{},
 		); err != nil {
 			log.Fatalf("Error auto migrating schema: %v", err)
 		}
@@ -116,5 +117,38 @@ func SeedTestData(db *gorm.DB) {
 
 	for i := range brands {
 		db.Where(Brand{Name: brands[i].Name}).FirstOrCreate(&brands[i])
+	}
+
+	// Create test bullet styles
+	bulletStyles := []BulletStyle{
+		{Type: "FMJ", Nickname: "Full Metal Jacket", Popularity: 100},
+		{Type: "JHP", Nickname: "Jacketed Hollow Point", Popularity: 90},
+		{Type: "SP", Nickname: "Soft Point", Popularity: 80},
+	}
+
+	for i := range bulletStyles {
+		db.Where(BulletStyle{Type: bulletStyles[i].Type}).FirstOrCreate(&bulletStyles[i])
+	}
+
+	// Create test grains
+	grains := []Grain{
+		{Weight: 115, Popularity: 85},
+		{Weight: 124, Popularity: 80},
+		{Weight: 55, Popularity: 90},
+	}
+
+	for i := range grains {
+		db.Where(Grain{Weight: grains[i].Weight}).FirstOrCreate(&grains[i])
+	}
+
+	// Create test casings
+	casings := []Casing{
+		{Type: "Brass", Popularity: 100},
+		{Type: "Steel", Popularity: 80},
+		{Type: "Nickel-Plated Brass", Popularity: 70},
+	}
+
+	for i := range casings {
+		db.Where(Casing{Type: casings[i].Type}).FirstOrCreate(&casings[i])
 	}
 }

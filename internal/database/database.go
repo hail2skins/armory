@@ -193,6 +193,7 @@ func (s *service) AutoMigrate() error {
 		&models.BulletStyle{},
 		&models.Grain{},
 		&models.Brand{},
+		&models.Ammo{},
 	)
 }
 
