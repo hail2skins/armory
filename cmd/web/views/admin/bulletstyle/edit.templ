@@ -19,6 +19,22 @@ templ Edit(data *data.AdminData) {
 					<a href="/admin/bullet_styles" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded">
 						Back to List
 					</a>
+					<a href="/admin/bullet_styles/`)
+		if err != nil {
+			return err
+		}
+
+		// Only try to write the ID if a bullet style is provided
+		if data.BulletStyle != nil {
+			_, err = io.WriteString(w, fmt.Sprintf("%d", data.BulletStyle.ID))
+			if err != nil {
+				return err
+			}
+		}
+
+		_, err = io.WriteString(w, `" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">
+						View Bullet Style
+					</a>
 				</div>
 			</div>
 		`)
@@ -91,17 +107,11 @@ templ Edit(data *data.AdminData) {
 						<button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline" type="submit">
 							Update Bullet Style
 						</button>
-						<form action="/admin/bullet_styles/%d/delete" method="post" class="inline" onsubmit="return confirm('Are you sure you want to delete this bullet style?');">
-							<input type="hidden" name="csrf_token" value="%s">
-							<button type="submit" class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
-								Delete
-							</button>
-						</form>
 					</div>
 				</form>
 			</div>
 			`, data.BulletStyle.ID, data.AuthData.CSRFToken, data.BulletStyle.Type, data.BulletStyle.Nickname, 
-			   data.BulletStyle.Popularity, data.BulletStyle.ID, data.AuthData.CSRFToken))
+			   data.BulletStyle.Popularity))
 			if err != nil {
 				return err
 			}
