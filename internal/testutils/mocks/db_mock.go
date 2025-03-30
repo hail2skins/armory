@@ -473,3 +473,34 @@ func (m *MockDB) UpdateGrain(grain *models.Grain) error {
 func (m *MockDB) DeleteGrain(id uint) error {
 	return m.Called(id).Error(0)
 }
+
+// Brand related methods
+// FindAllBrands mocks the FindAllBrands method
+func (m *MockDB) FindAllBrands() ([]models.Brand, error) {
+	args := m.Called()
+	return args.Get(0).([]models.Brand), args.Error(1)
+}
+
+// CreateBrand mocks the CreateBrand method
+func (m *MockDB) CreateBrand(brand *models.Brand) error {
+	return m.Called(brand).Error(0)
+}
+
+// FindBrandByID mocks the FindBrandByID method
+func (m *MockDB) FindBrandByID(id uint) (*models.Brand, error) {
+	args := m.Called(id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*models.Brand), args.Error(1)
+}
+
+// UpdateBrand mocks the UpdateBrand method
+func (m *MockDB) UpdateBrand(brand *models.Brand) error {
+	return m.Called(brand).Error(0)
+}
+
+// DeleteBrand mocks the DeleteBrand method
+func (m *MockDB) DeleteBrand(id uint) error {
+	return m.Called(id).Error(0)
+}

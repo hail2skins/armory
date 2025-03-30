@@ -27,6 +27,7 @@ func (s *Server) RegisterAdminRoutes(r *gin.Engine, authController *controller.A
 	adminCasingController := controller.NewAdminCasingController(s.db)
 	adminBulletStyleController := controller.NewAdminBulletStyleController(s.db)
 	adminGrainController := controller.NewAdminGrainController(s.db)
+	adminBrandController := controller.NewAdminBrandController(s.db)
 
 	// Create Stripe security controller
 	stripeSecurityController := controller.NewStripeSecurityController(s.ipFilterService)
@@ -308,6 +309,30 @@ func (s *Server) RegisterAdminRoutes(r *gin.Engine, authController *controller.A
 				grainGroup.GET("/:id/edit", adminGrainController.Edit)
 				grainGroup.POST("/:id", adminGrainController.Update)
 				grainGroup.POST("/:id/delete", adminGrainController.Delete)
+			}
+		}
+
+		// Brand routes
+		brandGroup := adminGroup.Group("/brands")
+		{
+			if casbinAuth != nil {
+				// Define routes with flexible Casbin authorization
+				brandGroup.GET("", casbinAuth.FlexibleAuthorize("brands", "read"), adminBrandController.Index)
+				brandGroup.GET("/new", casbinAuth.FlexibleAuthorize("brands", "write"), adminBrandController.New)
+				brandGroup.POST("", casbinAuth.FlexibleAuthorize("brands", "write"), adminBrandController.Create)
+				brandGroup.GET("/:id", casbinAuth.FlexibleAuthorize("brands", "read"), adminBrandController.Show)
+				brandGroup.GET("/:id/edit", casbinAuth.FlexibleAuthorize("brands", "write"), adminBrandController.Edit)
+				brandGroup.POST("/:id", casbinAuth.FlexibleAuthorize("brands", "write"), adminBrandController.Update)
+				brandGroup.POST("/:id/delete", casbinAuth.FlexibleAuthorize("brands", "write"), adminBrandController.Delete)
+			} else {
+				// Without Casbin, register routes with just authentication middleware
+				brandGroup.GET("", adminBrandController.Index)
+				brandGroup.GET("/new", adminBrandController.New)
+				brandGroup.POST("", adminBrandController.Create)
+				brandGroup.GET("/:id", adminBrandController.Show)
+				brandGroup.GET("/:id/edit", adminBrandController.Edit)
+				brandGroup.POST("/:id", adminBrandController.Update)
+				brandGroup.POST("/:id/delete", adminBrandController.Delete)
 			}
 		}
 

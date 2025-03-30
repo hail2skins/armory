@@ -1,0 +1,125 @@
+package brand
+
+import (
+	"context"
+	"fmt"
+	"io"
+
+	"github.com/hail2skins/armory/cmd/web/views/data"
+	"github.com/hail2skins/armory/cmd/web/views/partials"
+)
+
+templ Index(data *data.AdminData) {
+	@partials.Base(data.AuthData, templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+		_, err := io.WriteString(w, `
+		<div class="container mx-auto px-4 py-8">
+			<div class="flex justify-between items-center mb-6">
+				<h1 class="text-3xl font-bold text-gunmetal-800">Brands</h1>
+				<a href="/admin/brands/new" class="bg-gunmetal-800 hover:bg-gunmetal-700 text-white font-bold py-2 px-4 rounded">
+					Add New Brand
+				</a>
+			</div>
+		`)
+		if err != nil {
+			return err
+		}
+
+		if data.Success != "" {
+			_, err = io.WriteString(w, `
+			<div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4" role="alert">
+				<span class="block sm:inline">`+data.Success+`</span>
+			</div>
+			`)
+			if err != nil {
+				return err
+			}
+		}
+
+		if data.Error != "" {
+			_, err = io.WriteString(w, `
+			<div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+				<span class="block sm:inline">`+data.Error+`</span>
+			</div>
+			`)
+			if err != nil {
+				return err
+			}
+		}
+
+		_, err = io.WriteString(w, `
+		<div class="bg-white shadow-md rounded my-6">
+			<table class="min-w-max w-full table-auto">
+				<thead>
+					<tr class="bg-gray-200 text-gray-600 uppercase text-sm leading-normal">
+						<th class="py-3 px-6 text-left">Name</th>
+						<th class="py-3 px-6 text-left">Nickname</th>
+						<th class="py-3 px-6 text-center">Popularity</th>
+						<th class="py-3 px-6 text-center">Actions</th>
+					</tr>
+				</thead>
+				<tbody class="text-gunmetal-800 text-sm font-light">
+		`)
+		if err != nil {
+			return err
+		}
+
+		if len(data.Brands) == 0 {
+			_, err = io.WriteString(w, `
+				<tr class="border-b border-gray-200 hover:bg-gray-100">
+					<td colspan="4" class="py-3 px-6 text-center">No brands found.</td>
+				</tr>
+			`)
+			if err != nil {
+				return err
+			}
+		}
+
+		for _, brand := range data.Brands {
+			_, err = io.WriteString(w, fmt.Sprintf(`
+				<tr class="border-b border-gray-200 hover:bg-gray-100">
+					<td class="py-3 px-6 text-left whitespace-nowrap">
+						<div class="flex items-center">
+							<span class="font-medium">%s</span>
+						</div>
+					</td>
+					<td class="py-3 px-6 text-left">%s</td>
+					<td class="py-3 px-6 text-center">%d</td>
+					<td class="py-3 px-6 text-center">
+						<div class="flex item-center justify-center">
+							<a href="/admin/brands/%d" class="w-4 mr-2 transform hover:text-purple-500 hover:scale-110">
+								<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+								</svg>
+							</a>
+							<a href="/admin/brands/%d/edit" class="w-4 mr-2 transform hover:text-purple-500 hover:scale-110">
+								<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+								</svg>
+							</a>
+							<form action="/admin/brands/%d/delete" method="post" onsubmit="return confirm('Are you sure you want to delete this brand?');">
+								<input type="hidden" name="csrf_token" value="%s">
+								<button type="submit" class="w-4 mr-2 transform hover:text-red-500 hover:scale-110">
+									<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+									</svg>
+								</button>
+							</form>
+						</div>
+					</td>
+				</tr>
+			`, brand.Name, brand.Nickname, brand.Popularity, brand.ID, brand.ID, brand.ID, data.AuthData.CSRFToken))
+			if err != nil {
+				return err
+			}
+		}
+
+		_, err = io.WriteString(w, `
+				</tbody>
+			</table>
+		</div>
+		</div>
+		`)
+		return err
+	}))
+} 

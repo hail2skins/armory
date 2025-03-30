@@ -140,6 +140,7 @@ type TestService struct {
 	Casings       []models.Casing
 	BulletStyles  []models.BulletStyle
 	Grains        []models.Grain
+	Brands        []models.Brand
 }
 
 // Health returns a map of health status information
@@ -985,7 +986,7 @@ func (s *TestService) UpdateGrain(grain *models.Grain) error {
 	return gorm.ErrRecordNotFound
 }
 
-// DeleteGrain is a mock implementation for testing
+// DeleteGrain deletes a grain
 func (s *TestService) DeleteGrain(id uint) error {
 	for i, grain := range s.Grains {
 		if grain.ID == id {
@@ -997,4 +998,46 @@ func (s *TestService) DeleteGrain(id uint) error {
 		}
 	}
 	return gorm.ErrRecordNotFound
+}
+
+// Brand-related methods implementation
+
+// FindAllBrands retrieves all brands from the database
+func (s *TestService) FindAllBrands() ([]models.Brand, error) {
+	var brands []models.Brand
+	if err := s.db.Find(&brands).Error; err != nil {
+		return nil, err
+	}
+	return brands, nil
+}
+
+// CreateBrand creates a new brand record
+func (s *TestService) CreateBrand(brand *models.Brand) error {
+	return s.db.Create(brand).Error
+}
+
+// FindBrandByID retrieves a brand by its ID
+func (s *TestService) FindBrandByID(id uint) (*models.Brand, error) {
+	var brand models.Brand
+	if err := s.db.First(&brand, id).Error; err != nil {
+		return nil, err
+	}
+	return &brand, nil
+}
+
+// UpdateBrand updates an existing brand in the database
+func (s *TestService) UpdateBrand(brand *models.Brand) error {
+	return s.db.Save(brand).Error
+}
+
+// DeleteBrand deletes a brand from the database
+func (s *TestService) DeleteBrand(id uint) error {
+	// First find the brand
+	var brand models.Brand
+	if err := s.db.First(&brand, id).Error; err != nil {
+		return err
+	}
+
+	// Then delete it
+	return s.db.Delete(&brand).Error
 }
