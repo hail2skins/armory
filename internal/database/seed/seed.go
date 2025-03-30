@@ -55,6 +55,17 @@ func RunSeeds(db *gorm.DB) {
 		log.Printf("Casings table already seeded (count: %d), skipping.", casingCount)
 	}
 
+	// Seed Bullet Styles if the table is empty
+	var bulletStyleCount int64
+	if err := db.Model(&models.BulletStyle{}).Count(&bulletStyleCount).Error; err != nil {
+		log.Printf("Error checking bullet styles count: %v", err)
+	} else if bulletStyleCount == 0 {
+		log.Println("Seeding bullet styles...")
+		SeedBulletStyles(db)
+	} else {
+		log.Printf("Bullet Styles table already seeded (count: %d), skipping.", bulletStyleCount)
+	}
+
 	// Add more seed functions here following the same pattern
 
 	log.Println("Individual table seeding checks completed.")
@@ -88,7 +99,7 @@ func NeedsSeeding(db *gorm.DB) bool {
 		return false // Data found, no need to seed
 	}
 
-	// Check casings <--- NEW CHECK
+	// Check casings
 	var casingCount int64
 	if err := db.Model(&models.Casing{}).Count(&casingCount).Error; err != nil {
 		log.Printf("Error checking casings: %v", err)
@@ -96,7 +107,15 @@ func NeedsSeeding(db *gorm.DB) bool {
 		return false // Data found, no need to seed
 	}
 
+	// Check bullet styles
+	var bulletStyleCount int64
+	if err := db.Model(&models.BulletStyle{}).Count(&bulletStyleCount).Error; err != nil {
+		log.Printf("Error checking bullet styles: %v", err)
+	} else if bulletStyleCount > 0 {
+		return false // Data found, no need to seed
+	}
+
 	// If we reach here, NONE of the checked tables contained data, so we need to seed.
-	log.Println("No data found in Manufacturers, Calibers, WeaponTypes, or Casings. Proceeding with seed.")
+	log.Println("No data found in Manufacturers, Calibers, WeaponTypes, Casings, or Bullet Styles. Proceeding with seed.")
 	return true
 }

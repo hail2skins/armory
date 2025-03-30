@@ -420,3 +420,30 @@ func (m *MockDB) UpdateCasing(casing *models.Casing) error {
 func (m *MockDB) DeleteCasing(id uint) error {
 	return m.Called(id).Error(0)
 }
+
+// --- BulletStyle-related methods ---
+
+func (m *MockDB) FindAllBulletStyles() ([]models.BulletStyle, error) {
+	args := m.Called()
+	return args.Get(0).([]models.BulletStyle), args.Error(1)
+}
+
+func (m *MockDB) CreateBulletStyle(bulletStyle *models.BulletStyle) error {
+	return m.Called(bulletStyle).Error(0)
+}
+
+func (m *MockDB) FindBulletStyleByID(id uint) (*models.BulletStyle, error) {
+	args := m.Called(id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*models.BulletStyle), args.Error(1)
+}
+
+func (m *MockDB) UpdateBulletStyle(bulletStyle *models.BulletStyle) error {
+	return m.Called(bulletStyle).Error(0)
+}
+
+func (m *MockDB) DeleteBulletStyle(id uint) error {
+	return m.Called(id).Error(0)
+}
