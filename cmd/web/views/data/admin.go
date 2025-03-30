@@ -26,6 +26,10 @@ type AdminData struct {
 	Casings []models.Casing
 	Casing  *models.Casing
 
+	// For bullet styles
+	BulletStyles []models.BulletStyle
+	BulletStyle  *models.BulletStyle
+
 	// For promotions
 	Promotions []models.Promotion
 	Promotion  *models.Promotion
@@ -172,6 +176,18 @@ func (a *AdminData) WithCasings(casings []models.Casing) *AdminData {
 // WithCasing returns a copy of the AdminData with a single casing
 func (a *AdminData) WithCasing(casing *models.Casing) *AdminData {
 	a.Casing = casing
+	return a
+}
+
+// WithBulletStyles returns a copy of the AdminData with bullet styles
+func (a *AdminData) WithBulletStyles(bulletStyles []models.BulletStyle) *AdminData {
+	a.BulletStyles = bulletStyles
+	return a
+}
+
+// WithBulletStyle returns a copy of the AdminData with a single bullet style
+func (a *AdminData) WithBulletStyle(bulletStyle *models.BulletStyle) *AdminData {
+	a.BulletStyle = bulletStyle
 	return a
 }
 
