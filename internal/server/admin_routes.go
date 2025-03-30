@@ -26,6 +26,7 @@ func (s *Server) RegisterAdminRoutes(r *gin.Engine, authController *controller.A
 	adminFeatureFlagsController := controller.NewAdminFeatureFlagsController(s.db)
 	adminCasingController := controller.NewAdminCasingController(s.db)
 	adminBulletStyleController := controller.NewAdminBulletStyleController(s.db)
+	adminGrainController := controller.NewAdminGrainController(s.db)
 
 	// Create Stripe security controller
 	stripeSecurityController := controller.NewStripeSecurityController(s.ipFilterService)
@@ -283,6 +284,30 @@ func (s *Server) RegisterAdminRoutes(r *gin.Engine, authController *controller.A
 				bulletStyleGroup.GET("/:id/edit", adminBulletStyleController.Edit)
 				bulletStyleGroup.POST("/:id", adminBulletStyleController.Update)
 				bulletStyleGroup.POST("/:id/delete", adminBulletStyleController.Delete)
+			}
+		}
+
+		// Grain routes
+		grainGroup := adminGroup.Group("/grains")
+		{
+			if casbinAuth != nil {
+				// Define routes with flexible Casbin authorization
+				grainGroup.GET("", casbinAuth.FlexibleAuthorize("grains", "read"), adminGrainController.Index)
+				grainGroup.GET("/new", casbinAuth.FlexibleAuthorize("grains", "write"), adminGrainController.New)
+				grainGroup.POST("", casbinAuth.FlexibleAuthorize("grains", "write"), adminGrainController.Create)
+				grainGroup.GET("/:id", casbinAuth.FlexibleAuthorize("grains", "read"), adminGrainController.Show)
+				grainGroup.GET("/:id/edit", casbinAuth.FlexibleAuthorize("grains", "write"), adminGrainController.Edit)
+				grainGroup.POST("/:id", casbinAuth.FlexibleAuthorize("grains", "write"), adminGrainController.Update)
+				grainGroup.POST("/:id/delete", casbinAuth.FlexibleAuthorize("grains", "write"), adminGrainController.Delete)
+			} else {
+				// Without Casbin, register routes with just authentication middleware
+				grainGroup.GET("", adminGrainController.Index)
+				grainGroup.GET("/new", adminGrainController.New)
+				grainGroup.POST("", adminGrainController.Create)
+				grainGroup.GET("/:id", adminGrainController.Show)
+				grainGroup.GET("/:id/edit", adminGrainController.Edit)
+				grainGroup.POST("/:id", adminGrainController.Update)
+				grainGroup.POST("/:id/delete", adminGrainController.Delete)
 			}
 		}
 

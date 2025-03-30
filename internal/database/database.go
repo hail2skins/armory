@@ -88,6 +88,13 @@ type Service interface {
 	UpdateBulletStyle(bulletStyle *models.BulletStyle) error
 	DeleteBulletStyle(id uint) error
 
+	// Grain-related methods
+	FindAllGrains() ([]models.Grain, error)
+	CreateGrain(grain *models.Grain) error
+	FindGrainByID(id uint) (*models.Grain, error)
+	UpdateGrain(grain *models.Grain) error
+	DeleteGrain(id uint) error
+
 	// GetDB returns the underlying *gorm.DB instance
 	GetDB() *gorm.DB
 }
@@ -589,4 +596,57 @@ func (s *service) UpdateBulletStyle(bulletStyle *models.BulletStyle) error {
 // DeleteBulletStyle deletes a bullet style from the database
 func (s *service) DeleteBulletStyle(id uint) error {
 	return s.db.Delete(&models.BulletStyle{}, id).Error
+}
+
+// Grain-related methods implementation
+// FindAllGrains retrieves all grains from the database
+func (s *service) FindAllGrains() ([]models.Grain, error) {
+	var grains []models.Grain
+	// Order by Popularity descending, then by Weight ascending for consistent ordering
+	if err := s.db.Order("popularity DESC, weight ASC").Find(&grains).Error; err != nil {
+		return nil, err
+	}
+	return grains, nil
+}
+
+// CreateGrain creates a new grain record
+func (s *service) CreateGrain(grain *models.Grain) error {
+	// Check if there's a soft-deleted grain with the same weight
+	var existingGrain models.Grain
+	result := s.db.Unscoped().Where("weight = ?", grain.Weight).First(&existingGrain)
+
+	if result.Error == nil && existingGrain.DeletedAt.Valid {
+		// Record exists and is soft-deleted, restore it
+		existingGrain.DeletedAt.Valid = false // Clear the deleted_at timestamp
+		existingGrain.DeletedAt.Time = time.Time{}
+		existingGrain.Popularity = grain.Popularity // Update with new values
+
+		// Update the existing record (restore it)
+		return s.db.Unscoped().Save(&existingGrain).Error
+	} else if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		// Some error other than "record not found" occurred
+		return result.Error
+	}
+
+	// No soft-deleted record found with this weight, create a new one
+	return s.db.Create(grain).Error
+}
+
+// FindGrainByID retrieves a grain by its ID
+func (s *service) FindGrainByID(id uint) (*models.Grain, error) {
+	var grain models.Grain
+	if err := s.db.First(&grain, id).Error; err != nil {
+		return nil, err
+	}
+	return &grain, nil
+}
+
+// UpdateGrain updates an existing grain in the database
+func (s *service) UpdateGrain(grain *models.Grain) error {
+	return s.db.Save(grain).Error
+}
+
+// DeleteGrain deletes a grain from the database
+func (s *service) DeleteGrain(id uint) error {
+	return s.db.Delete(&models.Grain{}, id).Error
 }

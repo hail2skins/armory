@@ -447,3 +447,29 @@ func (m *MockDB) UpdateBulletStyle(bulletStyle *models.BulletStyle) error {
 func (m *MockDB) DeleteBulletStyle(id uint) error {
 	return m.Called(id).Error(0)
 }
+
+// Grain-related mock methods
+func (m *MockDB) FindAllGrains() ([]models.Grain, error) {
+	args := m.Called()
+	return args.Get(0).([]models.Grain), args.Error(1)
+}
+
+func (m *MockDB) CreateGrain(grain *models.Grain) error {
+	return m.Called(grain).Error(0)
+}
+
+func (m *MockDB) FindGrainByID(id uint) (*models.Grain, error) {
+	args := m.Called(id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*models.Grain), args.Error(1)
+}
+
+func (m *MockDB) UpdateGrain(grain *models.Grain) error {
+	return m.Called(grain).Error(0)
+}
+
+func (m *MockDB) DeleteGrain(id uint) error {
+	return m.Called(id).Error(0)
+}
