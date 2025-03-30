@@ -66,6 +66,17 @@ func RunSeeds(db *gorm.DB) {
 		log.Printf("Bullet Styles table already seeded (count: %d), skipping.", bulletStyleCount)
 	}
 
+	// Seed Grains if the table is empty
+	var grainCount int64
+	if err := db.Model(&models.Grain{}).Count(&grainCount).Error; err != nil {
+		log.Printf("Error checking grain weights count: %v", err)
+	} else if grainCount == 0 {
+		log.Println("Seeding grain weights...")
+		SeedGrains(db)
+	} else {
+		log.Printf("Grain weights table already seeded (count: %d), skipping.", grainCount)
+	}
+
 	// Add more seed functions here following the same pattern
 
 	log.Println("Individual table seeding checks completed.")
@@ -115,7 +126,13 @@ func NeedsSeeding(db *gorm.DB) bool {
 		return false // Data found, no need to seed
 	}
 
-	// If we reach here, NONE of the checked tables contained data, so we need to seed.
-	log.Println("No data found in Manufacturers, Calibers, WeaponTypes, Casings, or Bullet Styles. Proceeding with seed.")
-	return true
+	// Check grains
+	var grainCount int64
+	if err := db.Model(&models.Grain{}).Count(&grainCount).Error; err != nil {
+		log.Printf("Error checking grain weights: %v", err)
+	} else if grainCount > 0 {
+		return false // Data found, no need to seed
+	}
+
+	return true // No data found in any table, seeding is needed
 }

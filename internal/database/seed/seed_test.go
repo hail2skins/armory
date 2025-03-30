@@ -96,49 +96,64 @@ func TestRunSeeds(t *testing.T) {
 	db.Unscoped().Where("1 = 1").Delete(&models.Manufacturer{})
 	db.Unscoped().Where("1 = 1").Delete(&models.WeaponType{})
 	db.Unscoped().Where("1 = 1").Delete(&models.Casing{})
+	db.Unscoped().Where("1 = 1").Delete(&models.BulletStyle{})
+	db.Unscoped().Where("1 = 1").Delete(&models.Grain{})
 
 	// Initial seed run
 	seed.RunSeeds(db) // Explicitly run seeds here
 
 	// Get initial counts
 	initialCounts := make(map[string]int64)
-	var initialCaliberCount, initialManufacturerCount, initialWeaponTypeCount, initialCasingCount int64 // Declare variables first
+	var initialCaliberCount, initialManufacturerCount, initialWeaponTypeCount, initialCasingCount, initialBulletStyleCount, initialGrainCount int64 // Declare variables first
 	db.Model(&models.Caliber{}).Count(&initialCaliberCount)
 	db.Model(&models.Manufacturer{}).Count(&initialManufacturerCount)
 	db.Model(&models.WeaponType{}).Count(&initialWeaponTypeCount)
 	db.Model(&models.Casing{}).Count(&initialCasingCount)
+	db.Model(&models.BulletStyle{}).Count(&initialBulletStyleCount)
+	db.Model(&models.Grain{}).Count(&initialGrainCount)
 
 	// Store counts in the map
 	initialCounts["calibers"] = initialCaliberCount
 	initialCounts["manufacturers"] = initialManufacturerCount
 	initialCounts["weapon_types"] = initialWeaponTypeCount
 	initialCounts["casings"] = initialCasingCount
+	initialCounts["bullet_styles"] = initialBulletStyleCount
+	initialCounts["grains"] = initialGrainCount
 
 	assert.Greater(t, initialCounts["calibers"], int64(0), "Should have seeded calibers")
 	assert.Greater(t, initialCounts["manufacturers"], int64(0), "Should have seeded manufacturers")
 	assert.Greater(t, initialCounts["weapon_types"], int64(0), "Should have seeded weapon types")
 	assert.Greater(t, initialCounts["casings"], int64(0), "Should have seeded casings")
+	assert.Greater(t, initialCounts["bullet_styles"], int64(0), "Should have seeded bullet styles")
+	assert.Greater(t, initialCounts["grains"], int64(0), "Should have seeded grain weights")
 
 	// Re-run seeds to check for idempotency (no duplicates, updates happen correctly)
 	seed.RunSeeds(db)
 
 	// Check counts after second seed run
-	var caliberCount, manufacturerCount, weaponTypeCount, casingCount int64
+	var caliberCount, manufacturerCount, weaponTypeCount, casingCount, bulletStyleCount, grainCount int64
 	db.Model(&models.Caliber{}).Count(&caliberCount)
 	db.Model(&models.Manufacturer{}).Count(&manufacturerCount)
 	db.Model(&models.WeaponType{}).Count(&weaponTypeCount)
-	db.Model(&models.Casing{}).Count(&casingCount) // Add casing count check
+	db.Model(&models.Casing{}).Count(&casingCount)
+	db.Model(&models.BulletStyle{}).Count(&bulletStyleCount)
+	db.Model(&models.Grain{}).Count(&grainCount)
 
-	assert.Equal(t, initialCounts["calibers"], caliberCount, "Caliber count should not change on second seed")
-	assert.Equal(t, initialCounts["manufacturers"], manufacturerCount, "Manufacturer count should not change on second seed")
-	assert.Equal(t, initialCounts["weapon_types"], weaponTypeCount, "Weapon type count should not change on second seed")
-	assert.Equal(t, initialCounts["casings"], casingCount, "Casing count should not change on second seed") // Add casing count assertion
+	// Compare with initial counts
+	assert.Equal(t, initialCounts["calibers"], caliberCount, "Caliber count should not change after second seed")
+	assert.Equal(t, initialCounts["manufacturers"], manufacturerCount, "Manufacturer count should not change after second seed")
+	assert.Equal(t, initialCounts["weapon_types"], weaponTypeCount, "Weapon type count should not change after second seed")
+	assert.Equal(t, initialCounts["casings"], casingCount, "Casing count should not change after second seed")
+	assert.Equal(t, initialCounts["bullet_styles"], bulletStyleCount, "Bullet style count should not change after second seed")
+	assert.Equal(t, initialCounts["grains"], grainCount, "Grain count should not change after second seed")
 
 	// Clean up after test
 	db.Unscoped().Where("1 = 1").Delete(&models.Caliber{})
 	db.Unscoped().Where("1 = 1").Delete(&models.Manufacturer{})
 	db.Unscoped().Where("1 = 1").Delete(&models.WeaponType{})
 	db.Unscoped().Where("1 = 1").Delete(&models.Casing{})
+	db.Unscoped().Where("1 = 1").Delete(&models.BulletStyle{})
+	db.Unscoped().Where("1 = 1").Delete(&models.Grain{})
 }
 
 // Add a new test for the NeedsSeeding function and seed once strategy
@@ -148,7 +163,7 @@ func TestNeedsSeeding(t *testing.T) {
 	require.NoError(t, err, "Failed to create in-memory database")
 
 	// Run migrations to create tables
-	err = db.AutoMigrate(&models.WeaponType{}, &models.Caliber{}, &models.Manufacturer{})
+	err = db.AutoMigrate(&models.WeaponType{}, &models.Caliber{}, &models.Manufacturer{}, &models.Casing{}, &models.BulletStyle{}, &models.Grain{})
 	require.NoError(t, err, "Failed to run migrations")
 
 	// Test 1: Empty database should need seeding
@@ -165,6 +180,9 @@ func TestNeedsSeeding(t *testing.T) {
 	db.Exec("DELETE FROM weapon_types")
 	db.Exec("DELETE FROM calibers")
 	db.Exec("DELETE FROM manufacturers")
+	db.Exec("DELETE FROM casings")
+	db.Exec("DELETE FROM bullet_styles")
+	db.Exec("DELETE FROM grains")
 
 	assert.True(t, seed.NeedsSeeding(db), "Empty database should need seeding again")
 
@@ -183,27 +201,37 @@ func TestRunSeedsOnce(t *testing.T) {
 	require.NoError(t, err, "Failed to create in-memory database")
 
 	// Run migrations to create tables
-	err = db.AutoMigrate(&models.WeaponType{}, &models.Caliber{}, &models.Manufacturer{})
+	err = db.AutoMigrate(&models.WeaponType{}, &models.Caliber{}, &models.Manufacturer{},
+		&models.Casing{}, &models.BulletStyle{}, &models.Grain{})
 	require.NoError(t, err, "Failed to run migrations")
 
 	// Run seeds for the first time
 	seed.RunSeeds(db)
 
 	// Count entities to verify data was seeded
-	var weaponTypeCount, caliberCount, manufacturerCount int64
+	var weaponTypeCount, caliberCount, manufacturerCount, casingCount, bulletStyleCount, grainCount int64
 	db.Model(&models.WeaponType{}).Count(&weaponTypeCount)
 	db.Model(&models.Caliber{}).Count(&caliberCount)
 	db.Model(&models.Manufacturer{}).Count(&manufacturerCount)
+	db.Model(&models.Casing{}).Count(&casingCount)
+	db.Model(&models.BulletStyle{}).Count(&bulletStyleCount)
+	db.Model(&models.Grain{}).Count(&grainCount)
 
 	assert.Greater(t, weaponTypeCount, int64(0), "Weapon types should be seeded")
 	assert.Greater(t, caliberCount, int64(0), "Calibers should be seeded")
 	assert.Greater(t, manufacturerCount, int64(0), "Manufacturers should be seeded")
+	assert.Greater(t, casingCount, int64(0), "Casings should be seeded")
+	assert.Greater(t, bulletStyleCount, int64(0), "Bullet styles should be seeded")
+	assert.Greater(t, grainCount, int64(0), "Grain weights should be seeded")
 
 	// Remember the counts
 	initialCounts := map[string]int64{
 		"weaponTypes":   weaponTypeCount,
 		"calibers":      caliberCount,
 		"manufacturers": manufacturerCount,
+		"casings":       casingCount,
+		"bulletStyles":  bulletStyleCount,
+		"grains":        grainCount,
 	}
 
 	// Run seeds again
@@ -213,10 +241,16 @@ func TestRunSeedsOnce(t *testing.T) {
 	db.Model(&models.WeaponType{}).Count(&weaponTypeCount)
 	db.Model(&models.Caliber{}).Count(&caliberCount)
 	db.Model(&models.Manufacturer{}).Count(&manufacturerCount)
+	db.Model(&models.Casing{}).Count(&casingCount)
+	db.Model(&models.BulletStyle{}).Count(&bulletStyleCount)
+	db.Model(&models.Grain{}).Count(&grainCount)
 
 	assert.Equal(t, initialCounts["weaponTypes"], weaponTypeCount, "Weapon type count should not change on second seed")
 	assert.Equal(t, initialCounts["calibers"], caliberCount, "Caliber count should not change on second seed")
 	assert.Equal(t, initialCounts["manufacturers"], manufacturerCount, "Manufacturer count should not change on second seed")
+	assert.Equal(t, initialCounts["casings"], casingCount, "Casing count should not change on second seed")
+	assert.Equal(t, initialCounts["bulletStyles"], bulletStyleCount, "Bullet style count should not change on second seed")
+	assert.Equal(t, initialCounts["grains"], grainCount, "Grain count should not change on second seed")
 }
 
 // TestSeedCasings tests the SeedCasings function specifically

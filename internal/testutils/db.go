@@ -64,6 +64,7 @@ func NewTestDB() *TestDB {
 		&models.Promotion{},
 		&models.Casing{},
 		&models.BulletStyle{},
+		&models.Grain{},
 	); err != nil {
 		log.Fatalf("Error auto migrating schema: %v", err)
 	}

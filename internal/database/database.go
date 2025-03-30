@@ -177,6 +177,7 @@ func (s *service) AutoMigrate() error {
 		&models.FeatureFlagRole{},
 		&models.Casing{},
 		&models.BulletStyle{},
+		&models.Grain{},
 	)
 }
 
