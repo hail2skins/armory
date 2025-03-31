@@ -109,6 +109,13 @@ func RegisterOwnerRoutes(router *gin.Engine, db database.Service, authController
 
 			// Check permission using casbin
 			if casbinAuthInstance, ok := casbinAuth.(*middleware.CasbinAuth); ok {
+				// Reload policy from database to ensure we have the latest permissions
+				if err := casbinAuthInstance.ReloadPolicy(); err != nil {
+					c.Redirect(http.StatusSeeOther, "/")
+					c.Abort()
+					return
+				}
+
 				// Get auth info
 				authInfo, authExists := c.Get("auth_info")
 				if !authExists {

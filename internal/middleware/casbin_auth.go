@@ -55,9 +55,17 @@ func NewCasbinAuthWithDB(modelPath string, db *gorm.DB) (*CasbinAuth, error) {
 	}, nil
 }
 
-// Authorize returns a middleware that authorizes a user based on Casbin policies
+// Authorize returns a middleware function that authorizes a request
 func (ca *CasbinAuth) Authorize(obj string, act ...string) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// Reload policy from database to ensure we have the latest permissions
+		err := ca.ReloadPolicy()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load policies"})
+			c.Abort()
+			return
+		}
+
 		// Get the current user from the context (set by authentication middleware)
 		authInfo, exists := c.Get("auth_info")
 		if !exists {
