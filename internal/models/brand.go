@@ -87,3 +87,13 @@ func UpdateBrand(db *gorm.DB, brand *Brand) error {
 func DeleteBrand(db *gorm.DB, id uint) error {
 	return db.Delete(&Brand{}, id).Error
 }
+
+// GetAllBrands returns all brands from the database
+func GetAllBrands(db *gorm.DB) ([]Brand, error) {
+	var brands []Brand
+	result := db.Find(&brands)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return brands, nil
+}

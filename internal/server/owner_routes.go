@@ -229,11 +229,18 @@ func RegisterOwnerRoutes(router *gin.Engine, db database.Service, authController
 			// These are placeholders - create the controller methods as needed
 			// ammoGroup.GET("", ownerController.AmmoIndex)
 			ammoGroup.GET("/new", ownerController.AmmoNew)
-			// ammoGroup.POST("", ownerController.AmmoCreate)
+			ammoGroup.POST("", ownerController.AmmoCreate)
 			// ammoGroup.GET("/:id", ownerController.AmmoShow)
 			// ammoGroup.GET("/:id/edit", ownerController.AmmoEdit)
 			// ammoGroup.POST("/:id", ownerController.AmmoUpdate)
 			// ammoGroup.POST("/:id/delete", ownerController.AmmoDelete)
+
+			// Search routes for HTMX dropdown filters
+			ammoGroup.GET("/search/brands", ownerController.SearchBrands)
+			ammoGroup.GET("/search/calibers", ownerController.SearchCalibers)
+			ammoGroup.GET("/search/bullet-styles", ownerController.SearchBulletStyles)
+			ammoGroup.GET("/search/grains", ownerController.SearchGrains)
+			ammoGroup.GET("/search/casings", ownerController.SearchCasings)
 		}
 	}
 }

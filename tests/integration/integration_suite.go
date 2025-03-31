@@ -101,6 +101,9 @@ func (s *IntegrationSuite) SetupTest() {
 	// Set up flash middleware
 	s.setupFlashMiddleware()
 
+	// Set up auth controller middleware - VERY IMPORTANT
+	s.setupAuthControllerMiddleware()
+
 	// Instead of overriding render functions with mocks, set them to use the real
 	// templ components from server/auth_routes.go setupAuthRenderFunctions
 	s.AuthController.RenderLogin = func(c *gin.Context, d interface{}) {
@@ -578,4 +581,13 @@ func (s *IntegrationSuite) addCSRFTokenToForm(form url.Values, token string) url
 		form.Set("csrf_token", token)
 	}
 	return form
+}
+
+// setupAuthControllerMiddleware sets up the auth controller middleware
+func (s *IntegrationSuite) setupAuthControllerMiddleware() {
+	s.Router.Use(func(c *gin.Context) {
+		c.Set("auth", s.AuthController)
+		c.Set("authController", s.AuthController)
+		c.Next()
+	})
 }

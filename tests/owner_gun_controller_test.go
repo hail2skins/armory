@@ -1,0 +1,423 @@
+package tests
+
+import (
+	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
+	"strings"
+	"testing"
+
+	"github.com/gin-gonic/gin"
+	"github.com/hail2skins/armory/internal/controller"
+	"github.com/hail2skins/armory/internal/middleware"
+	"github.com/hail2skins/armory/internal/models"
+	"github.com/hail2skins/armory/internal/testutils"
+	"github.com/hail2skins/armory/internal/testutils/testhelper"
+	"github.com/shaj13/go-guardian/v2/auth"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+// MockAuthControllerAdapter adapts the testhelper.MockAuthService to what the controller expects
+type MockAuthControllerAdapter struct {
+	mockService *testhelper.MockAuthService
+	userID      uint
+	userEmail   string
+}
+
+// GetCurrentUser implements the required interface method
+func (m *MockAuthControllerAdapter) GetCurrentUser(c *gin.Context) (auth.Info, bool) {
+	return &testhelper.MockAuthInfo{
+		Username: m.userEmail,
+		ID:       fmt.Sprintf("%d", m.userID),
+	}, true
+}
+
+// TestNewGun tests the new gun form page
+func TestNewGun(t *testing.T) {
+	// Enable CSRF test mode
+	middleware.EnableTestMode()
+	defer middleware.DisableTestMode()
+
+	// Setup test database and service
+	db := testutils.NewTestDB()
+	defer db.Close()
+	service := testutils.NewTestService(db.DB)
+	helper := testhelper.NewControllerTestHelper(db.DB, service)
+	defer helper.CleanupTest()
+
+	// Create a test user for authentication context
+	testUser := helper.CreateTestUser(t)
+
+	// Create controller and setup the route
+	controller := controller.NewOwnerController(service)
+	router := helper.GetAuthenticatedRouter(testUser.ID, testUser.Email)
+	router.GET("/owner/gun/new", controller.New)
+
+	// Make request
+	w := helper.AssertViewRendered(
+		t,
+		router,
+		http.MethodGet,
+		"/owner/gun/new",
+		nil,
+		http.StatusOK,
+	)
+
+	// Assert response
+	assert.Contains(t, w.Body.String(), "Add New Firearm")
+}
+
+// TestGunCreate tests the creation of a gun
+func TestGunCreate(t *testing.T) {
+	// Enable CSRF test mode
+	middleware.EnableTestMode()
+	defer middleware.DisableTestMode()
+
+	// Setup test database and service
+	db := testutils.NewTestDB()
+	defer db.Close()
+	service := testutils.NewTestService(db.DB)
+	helper := testhelper.NewControllerTestHelper(db.DB, service)
+	defer helper.CleanupTest()
+
+	// Create a test user for authentication context
+	testUser := helper.CreateTestUser(t)
+
+	// Create some test data
+	weaponType := models.WeaponType{Type: "Test Pistol Creation", Popularity: 1}
+	err := service.CreateWeaponType(&weaponType)
+	require.NoError(t, err)
+
+	caliber := models.Caliber{Caliber: "Test 9mm Creation", Popularity: 1}
+	err = service.CreateCaliber(&caliber)
+	require.NoError(t, err)
+
+	manufacturer := models.Manufacturer{Name: "Test Glock Creation", Country: "USA", Popularity: 1}
+	err = service.CreateManufacturer(&manufacturer)
+	require.NoError(t, err)
+
+	// Define form data for gun creation
+	formData := url.Values{}
+	formData.Set("name", "Test Gun")
+	formData.Set("serial_number", "TEST123")
+	formData.Set("purpose", "Home Defense")
+	formData.Set("weapon_type_id", fmt.Sprintf("%d", weaponType.ID))
+	formData.Set("caliber_id", fmt.Sprintf("%d", caliber.ID))
+	formData.Set("manufacturer_id", fmt.Sprintf("%d", manufacturer.ID))
+	formData.Set("csrf_token", "test_token")
+
+	// Create controller and setup the route
+	gunController := controller.NewOwnerController(service)
+
+	// Create a custom router with our adapter
+	router := gin.New()
+	router.Use(func(c *gin.Context) {
+		// Set up the auth controller adapter
+		mockAuthService := helper.AuthService.(*testhelper.MockAuthService)
+		adapter := &MockAuthControllerAdapter{
+			mockService: mockAuthService,
+			userID:      testUser.ID,
+			userEmail:   testUser.Email,
+		}
+		c.Set("authController", adapter)
+
+		// Set authenticated flag
+		c.Set("authenticated", true)
+
+		// Set user data
+		c.Set("user", gin.H{"id": testUser.ID, "email": testUser.Email})
+
+		// Set CSRF token
+		c.Set("csrf_token", "test_token")
+
+		// Set flash function
+		c.Set("setFlash", func(msg string) {
+			// No-op for tests
+		})
+
+		// Set auth data for views
+		c.Set("authData", gin.H{
+			"IsAuthenticated": true,
+			"UserEmail":       testUser.Email,
+			"UserID":          testUser.ID,
+			"CSRFToken":       "test_token",
+		})
+
+		c.Next()
+	})
+
+	// Add the gun controller route with the correct path
+	router.POST("/owner/guns", gunController.Create)
+
+	// Make request with error handling
+	req, err := http.NewRequest("POST", "/owner/guns", strings.NewReader(formData.Encode()))
+	require.NoError(t, err, "Failed to create request")
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("X-CSRF-TEST-MODE", "1")
+	rr := httptest.NewRecorder()
+
+	// Serve the request through the router
+	router.ServeHTTP(rr, req)
+
+	// Verify redirection to owner dashboard
+	assert.Equal(t, http.StatusSeeOther, rr.Code)
+	assert.Equal(t, "/owner", rr.Header().Get("Location"))
+
+	// Verify the gun was created in the database
+	gunList := []models.Gun{}
+	err = db.DB.Where("owner_id = ? AND name = ?", testUser.ID, "Test Gun").Find(&gunList).Error
+	require.NoError(t, err, "Failed to query gun")
+
+	// Verify the gun was created
+	assert.Greater(t, len(gunList), 0, "No gun was created in the database")
+
+	if len(gunList) > 0 {
+		assert.Equal(t, "Test Gun", gunList[0].Name, "Gun name mismatch")
+		assert.Equal(t, "TEST123", gunList[0].SerialNumber, "Serial number mismatch")
+		assert.Equal(t, "Home Defense", gunList[0].Purpose, "Purpose mismatch")
+		assert.Equal(t, weaponType.ID, gunList[0].WeaponTypeID, "Weapon type ID mismatch")
+		assert.Equal(t, caliber.ID, gunList[0].CaliberID, "Caliber ID mismatch")
+		assert.Equal(t, manufacturer.ID, gunList[0].ManufacturerID, "Manufacturer ID mismatch")
+	}
+}
+
+// TestGunCreateValidation tests validation during gun creation
+func TestGunCreateValidation(t *testing.T) {
+	// Enable CSRF test mode
+	middleware.EnableTestMode()
+	defer middleware.DisableTestMode()
+
+	// Setup test database
+	db := testutils.NewTestDB()
+	defer db.Close()
+
+	// First, create valid weapon type, caliber, and manufacturer records
+	weaponType := models.WeaponType{Type: "Test Type Validation", Popularity: 1}
+	err := db.DB.Create(&weaponType).Error
+	require.NoError(t, err, "Failed to create test weapon type")
+
+	caliber := models.Caliber{Caliber: "Test Caliber Validation", Popularity: 1}
+	err = db.DB.Create(&caliber).Error
+	require.NoError(t, err, "Failed to create test caliber")
+
+	manufacturer := models.Manufacturer{Name: "Test Manufacturer Validation", Country: "USA", Popularity: 1}
+	err = db.DB.Create(&manufacturer).Error
+	require.NoError(t, err, "Failed to create test manufacturer")
+
+	// Test cases for validation failures
+	testCases := []struct {
+		name        string
+		gun         *models.Gun
+		expectedErr string
+	}{
+		{
+			name: "Too Long Name",
+			gun: &models.Gun{
+				Name:           strings.Repeat("X", 101),
+				SerialNumber:   "TEST123",
+				WeaponTypeID:   weaponType.ID,
+				CaliberID:      caliber.ID,
+				ManufacturerID: manufacturer.ID,
+				OwnerID:        1,
+			},
+			expectedErr: "exceeds maximum length",
+		},
+		{
+			name: "Invalid Weapon Type",
+			gun: &models.Gun{
+				Name:           "Test Gun",
+				SerialNumber:   "TEST123",
+				WeaponTypeID:   999,
+				CaliberID:      caliber.ID,
+				ManufacturerID: manufacturer.ID,
+				OwnerID:        1,
+			},
+			expectedErr: "weapon type",
+		},
+		{
+			name: "Invalid Caliber",
+			gun: &models.Gun{
+				Name:           "Test Gun",
+				SerialNumber:   "TEST123",
+				WeaponTypeID:   weaponType.ID,
+				CaliberID:      999,
+				ManufacturerID: manufacturer.ID,
+				OwnerID:        1,
+			},
+			expectedErr: "caliber",
+		},
+		{
+			name: "Invalid Manufacturer",
+			gun: &models.Gun{
+				Name:           "Test Gun",
+				SerialNumber:   "TEST123",
+				WeaponTypeID:   weaponType.ID,
+				CaliberID:      caliber.ID,
+				ManufacturerID: 999,
+				OwnerID:        1,
+			},
+			expectedErr: "manufacturer",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Validate using the model's validation method
+			err := tc.gun.Validate(db.DB)
+
+			// Check that validation failed as expected
+			assert.Error(t, err, "Expected validation to fail")
+			if assert.NotNil(t, err, "Error should not be nil") {
+				assert.Contains(t, err.Error(), tc.expectedErr,
+					"Error message should contain %q, but got: %q",
+					tc.expectedErr, err.Error())
+			}
+		})
+	}
+}
+
+// TestCreateGunValidationErrors tests validation during gun creation
+func TestCreateGunValidationErrors(t *testing.T) {
+	// Enable CSRF test mode
+	middleware.EnableTestMode()
+	defer middleware.DisableTestMode()
+
+	// Setup test database and service
+	db := testutils.NewTestDB()
+	defer db.Close()
+	service := testutils.NewTestService(db.DB)
+	helper := testhelper.NewControllerTestHelper(db.DB, service)
+	defer helper.CleanupTest()
+
+	// Create a test user for authentication context
+	testUser := helper.CreateTestUser(t)
+
+	// Create some test data for form validation
+	weaponType := models.WeaponType{Type: "Test Validation Type", Popularity: 1}
+	err := service.CreateWeaponType(&weaponType)
+	require.NoError(t, err)
+
+	caliber := models.Caliber{Caliber: "Test Validation Caliber", Popularity: 1}
+	err = service.CreateCaliber(&caliber)
+	require.NoError(t, err)
+
+	manufacturer := models.Manufacturer{Name: "Test Validation Manufacturer", Country: "USA", Popularity: 1}
+	err = service.CreateManufacturer(&manufacturer)
+	require.NoError(t, err)
+
+	// Create form data with validation errors
+	formData := url.Values{
+		"name":            {"Test Gun With Error"}, // Valid name, but validation will catch other errors
+		"serial_number":   {"TEST123"},
+		"purpose":         {string(make([]byte, 101))}, // Purpose too long
+		"paid":            {"-100"},                    // Negative price
+		"weapon_type_id":  {fmt.Sprintf("%d", weaponType.ID)},
+		"caliber_id":      {fmt.Sprintf("%d", caliber.ID)},
+		"manufacturer_id": {fmt.Sprintf("%d", manufacturer.ID)},
+		"csrf_token":      {"test_token"},
+	}
+
+	// Create controller and setup the route
+	gunController := controller.NewOwnerController(service)
+
+	// Create a custom router with our adapter
+	router := gin.New()
+	router.Use(func(c *gin.Context) {
+		// Set up the auth controller adapter
+		mockAuthService := helper.AuthService.(*testhelper.MockAuthService)
+		adapter := &MockAuthControllerAdapter{
+			mockService: mockAuthService,
+			userID:      testUser.ID,
+			userEmail:   testUser.Email,
+		}
+		c.Set("authController", adapter)
+
+		// Set authenticated flag
+		c.Set("authenticated", true)
+
+		// Set user data
+		c.Set("user", gin.H{"id": testUser.ID, "email": testUser.Email})
+
+		// Set CSRF token
+		c.Set("csrf_token", "test_token")
+
+		// Set flash function
+		c.Set("setFlash", func(msg string) {
+			// No-op for tests
+		})
+
+		// Set auth data for views
+		c.Set("authData", gin.H{
+			"IsAuthenticated": true,
+			"UserEmail":       testUser.Email,
+			"UserID":          testUser.ID,
+			"CSRFToken":       "test_token",
+		})
+
+		c.Next()
+	})
+
+	// Add the gun controller route with the correct path
+	router.POST("/owner/guns", gunController.Create)
+
+	// Make request with error handling
+	req, err := http.NewRequest("POST", "/owner/guns", strings.NewReader(formData.Encode()))
+	require.NoError(t, err, "Failed to create request")
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("X-CSRF-TEST-MODE", "1")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	// Assert response contains form rendering with validation errors
+	assert.Equal(t, http.StatusUnprocessableEntity, w.Code)
+	assert.Contains(t, w.Body.String(), "Add New Firearm") // Should re-render the form
+
+	// Verify no gun was created
+	var count int64
+	db.DB.Model(&models.Gun{}).Where("owner_id = ?", testUser.ID).Count(&count)
+	assert.Equal(t, int64(0), count)
+}
+
+// TestCreateGunUnauthenticated tests gun creation when not authenticated
+func TestCreateGunUnauthenticated(t *testing.T) {
+	// Enable CSRF test mode
+	middleware.EnableTestMode()
+	defer middleware.DisableTestMode()
+
+	// Setup test database and service
+	db := testutils.NewTestDB()
+	defer db.Close()
+	service := testutils.NewTestService(db.DB)
+	helper := testhelper.NewControllerTestHelper(db.DB, service)
+	defer helper.CleanupTest()
+
+	// Create controller and setup a router with no auth controller
+	controller := controller.NewOwnerController(service)
+	router := gin.Default()
+
+	// Use middleware without authentication
+	router.Use(middleware.CSRFMiddleware())
+
+	// Add the route
+	router.POST("/owner/guns", controller.Create)
+
+	// Make request
+	formData := url.Values{"csrf_token": {"test_token"}}
+	req, err := http.NewRequest("POST", "/owner/guns", strings.NewReader(formData.Encode()))
+	require.NoError(t, err, "Failed to create request")
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("X-CSRF-TEST-MODE", "1")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	// Assert redirect to login
+	assert.Equal(t, http.StatusSeeOther, w.Code)
+	assert.Equal(t, "/login", w.Header().Get("Location"))
+
+	// Verify no gun was created
+	var count int64
+	db.DB.Model(&models.Gun{}).Count(&count)
+	assert.Equal(t, int64(0), count)
+}
