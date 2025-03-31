@@ -11,6 +11,14 @@ import (
 	"github.com/hail2skins/armory/internal/models"
 )
 
+// Helper function to render error messages for a form field
+func renderErrorForField(errors map[string]string, fieldName string) string {
+	if errorMsg, exists := errors[fieldName]; exists && errorMsg != "" {
+		return `<p class="text-red-500 text-xs italic mt-1">` + errorMsg + `</p>`
+	}
+	return ""
+}
+
 // Helper functions for dropdown options
 func brandOptions(brands []models.Brand) string {
 	options := ""
@@ -119,14 +127,16 @@ templ New(data *data.OwnerData) {
 								<!-- Name -->
 								<div class="mb-4">
 									<label for="name" class="block text-gunmetal-700 text-sm font-bold mb-2">Purchase Note *</label>
-									<input type="text" id="name" name="name" class="shadow appearance-none border rounded w-full py-2 px-3 text-gunmetal-700 leading-tight focus:outline-none focus:shadow-outline" maxlength="100" required />
+									<input type="text" id="name" name="name" class="shadow appearance-none border rounded w-full py-2 px-3 text-gunmetal-700 leading-tight focus:outline-none focus:shadow-outline" maxlength="100" value="` + data.FormErrors["value_name"] + `" required />
 									<p class="text-xs text-gray-500 mt-1">Maximum 100 characters</p>
+									` + renderErrorForField(data.FormErrors, "name") + `
 								</div>
 								
 								<!-- Count -->
 								<div class="mb-4">
 									<label for="count" class="block text-gunmetal-700 text-sm font-bold mb-2">Quantity (Rounds) *</label>
-									<input type="number" id="count" name="count" class="shadow appearance-none border rounded w-full py-2 px-3 text-gunmetal-700 leading-tight focus:outline-none focus:shadow-outline" min="1" required />
+									<input type="number" id="count" name="count" class="shadow appearance-none border rounded w-full py-2 px-3 text-gunmetal-700 leading-tight focus:outline-none focus:shadow-outline" min="1" value="` + data.FormErrors["value_count"] + `" required />
+									` + renderErrorForField(data.FormErrors, "count") + `
 								</div>
 								
 								<!-- Brand -->
@@ -144,9 +154,10 @@ templ New(data *data.OwnerData) {
 											hx-params="q"
 											name="q"
 										/>
-										<input type="hidden" id="brand_id" name="brand_id" required />
+										<input type="hidden" id="brand_id" name="brand_id" value="` + data.FormErrors["value_brand_id"] + `" required />
 										<div id="brand_dropdown" class="custom-dropdown"></div>
 									</div>
+									` + renderErrorForField(data.FormErrors, "brand_id") + `
 								</div>
 								
 								<!-- Caliber -->
@@ -164,9 +175,10 @@ templ New(data *data.OwnerData) {
 											hx-params="q"
 											name="q"
 										/>
-										<input type="hidden" id="caliber_id" name="caliber_id" required />
+										<input type="hidden" id="caliber_id" name="caliber_id" value="` + data.FormErrors["value_caliber_id"] + `" required />
 										<div id="caliber_dropdown" class="custom-dropdown"></div>
 									</div>
+									` + renderErrorForField(data.FormErrors, "caliber_id") + `
 								</div>
 							</div>
 
@@ -179,14 +191,16 @@ templ New(data *data.OwnerData) {
 									<label for="paid" class="block text-gunmetal-700 text-sm font-bold mb-2">Price Paid (USD)</label>
 									<div class="relative">
 										<span class="absolute left-3 top-2 text-gunmetal-700">$</span>
-										<input type="number" id="paid" name="paid" step="0.01" min="0" class="shadow appearance-none border rounded w-full py-2 pl-6 pr-3 text-gunmetal-700 leading-tight focus:outline-none focus:shadow-outline" />
+										<input type="number" id="paid" name="paid" step="0.01" min="0" value="` + data.FormErrors["value_paid"] + `" class="shadow appearance-none border rounded w-full py-2 pl-6 pr-3 text-gunmetal-700 leading-tight focus:outline-none focus:shadow-outline" />
 									</div>
+									` + renderErrorForField(data.FormErrors, "paid") + `
 								</div>
 
 								<!-- Date -->
 								<div class="mb-4">
 									<label for="acquired_date" class="block text-gunmetal-700 text-sm font-bold mb-2">Acquisition Date</label>
-									<input type="date" id="acquired_date" name="acquired_date" class="shadow appearance-none border rounded w-full py-2 px-3 text-gunmetal-700 leading-tight focus:outline-none focus:shadow-outline" max="` + formatCurrentDate() + `" />
+									<input type="date" id="acquired_date" name="acquired_date" value="` + data.FormErrors["value_acquired_date"] + `" class="shadow appearance-none border rounded w-full py-2 px-3 text-gunmetal-700 leading-tight focus:outline-none focus:shadow-outline" max="` + formatCurrentDate() + `" />
+									` + renderErrorForField(data.FormErrors, "acquired_date") + `
 								</div>
 								
 								<!-- Bullet Style -->
@@ -204,9 +218,10 @@ templ New(data *data.OwnerData) {
 											hx-params="q"
 											name="q"
 										/>
-										<input type="hidden" id="bullet_style_id" name="bullet_style_id" />
+										<input type="hidden" id="bullet_style_id" name="bullet_style_id" value="` + data.FormErrors["value_bullet_style_id"] + `" />
 										<div id="bullet_style_dropdown" class="custom-dropdown"></div>
 									</div>
+									` + renderErrorForField(data.FormErrors, "bullet_style_id") + `
 								</div>
 								
 								<!-- Grain -->
@@ -224,19 +239,20 @@ templ New(data *data.OwnerData) {
 											hx-params="q"
 											name="q"
 										/>
-										<input type="hidden" id="grain_id" name="grain_id" />
+										<input type="hidden" id="grain_id" name="grain_id" value="` + data.FormErrors["value_grain_id"] + `" />
 										<div id="grain_dropdown" class="custom-dropdown"></div>
 									</div>
+									` + renderErrorForField(data.FormErrors, "grain_id") + `
 								</div>
 								
 								<!-- Casing -->
 								<div class="mb-4">
-									<label for="casing_search" class="block text-gunmetal-700 text-sm font-bold mb-2">Casing Type</label>
+									<label for="casing_search" class="block text-gunmetal-700 text-sm font-bold mb-2">Casing Material</label>
 									<div class="custom-select-container">
 										<input type="text" 
 											id="casing_search" 
 											class="custom-search-input" 
-											placeholder="Search for a casing type..." 
+											placeholder="Search for a casing material..." 
 											hx-get="/owner/munitions/search/casings" 
 											hx-trigger="keyup changed delay:200ms, focus"
 											hx-target="#casing_dropdown"
@@ -244,9 +260,10 @@ templ New(data *data.OwnerData) {
 											hx-params="q"
 											name="q"
 										/>
-										<input type="hidden" id="casing_id" name="casing_id" />
+										<input type="hidden" id="casing_id" name="casing_id" value="` + data.FormErrors["value_casing_id"] + `" />
 										<div id="casing_dropdown" class="custom-dropdown"></div>
 									</div>
+									` + renderErrorForField(data.FormErrors, "casing_id") + `
 								</div>
 							</div>
 						</div>

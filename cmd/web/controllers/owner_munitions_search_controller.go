@@ -16,7 +16,11 @@ func SearchBrands(c *gin.Context) {
 	db := c.MustGet("db").(*gorm.DB)
 
 	// Get all brands from the database
-	brands := models.GetAllBrands(db)
+	brands, err := models.GetAllBrands(db)
+	if err != nil {
+		c.JSON(500, gin.H{"error": "Failed to fetch brands"})
+		return
+	}
 
 	// Filter brands based on the search query
 	var filteredBrands []models.Brand
@@ -36,7 +40,11 @@ func SearchCalibers(c *gin.Context) {
 	db := c.MustGet("db").(*gorm.DB)
 
 	// Get all calibers from the database
-	calibers := models.GetAllCalibers(db)
+	calibers, err := models.GetAllCalibers(db)
+	if err != nil {
+		c.JSON(500, gin.H{"error": "Failed to fetch calibers"})
+		return
+	}
 
 	// Filter calibers based on the search query
 	var filteredCalibers []models.Caliber
@@ -60,7 +68,11 @@ func SearchBulletStyles(c *gin.Context) {
 	db := c.MustGet("db").(*gorm.DB)
 
 	// Get all bullet styles from the database
-	styles := models.GetAllBulletStyles(db)
+	styles, err := models.GetAllBulletStyles(db)
+	if err != nil {
+		c.JSON(500, gin.H{"error": "Failed to fetch bullet styles"})
+		return
+	}
 
 	// Filter styles based on the search query
 	var filteredStyles []models.BulletStyle
@@ -80,7 +92,11 @@ func SearchGrains(c *gin.Context) {
 	db := c.MustGet("db").(*gorm.DB)
 
 	// Get all grains from the database
-	grains := models.GetAllGrains(db)
+	grains, err := models.GetAllGrains(db)
+	if err != nil {
+		c.JSON(500, gin.H{"error": "Failed to fetch grain weights"})
+		return
+	}
 
 	// Filter grains based on the search query
 	var filteredGrains []models.Grain
@@ -100,7 +116,11 @@ func SearchCasings(c *gin.Context) {
 	db := c.MustGet("db").(*gorm.DB)
 
 	// Get all casings from the database
-	casings := models.GetAllCasings(db)
+	casings, err := models.GetAllCasings(db)
+	if err != nil {
+		c.JSON(500, gin.H{"error": "Failed to fetch casing types"})
+		return
+	}
 
 	// Filter casings based on the search query
 	var filteredCasings []models.Casing

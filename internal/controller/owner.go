@@ -24,6 +24,7 @@ import (
 	"github.com/hail2skins/armory/internal/models"
 	"github.com/hail2skins/armory/internal/services/email"
 	"github.com/shaj13/go-guardian/v2/auth"
+	"gorm.io/gorm"
 )
 
 // AuthControllerInterface defines the interface for the auth controller
@@ -3315,7 +3316,7 @@ func (o *OwnerController) AmmoCreate(c *gin.Context) {
 	err = c.Request.ParseForm()
 	if err != nil {
 		// Handle error
-		handleAmmoCreateError(c, dbUser, "Failed to parse form", nil, http.StatusUnprocessableEntity)
+		handleAmmoCreateError(c, dbUser, "Failed to parse form", nil, http.StatusUnprocessableEntity, o.db.GetDB())
 		return
 	}
 
@@ -3376,7 +3377,7 @@ func (o *OwnerController) AmmoCreate(c *gin.Context) {
 	// If there are validation errors, respond with them
 	if len(formErrors) > 0 {
 		// Format and return all errors
-		handleAmmoCreateError(c, dbUser, "Please fix the errors below", formErrors, http.StatusUnprocessableEntity)
+		handleAmmoCreateError(c, dbUser, "Please fix the errors below", formErrors, http.StatusUnprocessableEntity, o.db.GetDB())
 		return
 	}
 
@@ -3433,7 +3434,7 @@ func (o *OwnerController) AmmoCreate(c *gin.Context) {
 	db := o.db.GetDB()
 	if err := models.CreateAmmoWithValidation(db, ammo); err != nil {
 		// Create detailed error message based on the validation error
-		handleAmmoCreateError(c, dbUser, "Failed to create ammunition: "+err.Error(), nil, http.StatusUnprocessableEntity)
+		handleAmmoCreateError(c, dbUser, "Failed to create ammunition: "+err.Error(), nil, http.StatusUnprocessableEntity, db)
 		return
 	}
 
@@ -3447,7 +3448,45 @@ func (o *OwnerController) AmmoCreate(c *gin.Context) {
 }
 
 // Helper function to handle ammunition creation errors
-func handleAmmoCreateError(c *gin.Context, dbUser *database.User, errMsg string, formErrors map[string]string, statusCode int) {
+func handleAmmoCreateError(c *gin.Context, dbUser *database.User, errMsg string, formErrors map[string]string, statusCode int, db *gorm.DB) {
+	// Get the database connection to fetch reference data
+	// db := c.MustGet("db").(*gorm.DB)
+
+	// Fetch brands ordered by popularity
+	var brands []models.Brand
+	if err := db.Order("popularity DESC, name ASC").Find(&brands).Error; err != nil {
+		logger.Error("Failed to fetch brands", err, nil)
+		brands = []models.Brand{}
+	}
+
+	// Fetch calibers ordered by popularity
+	var calibers []models.Caliber
+	if err := db.Order("popularity DESC, caliber ASC").Find(&calibers).Error; err != nil {
+		logger.Error("Failed to fetch calibers", err, nil)
+		calibers = []models.Caliber{}
+	}
+
+	// Fetch bullet styles ordered by popularity
+	var bulletStyles []models.BulletStyle
+	if err := db.Order("popularity DESC, type ASC").Find(&bulletStyles).Error; err != nil {
+		logger.Error("Failed to fetch bullet styles", err, nil)
+		bulletStyles = []models.BulletStyle{}
+	}
+
+	// Fetch grains ordered by popularity
+	var grains []models.Grain
+	if err := db.Order("popularity DESC, weight ASC").Find(&grains).Error; err != nil {
+		logger.Error("Failed to fetch grains", err, nil)
+		grains = []models.Grain{}
+	}
+
+	// Fetch casings ordered by popularity
+	var casings []models.Casing
+	if err := db.Order("popularity DESC, type ASC").Find(&casings).Error; err != nil {
+		logger.Error("Failed to fetch casings", err, nil)
+		casings = []models.Casing{}
+	}
+
 	// Create owner data for the view
 	ownerData := data.NewOwnerData().
 		WithTitle("New Ammunition").
@@ -3455,10 +3494,32 @@ func handleAmmoCreateError(c *gin.Context, dbUser *database.User, errMsg string,
 		WithUser(dbUser).
 		WithError(errMsg)
 
-	// If form errors provided, add them to the ownerData
-	if formErrors != nil {
-		ownerData = ownerData.WithFormErrors(formErrors)
+	// Add the data for dropdowns
+	ownerData.Brands = brands
+	ownerData.Calibers = calibers
+	ownerData.BulletStyles = bulletStyles
+	ownerData.Grains = grains
+	ownerData.Casings = casings
+
+	// Initialize form errors if not provided
+	if formErrors == nil {
+		formErrors = make(map[string]string)
 	}
+
+	// Preserve user input data by storing in form errors with a special prefix
+	// This allows the template to access the values using the same FormErrors map
+	formErrors["value_name"] = c.Request.PostForm.Get("name")
+	formErrors["value_count"] = c.Request.PostForm.Get("count")
+	formErrors["value_brand_id"] = c.Request.PostForm.Get("brand_id")
+	formErrors["value_bullet_style_id"] = c.Request.PostForm.Get("bullet_style_id")
+	formErrors["value_grain_id"] = c.Request.PostForm.Get("grain_id")
+	formErrors["value_caliber_id"] = c.Request.PostForm.Get("caliber_id")
+	formErrors["value_casing_id"] = c.Request.PostForm.Get("casing_id")
+	formErrors["value_acquired_date"] = c.Request.PostForm.Get("acquired_date")
+	formErrors["value_paid"] = c.Request.PostForm.Get("paid")
+
+	// Add form errors to the ownerData
+	ownerData = ownerData.WithFormErrors(formErrors)
 
 	// Set authentication data from context
 	if csrfToken, exists := c.Get("csrf_token"); exists {

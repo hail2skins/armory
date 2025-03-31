@@ -46,8 +46,11 @@ func DeleteCaliber(db *gorm.DB, id uint) error {
 }
 
 // GetAllCalibers returns all calibers from the database
-func GetAllCalibers(db *gorm.DB) []Caliber {
+func GetAllCalibers(db *gorm.DB) ([]Caliber, error) {
 	var calibers []Caliber
-	db.Find(&calibers)
-	return calibers
+	result := db.Find(&calibers)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return calibers, nil
 }

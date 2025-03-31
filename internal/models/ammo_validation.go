@@ -36,6 +36,8 @@ var (
 	ErrInvalidCasing = errors.New("invalid casing ID")
 )
 
+// Note: ErrInvalidCaliber is imported from gun_validation.go
+
 // Validate validates the Ammo model
 func (a *Ammo) Validate(db *gorm.DB) error {
 	// Validate name is not empty

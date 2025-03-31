@@ -54,8 +54,11 @@ func DeleteBulletStyle(db *gorm.DB, id uint) error {
 }
 
 // GetAllBulletStyles returns all bullet styles from the database
-func GetAllBulletStyles(db *gorm.DB) []BulletStyle {
+func GetAllBulletStyles(db *gorm.DB) ([]BulletStyle, error) {
 	var styles []BulletStyle
-	db.Find(&styles)
-	return styles
+	result := db.Find(&styles)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return styles, nil
 }
