@@ -2,32 +2,311 @@ package munitions
 
 import (
 	"context"
+	"fmt"
 	"io"
+	"time"
 
 	"github.com/hail2skins/armory/cmd/web/views/data"
 	"github.com/hail2skins/armory/cmd/web/views/partials"
+	"github.com/hail2skins/armory/internal/models"
 )
+
+// Helper functions for dropdown options
+func brandOptions(brands []models.Brand) string {
+	options := ""
+	for _, brand := range brands {
+		options += fmt.Sprintf(`<option value="%d">%s</option>`, brand.ID, brand.Name)
+	}
+	return options
+}
+
+func caliberOptions(calibers []models.Caliber) string {
+	options := ""
+	for _, caliber := range calibers {
+		options += fmt.Sprintf(`<option value="%d">%s</option>`, caliber.ID, caliber.Caliber)
+	}
+	return options
+}
+
+func bulletStyleOptions(styles []models.BulletStyle) string {
+	options := ""
+	for _, style := range styles {
+		options += fmt.Sprintf(`<option value="%d">%s</option>`, style.ID, style.Type)
+	}
+	return options
+}
+
+func grainOptions(grains []models.Grain) string {
+	options := ""
+	for _, grain := range grains {
+		displayText := ""
+		if grain.Weight == 0 {
+			displayText = "Other"
+		} else {
+			displayText = fmt.Sprintf("%d gr", grain.Weight)
+		}
+		options += fmt.Sprintf(`<option value="%d">%s</option>`, grain.ID, displayText)
+	}
+	return options
+}
+
+func casingOptions(casings []models.Casing) string {
+	options := ""
+	for _, casing := range casings {
+		options += fmt.Sprintf(`<option value="%d">%s</option>`, casing.ID, casing.Type)
+	}
+	return options
+}
 
 templ New(data *data.OwnerData) {
 	@partials.Base(data.Auth, templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
-		_, err := io.WriteString(w, `
-		<div class="container mx-auto px-4 py-8">
-			<div class="flex justify-between items-center mb-6">
-				<h1 class="text-3xl font-bold text-gunmetal-800">Add New Ammunition</h1>
-				<a href="/owner" class="bg-gunmetal-500 hover:bg-gunmetal-600 text-white font-bold py-2 px-4 rounded">
-					Back to Dashboard
-				</a>
+		return templ.Raw(`
+			<style>
+				.custom-select-container {
+					position: relative;
+				}
+				.custom-search-input {
+					width: 100%;
+					padding: 0.5rem 0.75rem;
+					border: 1px solid #e2e8f0;
+					border-radius: 0.375rem;
+					box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+					outline: none;
+				}
+				.custom-search-input:focus {
+					border-color: #4B5563;
+					box-shadow: 0 0 0 3px rgba(75, 85, 99, 0.15);
+				}
+				.custom-dropdown {
+					position: absolute;
+					width: 100%;
+					max-height: 200px;
+					overflow-y: auto;
+					border: 1px solid #e2e8f0;
+					border-radius: 0.375rem;
+					background: white;
+					z-index: 10;
+					box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+					display: none;
+				}
+				.custom-dropdown:not(:empty) {
+					display: block;
+				}
+				.custom-dropdown-item {
+					padding: 0.5rem 0.75rem;
+					cursor: pointer;
+				}
+				.custom-dropdown-item:hover {
+					background-color: #f3f4f6;
+				}
+			</style>
+
+			<div class="container mx-auto px-4 py-8">
+				<div class="flex justify-between items-center mb-6">
+					<h1 class="text-3xl font-bold text-gunmetal-800">Add New Ammunition</h1>
+					<a href="/owner" class="bg-gunmetal-500 hover:bg-gunmetal-600 text-white font-bold py-2 px-4 rounded">Back to Dashboard</a>
+				</div>
+
+				<div class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
+					<form action="/owner/munitions" method="POST" class="space-y-6" hx-boost="true">
+						<input type="hidden" name="csrf_token" value="` + data.Auth.CSRFToken + `" />
+						
+						<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+							<!-- Left Column - Required Fields -->
+							<div>
+								<h3 class="text-lg font-medium text-gunmetal-800 mb-4">Required Information</h3>
+								
+								<!-- Name -->
+								<div class="mb-4">
+									<label for="name" class="block text-gunmetal-700 text-sm font-bold mb-2">Purchase Note *</label>
+									<input type="text" id="name" name="name" class="shadow appearance-none border rounded w-full py-2 px-3 text-gunmetal-700 leading-tight focus:outline-none focus:shadow-outline" maxlength="100" required />
+									<p class="text-xs text-gray-500 mt-1">Maximum 100 characters</p>
+								</div>
+								
+								<!-- Count -->
+								<div class="mb-4">
+									<label for="count" class="block text-gunmetal-700 text-sm font-bold mb-2">Quantity (Rounds) *</label>
+									<input type="number" id="count" name="count" class="shadow appearance-none border rounded w-full py-2 px-3 text-gunmetal-700 leading-tight focus:outline-none focus:shadow-outline" min="1" required />
+								</div>
+								
+								<!-- Brand -->
+								<div class="mb-4">
+									<label for="brand_search" class="block text-gunmetal-700 text-sm font-bold mb-2">Brand *</label>
+									<div class="custom-select-container">
+										<input type="text" 
+											id="brand_search" 
+											class="custom-search-input" 
+											placeholder="Search for a brand..." 
+											hx-get="/owner/munitions/search/brands" 
+											hx-trigger="keyup changed delay:200ms, focus"
+											hx-target="#brand_dropdown"
+											hx-swap="innerHTML"
+											hx-params="q"
+											name="q"
+										/>
+										<input type="hidden" id="brand_id" name="brand_id" required />
+										<div id="brand_dropdown" class="custom-dropdown"></div>
+									</div>
+								</div>
+								
+								<!-- Caliber -->
+								<div class="mb-4">
+									<label for="caliber_search" class="block text-gunmetal-700 text-sm font-bold mb-2">Caliber *</label>
+									<div class="custom-select-container">
+										<input type="text" 
+											id="caliber_search" 
+											class="custom-search-input" 
+											placeholder="Search for a caliber..." 
+											hx-get="/owner/munitions/search/calibers" 
+											hx-trigger="keyup changed delay:200ms, focus"
+											hx-target="#caliber_dropdown"
+											hx-swap="innerHTML"
+											hx-params="q"
+											name="q"
+										/>
+										<input type="hidden" id="caliber_id" name="caliber_id" required />
+										<div id="caliber_dropdown" class="custom-dropdown"></div>
+									</div>
+								</div>
+							</div>
+
+							<!-- Right Column - Optional Fields -->
+							<div>
+								<h3 class="text-lg font-medium text-gunmetal-800 mb-4">Optional Details</h3>
+								
+								<!-- Price -->
+								<div class="mb-4">
+									<label for="paid" class="block text-gunmetal-700 text-sm font-bold mb-2">Price Paid (USD)</label>
+									<div class="relative">
+										<span class="absolute left-3 top-2 text-gunmetal-700">$</span>
+										<input type="number" id="paid" name="paid" step="0.01" min="0" class="shadow appearance-none border rounded w-full py-2 pl-6 pr-3 text-gunmetal-700 leading-tight focus:outline-none focus:shadow-outline" />
+									</div>
+								</div>
+
+								<!-- Date -->
+								<div class="mb-4">
+									<label for="acquired_date" class="block text-gunmetal-700 text-sm font-bold mb-2">Acquisition Date</label>
+									<input type="date" id="acquired_date" name="acquired_date" class="shadow appearance-none border rounded w-full py-2 px-3 text-gunmetal-700 leading-tight focus:outline-none focus:shadow-outline" max="` + formatCurrentDate() + `" />
+								</div>
+								
+								<!-- Bullet Style -->
+								<div class="mb-4">
+									<label for="bullet_style_search" class="block text-gunmetal-700 text-sm font-bold mb-2">Bullet Style</label>
+									<div class="custom-select-container">
+										<input type="text" 
+											id="bullet_style_search" 
+											class="custom-search-input" 
+											placeholder="Search for a bullet style..." 
+											hx-get="/owner/munitions/search/bullet-styles" 
+											hx-trigger="keyup changed delay:200ms, focus"
+											hx-target="#bullet_style_dropdown"
+											hx-swap="innerHTML"
+											hx-params="q"
+											name="q"
+										/>
+										<input type="hidden" id="bullet_style_id" name="bullet_style_id" />
+										<div id="bullet_style_dropdown" class="custom-dropdown"></div>
+									</div>
+								</div>
+								
+								<!-- Grain -->
+								<div class="mb-4">
+									<label for="grain_search" class="block text-gunmetal-700 text-sm font-bold mb-2">Grain Weight</label>
+									<div class="custom-select-container">
+										<input type="text" 
+											id="grain_search" 
+											class="custom-search-input" 
+											placeholder="Search for a grain weight..." 
+											hx-get="/owner/munitions/search/grains" 
+											hx-trigger="keyup changed delay:200ms, focus"
+											hx-target="#grain_dropdown"
+											hx-swap="innerHTML"
+											hx-params="q"
+											name="q"
+										/>
+										<input type="hidden" id="grain_id" name="grain_id" />
+										<div id="grain_dropdown" class="custom-dropdown"></div>
+									</div>
+								</div>
+								
+								<!-- Casing -->
+								<div class="mb-4">
+									<label for="casing_search" class="block text-gunmetal-700 text-sm font-bold mb-2">Casing Type</label>
+									<div class="custom-select-container">
+										<input type="text" 
+											id="casing_search" 
+											class="custom-search-input" 
+											placeholder="Search for a casing type..." 
+											hx-get="/owner/munitions/search/casings" 
+											hx-trigger="keyup changed delay:200ms, focus"
+											hx-target="#casing_dropdown"
+											hx-swap="innerHTML"
+											hx-params="q"
+											name="q"
+										/>
+										<input type="hidden" id="casing_id" name="casing_id" />
+										<div id="casing_dropdown" class="custom-dropdown"></div>
+									</div>
+								</div>
+							</div>
+						</div>
+						
+						<!-- Submit -->
+						<div class="flex items-center justify-end pt-4 border-t border-gray-200">
+							<button type="submit" class="bg-gunmetal-500 hover:bg-gunmetal-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+								Add Ammunition
+							</button>
+						</div>
+					</form>
+				</div>
 			</div>
 			
-			<div class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
-				<p class="text-xl text-center py-8">
-					This is a test page for ammunition management permissions. 
-					<br>
-					If you can see this page, you have the proper permissions!
-				</p>
-			</div>
-		</div>
-		`)
-		return err
+			<script>
+				// Setup click handlers for dropdown items
+				document.body.addEventListener('click', function(e) {
+					if (e.target.matches('.custom-dropdown-item')) {
+						const id = e.target.dataset.id;
+						const text = e.target.innerText;
+						const dropdown = e.target.closest('.custom-dropdown');
+						const container = e.target.closest('.custom-select-container');
+						const hiddenInput = container.querySelector('input[type="hidden"]');
+						const searchInput = container.querySelector('.custom-search-input');
+						
+						// Set values
+						hiddenInput.value = id;
+						searchInput.value = text;
+						
+						// Hide dropdown
+						dropdown.innerHTML = '';
+					}
+				});
+				
+				// Close dropdowns when clicking outside
+				document.addEventListener('click', function(e) {
+					if (!e.target.closest('.custom-select-container')) {
+						document.querySelectorAll('.custom-dropdown').forEach(dropdown => {
+							dropdown.innerHTML = '';
+						});
+					}
+				});
+				
+				// Initial load of options on focus
+				document.addEventListener('DOMContentLoaded', function() {
+					document.querySelectorAll('.custom-search-input').forEach(input => {
+						input.addEventListener('focus', function() {
+							if (!this.value && this.closest('.custom-select-container').querySelector('.custom-dropdown').innerHTML === '') {
+								// Trigger HTMX request
+								htmx.trigger(this, 'focus');
+							}
+						});
+					});
+				});
+			</script>
+		`).Render(ctx, w)
 	}))
+}
+
+// Helper function to format the current date for the max attribute of date inputs
+func formatCurrentDate() string {
+	return time.Now().Format("2006-01-02")
 } 

@@ -206,7 +206,7 @@ func (s *OwnerGunIntegrationTest) TestCreateGunWorkflow() {
 	invalidResp := s.MakeAuthenticatedFormSubmission("/owner/guns", invalidForm, cookies)
 
 	// Verify we remain on the form page with error messages
-	s.Equal(http.StatusOK, invalidResp.Code)
+	s.Equal(http.StatusUnprocessableEntity, invalidResp.Code)
 	body := invalidResp.Body.String()
 	s.Contains(body, "Add New Firearm") // Still on the form page
 	s.Contains(body, "Valid weapon type is required")

@@ -52,3 +52,10 @@ func UpdateGrain(db *gorm.DB, grain *Grain) error {
 func DeleteGrain(db *gorm.DB, id uint) error {
 	return db.Delete(&Grain{}, id).Error
 }
+
+// GetAllGrains returns all grains from the database
+func GetAllGrains(db *gorm.DB) []Grain {
+	var grains []Grain
+	db.Find(&grains)
+	return grains
+}
