@@ -169,7 +169,7 @@ func (c *AdminPermissionsController) StoreRole(ctx *gin.Context) {
 		viewData.ErrorMsg = "Role name is required"
 		formData := &data.CreateRoleViewData{
 			Resources: []string{
-				"manufacturers", "calibers", "weapon_types", "promotions", "permissions",
+				"manufacturers", "calibers", "weapon_types", "promotions", "permissions", "ammo",
 			},
 			Actions: []string{
 				"read", "create", "update", "delete", "manage",
@@ -197,7 +197,7 @@ func (c *AdminPermissionsController) StoreRole(ctx *gin.Context) {
 		viewData.ErrorMsg = "Role already exists"
 		formData := &data.CreateRoleViewData{
 			Resources: []string{
-				"manufacturers", "calibers", "weapon_types", "promotions", "permissions",
+				"manufacturers", "calibers", "weapon_types", "promotions", "permissions", "ammo",
 			},
 			Actions: []string{
 				"read", "create", "update", "delete", "manage",
@@ -269,7 +269,7 @@ func (c *AdminPermissionsController) EditRole(ctx *gin.Context) {
 	formData := &data.EditRoleViewData{
 		Role: roleName,
 		Resources: []string{
-			"manufacturers", "calibers", "weapon_types", "promotions", "permissions",
+			"manufacturers", "calibers", "weapon_types", "promotions", "permissions", "ammo",
 		},
 		Actions: []string{
 			"read", "create", "update", "delete", "manage",
