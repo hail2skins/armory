@@ -12,37 +12,51 @@ import (
 templ New(data *data.OwnerData) {
 	@partials.Base(data.Auth, templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
 		_, err := io.WriteString(w, `
-		<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-		<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-		<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+		<link href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" rel="stylesheet" />
+		<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
 
-		<!-- Add custom styles for Select2 -->
+		<!-- Custom styles for our selects -->
 		<style>
-			.select2-container .select2-selection--single {
-				height: 38px !important;
+			/* Style for Choices.js dropdowns */
+			.choices {
+				margin-bottom: 16px;
+				width: 100%;
+			}
+			
+			.choices__inner {
 				border: 1px solid #E2E8F0 !important;
 				border-radius: 0.375rem !important;
 				box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1) !important;
-				padding: 5px !important;
+				padding: 8px 16px !important;
+				min-height: 42px !important;
+				background-color: white;
 			}
 			
-			.select2-container--default .select2-selection--single .select2-selection__rendered {
-				line-height: 26px !important;
-				padding-left: 8px !important;
-				color: #374151 !important;
-			}
-			
-			.select2-container--default .select2-selection--single .select2-selection__arrow {
-				height: 36px !important;
-			}
-			
-			.select2-dropdown {
+			.choices__list--dropdown {
 				border: 1px solid #E2E8F0 !important;
 				box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1) !important;
+				border-radius: 0.375rem !important;
 			}
 			
-			.select2-container--default .select2-results__option--highlighted[aria-selected] {
+			.choices__list--dropdown .choices__item--selectable {
+				padding: 8px 16px !important;
+			}
+			
+			.choices__list--dropdown .choices__item--selectable.is-highlighted {
 				background-color: #4B5563 !important;
+				color: white !important;
+			}
+			
+			.choices__input {
+				background-color: transparent !important;
+			}
+			
+			.choices[data-type*="select-one"] .choices__inner {
+				padding-bottom: 8px !important;
+			}
+			
+			.choices[data-type*="select-one"]:after {
+				right: 16px !important;
 			}
 		</style>
 
@@ -167,7 +181,7 @@ templ New(data *data.OwnerData) {
 					<label class="block text-gunmetal-700 text-sm font-bold mb-2" for="weapon_type_id">
 						Weapon Type
 					</label>
-					<select class="shadow appearance-none border rounded w-full py-2 px-3 text-gunmetal-800 leading-tight focus:outline-none focus:shadow-outline filterable-select" 
+					<select class="filterable-select" 
 						id="weapon_type_id" name="weapon_type_id" required>
 						<option value="">Select a weapon type</option>
 					`)
@@ -211,7 +225,7 @@ templ New(data *data.OwnerData) {
 					<label class="block text-gunmetal-700 text-sm font-bold mb-2" for="caliber_id">
 						Caliber
 					</label>
-					<select class="shadow appearance-none border rounded w-full py-2 px-3 text-gunmetal-800 leading-tight focus:outline-none focus:shadow-outline filterable-select" 
+					<select class="filterable-select" 
 						id="caliber_id" name="caliber_id" required>
 						<option value="">Select a caliber</option>
 					`)
@@ -255,7 +269,7 @@ templ New(data *data.OwnerData) {
 					<label class="block text-gunmetal-700 text-sm font-bold mb-2" for="manufacturer_id">
 						Manufacturer
 					</label>
-					<select class="shadow appearance-none border rounded w-full py-2 px-3 text-gunmetal-800 leading-tight focus:outline-none focus:shadow-outline filterable-select" 
+					<select class="filterable-select" 
 						id="manufacturer_id" name="manufacturer_id" required>
 						<option value="">Select a manufacturer</option>
 					`)
@@ -317,61 +331,27 @@ templ New(data *data.OwnerData) {
 			</form>
 			
 			<script>
-				$(document).ready(function() {
-					// Initialize Select2 with pagination to ensure all options load
-					$('.filterable-select').each(function() {
-						var $select = $(this);
-						
-						$select.select2({
-							placeholder: $select.find('option:first').text(),
-							allowClear: true,
-							width: '100%',
-							dropdownParent: $('body'),
-							// Enable pagination so all options are available for filtering
-							ajax: {
-								// No actual AJAX call needed, just use this to enable pagination
-								dataType: 'json',
-								delay: 0,
-								// This processes all data locally
-								data: function(params) {
-									return {
-										term: params.term || '',
-										page: params.page || 1
-									};
-								},
-								// Transform the original options for Select2
-								processResults: function(data, params) {
-									var options = [];
-									
-									// Include all options that match the search term
-									$select.find('option').each(function() {
-										var $option = $(this);
-										var text = $option.text();
-										var value = $option.val();
-										
-										// Skip if empty value and not the first option
-										if (!value && options.length > 0) return;
-										
-										// Skip if doesn't match search
-										if (params.term && text.toLowerCase().indexOf(params.term.toLowerCase()) === -1) return;
-										
-										options.push({
-											id: value,
-											text: text
-										});
-									});
-									
-									return {
-										results: options,
-										pagination: {
-											more: false
-										}
-									};
-								},
-								cache: true
-							},
-							// Minimum chars before search activates 
-							minimumInputLength: 0
+				document.addEventListener('DOMContentLoaded', function() {
+					// Initialize Choices.js on all selects with filterable-select class
+					var filterableSelects = document.querySelectorAll('.filterable-select');
+					
+					filterableSelects.forEach(function(select) {
+						new Choices(select, {
+							searchEnabled: true,
+							searchPlaceholderValue: 'Type to search...',
+							itemSelectText: '',
+							shouldSort: false,
+							searchResultLimit: 50,
+							position: 'auto',
+							placeholder: true,
+							placeholderValue: 'Select an option',
+							// Disable fuzzy search completely - only exact substring matching
+							fuseOptions: {
+								// 0 = exact match only
+								threshold: 0,
+								// Only search in these properties
+								keys: ['label', 'value', 'customProperties.displayText']
+							}
 						});
 					});
 				});
