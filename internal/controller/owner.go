@@ -17,6 +17,7 @@ import (
 	"github.com/hail2skins/armory/cmd/web/views/data"
 	"github.com/hail2skins/armory/cmd/web/views/owner"
 	gunView "github.com/hail2skins/armory/cmd/web/views/owner/gun"
+	"github.com/hail2skins/armory/cmd/web/views/owner/munitions"
 	"github.com/hail2skins/armory/internal/database"
 	"github.com/hail2skins/armory/internal/logger"
 	"github.com/hail2skins/armory/internal/models"
@@ -3029,4 +3030,70 @@ func (o *OwnerController) DeleteAccountHandler(c *gin.Context) {
 
 	// Redirect to home page
 	c.Redirect(http.StatusSeeOther, "/")
+}
+
+// AmmoNew handles the new ammunition route
+func (o *OwnerController) AmmoNew(c *gin.Context) {
+	// Get the current user's authentication status and email
+	authController, exists := c.Get("authController")
+	if !exists {
+		c.Redirect(http.StatusSeeOther, "/login")
+		return
+	}
+
+	// Get current user information
+	authInterface := authController.(AuthControllerInterface)
+	userInfo, authenticated := authInterface.GetCurrentUser(c)
+	if !authenticated {
+		// Set flash message
+		if setFlash, exists := c.Get("setFlash"); exists {
+			setFlash.(func(string))("You must be logged in to access this page")
+		}
+		c.Redirect(http.StatusSeeOther, "/login")
+		return
+	}
+
+	// Get the user from the database
+	ctx := context.Background()
+	dbUser, err := o.db.GetUserByEmail(ctx, userInfo.GetUserName())
+	if err != nil {
+		c.Redirect(http.StatusSeeOther, "/login")
+		return
+	}
+
+	// Create owner data for the view
+	ownerData := data.NewOwnerData().
+		WithTitle("New Ammunition").
+		WithAuthenticated(true).
+		WithUser(dbUser)
+
+	// Set authentication data
+	if csrfToken, exists := c.Get("csrf_token"); exists {
+		if token, ok := csrfToken.(string); ok {
+			ownerData.Auth.CSRFToken = token
+		}
+	}
+
+	// Get authData from context to preserve roles
+	if authDataInterface, exists := c.Get("authData"); exists {
+		if authData, ok := authDataInterface.(data.AuthData); ok {
+			// Use the auth data that already has roles, maintaining our title and other changes
+			ownerData.Auth = authData.WithTitle("New Ammunition")
+		}
+	}
+
+	// Check for flash messages from session
+	session := sessions.Default(c)
+	flashes := session.Flashes()
+	if len(flashes) > 0 {
+		session.Save()
+		for _, flash := range flashes {
+			if flashMsg, ok := flash.(string); ok {
+				ownerData.WithSuccess(flashMsg)
+			}
+		}
+	}
+
+	// Render the ammo new view
+	munitions.New(ownerData).Render(c.Request.Context(), c.Writer)
 }
