@@ -367,3 +367,8 @@ func (ca *CasbinAuth) FlexibleAuthorize(obj string, act ...string) gin.HandlerFu
 		return
 	}
 }
+
+// GetEnforcer returns the internal casbin enforcer for direct access (debugging purposes only)
+func (ca *CasbinAuth) GetEnforcer() *casbin.Enforcer {
+	return ca.enforcer
+}

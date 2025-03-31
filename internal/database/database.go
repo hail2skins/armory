@@ -471,7 +471,15 @@ func (s *service) UpdateFeatureFlag(flag *models.FeatureFlag) error {
 
 // DeleteFeatureFlag deletes a feature flag
 func (s *service) DeleteFeatureFlag(id uint) error {
-	return s.db.Delete(&models.FeatureFlag{}, id).Error
+	// Start a transaction to ensure all operations succeed or fail together
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		// Delete associated roles first
+		if err := tx.Where("feature_flag_id = ?", id).Delete(&models.FeatureFlagRole{}).Error; err != nil {
+			return err
+		}
+		// Then delete the feature flag
+		return tx.Delete(&models.FeatureFlag{}, id).Error
+	})
 }
 
 // AddRoleToFeatureFlag adds a role to a feature flag
