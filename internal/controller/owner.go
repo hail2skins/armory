@@ -1185,9 +1185,7 @@ func (o *OwnerController) Update(c *gin.Context) {
 		var acquiredDate *time.Time
 		if acquiredDateStr != "" {
 			parsedDate, err := time.Parse("2006-01-02", acquiredDateStr)
-			if err != nil {
-				formErrors["acquired_date"] = "Invalid date format, use MM-DD-YYYY"
-			} else {
+			if err == nil {
 				// Check if date is in the future
 				if parsedDate.After(time.Now()) {
 					formErrors["acquired_date"] = "Acquisition date cannot be in the future"
@@ -1201,9 +1199,7 @@ func (o *OwnerController) Update(c *gin.Context) {
 		var paidAmount *float64
 		if paidStr != "" {
 			paid, err := strconv.ParseFloat(paidStr, 64)
-			if err != nil {
-				formErrors["paid"] = "Invalid amount format"
-			} else {
+			if err == nil && paid >= 0 {
 				paidAmount = &paid
 			}
 		}
@@ -1447,9 +1443,7 @@ func (o *OwnerController) Update(c *gin.Context) {
 	var acquiredDate *time.Time
 	if acquiredDateStr != "" {
 		parsedDate, err := time.Parse("2006-01-02", acquiredDateStr)
-		if err != nil {
-			formErrors["acquired_date"] = "Invalid date format, use MM-DD-YYYY"
-		} else {
+		if err == nil {
 			// Check if date is in the future
 			if parsedDate.After(time.Now()) {
 				formErrors["acquired_date"] = "Acquisition date cannot be in the future"
@@ -1463,9 +1457,7 @@ func (o *OwnerController) Update(c *gin.Context) {
 	var paidAmount *float64
 	if paidStr != "" {
 		paid, err := strconv.ParseFloat(paidStr, 64)
-		if err != nil {
-			formErrors["paid"] = "Invalid amount format"
-		} else {
+		if err == nil && paid >= 0 {
 			paidAmount = &paid
 		}
 	}
@@ -3269,6 +3261,18 @@ func (o *OwnerController) AmmoNew(c *gin.Context) {
 		if authData, ok := authDataInterface.(data.AuthData); ok {
 			// Use the auth data that already has roles, maintaining our title and other changes
 			ownerData.Auth = authData.WithTitle("New Ammunition")
+
+			// Re-fetch roles from Casbin to ensure they're up to date
+			if casbinAuth, exists := c.Get("casbinAuth"); exists && casbinAuth != nil {
+				if ca, ok := casbinAuth.(interface{ GetUserRoles(string) []string }); ok {
+					roles := ca.GetUserRoles(userInfo.GetUserName())
+					logger.Info("Casbin roles for user in ammunition page", map[string]interface{}{
+						"email": userInfo.GetUserName(),
+						"roles": roles,
+					})
+					ownerData.Auth = ownerData.Auth.WithRoles(roles)
+				}
+			}
 		}
 	}
 
@@ -3482,8 +3486,8 @@ func (o *OwnerController) AmmoCreate(c *gin.Context) {
 	session.AddFlash("Ammunition added successfully")
 	session.Save()
 
-	// Redirect to owner dashboard or ammo index page
-	c.Redirect(http.StatusSeeOther, "/owner/munitions/ammunition")
+	// Redirect to ammunition index page
+	c.Redirect(http.StatusSeeOther, "/owner/munitions")
 }
 
 // Helper function to handle ammunition creation errors
@@ -3580,4 +3584,207 @@ func handleAmmoCreateError(c *gin.Context, dbUser *database.User, errMsg string,
 
 	// Render the ammo new view with error
 	munitions.New(ownerData).Render(c.Request.Context(), c.Writer)
+}
+
+// AmmoIndex displays all ammunition for the owner
+func (o *OwnerController) AmmoIndex(c *gin.Context) {
+	// Get the current user's authentication status and email
+	authController, exists := c.Get("authController")
+	if !exists {
+		c.Redirect(http.StatusSeeOther, "/login")
+		return
+	}
+
+	// Get current user information
+	authInterface := authController.(AuthControllerInterface)
+	userInfo, authenticated := authInterface.GetCurrentUser(c)
+	if !authenticated {
+		// Set flash message
+		if setFlash, exists := c.Get("setFlash"); exists {
+			setFlash.(func(string))("You must be logged in to access this page")
+		}
+		c.Redirect(http.StatusSeeOther, "/login")
+		return
+	}
+
+	// Get the user from the database
+	ctx := context.Background()
+	dbUser, err := o.db.GetUserByEmail(ctx, userInfo.GetUserName())
+	if err != nil {
+		c.Redirect(http.StatusSeeOther, "/login")
+		return
+	}
+
+	// Get all ammunition for this user
+	db := o.db.GetDB()
+	ammoItems, err := models.FindAmmoByOwner(db, dbUser.ID)
+	if err != nil {
+		logger.Error("Failed to fetch ammunition", err, map[string]interface{}{
+			"user_id": dbUser.ID,
+			"email":   dbUser.Email,
+		})
+		c.HTML(http.StatusInternalServerError, "error.html", gin.H{
+			"title":   "Error",
+			"message": "Failed to fetch ammunition. Please try again later.",
+		})
+		return
+	}
+
+	// Create owner data for the view
+	ownerData := data.NewOwnerData().
+		WithTitle("My Ammunition").
+		WithAuthenticated(true).
+		WithUser(dbUser).
+		WithAmmo(ammoItems)
+
+	// Set authentication data
+	if csrfToken, exists := c.Get("csrf_token"); exists {
+		if token, ok := csrfToken.(string); ok {
+			ownerData.Auth.CSRFToken = token
+		}
+	}
+
+	// Get authData from context to preserve roles
+	if authDataInterface, exists := c.Get("authData"); exists {
+		if authData, ok := authDataInterface.(data.AuthData); ok {
+			// Use the auth data that already has roles, maintaining our title and other changes
+			ownerData.Auth = authData.WithTitle("My Ammunition")
+
+			// Re-fetch roles from Casbin to ensure they're up to date
+			if casbinAuth, exists := c.Get("casbinAuth"); exists && casbinAuth != nil {
+				if ca, ok := casbinAuth.(interface{ GetUserRoles(string) []string }); ok {
+					roles := ca.GetUserRoles(userInfo.GetUserName())
+					logger.Info("Casbin roles for user in ammunition index page", map[string]interface{}{
+						"email": userInfo.GetUserName(),
+						"roles": roles,
+					})
+					ownerData.Auth = ownerData.Auth.WithRoles(roles)
+				}
+			}
+		}
+	}
+
+	// Check for flash messages from session
+	session := sessions.Default(c)
+	flashes := session.Flashes()
+	if len(flashes) > 0 {
+		session.Save()
+		for _, flash := range flashes {
+			if flashMsg, ok := flash.(string); ok {
+				ownerData.WithSuccess(flashMsg)
+			}
+		}
+	}
+
+	// Render the ammunition index view
+	munitions.Index(ownerData).Render(c.Request.Context(), c.Writer)
+}
+
+// AmmoShow displays a single ammunition record
+func (o *OwnerController) AmmoShow(c *gin.Context) {
+	// Get the current user's authentication status and email
+	authController, exists := c.Get("authController")
+	if !exists {
+		c.Redirect(http.StatusSeeOther, "/login")
+		return
+	}
+
+	// Get current user information
+	authInterface := authController.(AuthControllerInterface)
+	userInfo, authenticated := authInterface.GetCurrentUser(c)
+	if !authenticated {
+		// Set flash message
+		if setFlash, exists := c.Get("setFlash"); exists {
+			setFlash.(func(string))("You must be logged in to access this page")
+		}
+		c.Redirect(http.StatusSeeOther, "/login")
+		return
+	}
+
+	// Get the user from the database
+	ctx := context.Background()
+	dbUser, err := o.db.GetUserByEmail(ctx, userInfo.GetUserName())
+	if err != nil {
+		c.Redirect(http.StatusSeeOther, "/login")
+		return
+	}
+
+	// Get ammo ID from URL
+	ammoIDStr := c.Param("id")
+	ammoID, err := strconv.ParseUint(ammoIDStr, 10, 64)
+	if err != nil {
+		// Set error flash message
+		session := sessions.Default(c)
+		session.AddFlash("Invalid ammunition ID")
+		session.Save()
+		c.Redirect(http.StatusSeeOther, "/owner/munitions")
+		return
+	}
+
+	// Get ammunition details
+	db := o.db.GetDB()
+	ammo, err := models.FindAmmoByID(db, uint(ammoID), dbUser.ID)
+	if err != nil {
+		logger.Error("Failed to fetch ammunition details", err, map[string]interface{}{
+			"user_id": dbUser.ID,
+			"email":   dbUser.Email,
+			"ammo_id": ammoID,
+		})
+
+		// Set error flash message
+		session := sessions.Default(c)
+		session.AddFlash("Ammunition not found")
+		session.Save()
+		c.Redirect(http.StatusSeeOther, "/owner/munitions")
+		return
+	}
+
+	// Create owner data for the view
+	ownerData := data.NewOwnerData().
+		WithTitle("Ammunition Details").
+		WithAuthenticated(true).
+		WithUser(dbUser).
+		WithAmmo([]models.Ammo{*ammo}) // Put in slice for consistency with other views
+
+	// Set authentication data
+	if csrfToken, exists := c.Get("csrf_token"); exists {
+		if token, ok := csrfToken.(string); ok {
+			ownerData.Auth.CSRFToken = token
+		}
+	}
+
+	// Get authData from context to preserve roles
+	if authDataInterface, exists := c.Get("authData"); exists {
+		if authData, ok := authDataInterface.(data.AuthData); ok {
+			// Use the auth data that already has roles, maintaining our title and other changes
+			ownerData.Auth = authData.WithTitle("Ammunition Details")
+
+			// Re-fetch roles from Casbin to ensure they're up to date
+			if casbinAuth, exists := c.Get("casbinAuth"); exists && casbinAuth != nil {
+				if ca, ok := casbinAuth.(interface{ GetUserRoles(string) []string }); ok {
+					roles := ca.GetUserRoles(userInfo.GetUserName())
+					logger.Info("Casbin roles for user in ammunition details page", map[string]interface{}{
+						"email": userInfo.GetUserName(),
+						"roles": roles,
+					})
+					ownerData.Auth = ownerData.Auth.WithRoles(roles)
+				}
+			}
+		}
+	}
+
+	// Check for flash messages from session
+	session := sessions.Default(c)
+	flashes := session.Flashes()
+	if len(flashes) > 0 {
+		session.Save()
+		for _, flash := range flashes {
+			if flashMsg, ok := flash.(string); ok {
+				ownerData.WithSuccess(flashMsg)
+			}
+		}
+	}
+
+	// Render the ammunition details view
+	munitions.Show(ownerData).Render(c.Request.Context(), c.Writer)
 }

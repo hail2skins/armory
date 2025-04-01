@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/hail2skins/armory/internal/controller"
@@ -420,4 +421,148 @@ func TestCreateGunUnauthenticated(t *testing.T) {
 	var count int64
 	db.DB.Model(&models.Gun{}).Count(&count)
 	assert.Equal(t, int64(0), count)
+}
+
+// TestGunIndex tests the index action for guns
+func TestGunIndex(t *testing.T) {
+	// Enable CSRF test mode
+	middleware.EnableTestMode()
+	defer middleware.DisableTestMode()
+
+	// Setup test database and service
+	db := testutils.NewTestDB()
+	defer db.Close()
+	service := testutils.NewTestService(db.DB)
+	helper := testhelper.NewControllerTestHelper(db.DB, service)
+	defer helper.CleanupTest()
+
+	// Create a test user for authentication context
+	testUser := helper.CreateTestUser(t)
+
+	// Get existing data from seeded database
+	var weaponType models.WeaponType
+	var caliber models.Caliber
+	var manufacturer models.Manufacturer
+
+	err := db.DB.First(&weaponType).Error
+	require.NoError(t, err, "Failed to get weapon type")
+
+	err = db.DB.First(&caliber).Error
+	require.NoError(t, err, "Failed to get caliber")
+
+	err = db.DB.First(&manufacturer).Error
+	require.NoError(t, err, "Failed to get manufacturer")
+
+	// Create two test guns
+	testGun1 := models.Gun{
+		Name:           "Test Gun 1",
+		SerialNumber:   "SN-TEST-1",
+		WeaponTypeID:   weaponType.ID,
+		CaliberID:      caliber.ID,
+		ManufacturerID: manufacturer.ID,
+		OwnerID:        testUser.ID,
+	}
+	err = db.DB.Create(&testGun1).Error
+	require.NoError(t, err, "Failed to create test gun 1")
+
+	testGun2 := models.Gun{
+		Name:           "Test Gun 2",
+		SerialNumber:   "SN-TEST-2",
+		WeaponTypeID:   weaponType.ID,
+		CaliberID:      caliber.ID,
+		ManufacturerID: manufacturer.ID,
+		OwnerID:        testUser.ID,
+	}
+	err = db.DB.Create(&testGun2).Error
+	require.NoError(t, err, "Failed to create test gun 2")
+
+	// Create controller and setup the route
+	controller := controller.NewOwnerController(service)
+	router := helper.GetAuthenticatedRouter(testUser.ID, testUser.Email)
+	router.GET("/owner/guns/arsenal", controller.Arsenal)
+
+	// Make the request
+	req, err := http.NewRequest("GET", "/owner/guns/arsenal", nil)
+	require.NoError(t, err, "Failed to create request")
+	req.Header.Set("X-CSRF-TEST-MODE", "1")
+	rr := httptest.NewRecorder()
+
+	router.ServeHTTP(rr, req)
+
+	// Verify response
+	assert.Equal(t, http.StatusOK, rr.Code, "Expected status OK")
+	assert.Contains(t, rr.Body.String(), "Test Gun 1", "Response should contain first gun name")
+	assert.Contains(t, rr.Body.String(), "Test Gun 2", "Response should contain second gun name")
+}
+
+// TestGunShow tests displaying a single gun record
+func TestGunShow(t *testing.T) {
+	// Enable CSRF test mode
+	middleware.EnableTestMode()
+	defer middleware.DisableTestMode()
+
+	// Setup test database and service
+	db := testutils.NewTestDB()
+	defer db.Close()
+	service := testutils.NewTestService(db.DB)
+	helper := testhelper.NewControllerTestHelper(db.DB, service)
+	defer helper.CleanupTest()
+
+	// Create a test user for authentication context
+	testUser := helper.CreateTestUser(t)
+
+	// Get existing data from seeded database
+	var weaponType models.WeaponType
+	var caliber models.Caliber
+	var manufacturer models.Manufacturer
+
+	err := db.DB.First(&weaponType).Error
+	require.NoError(t, err, "Failed to get weapon type")
+
+	err = db.DB.First(&caliber).Error
+	require.NoError(t, err, "Failed to get caliber")
+
+	err = db.DB.First(&manufacturer).Error
+	require.NoError(t, err, "Failed to get manufacturer")
+
+	// Create a test gun with optional fields
+	paid := 1299.99
+	acquiredDate := time.Now().AddDate(0, -1, 0) // 1 month ago
+
+	testGun := models.Gun{
+		Name:           "Test Detail Gun",
+		SerialNumber:   "SN-DETAIL-1",
+		Purpose:        "Home Defense",
+		WeaponTypeID:   weaponType.ID,
+		CaliberID:      caliber.ID,
+		ManufacturerID: manufacturer.ID,
+		OwnerID:        testUser.ID,
+		Paid:           &paid,
+		Acquired:       &acquiredDate,
+	}
+	err = db.DB.Create(&testGun).Error
+	require.NoError(t, err, "Failed to create test gun")
+
+	// Create controller and setup the route
+	controller := controller.NewOwnerController(service)
+	router := helper.GetAuthenticatedRouter(testUser.ID, testUser.Email)
+	router.GET("/owner/guns/:id", controller.Show)
+
+	// Make the request
+	req, err := http.NewRequest("GET", fmt.Sprintf("/owner/guns/%d", testGun.ID), nil)
+	require.NoError(t, err, "Failed to create request")
+	req.Header.Set("X-CSRF-TEST-MODE", "1")
+	rr := httptest.NewRecorder()
+
+	router.ServeHTTP(rr, req)
+
+	// Verify response
+	assert.Equal(t, http.StatusOK, rr.Code, "Expected status OK")
+	assert.Contains(t, rr.Body.String(), "Test Detail Gun", "Response should contain gun name")
+	assert.Contains(t, rr.Body.String(), "SN-DETAIL-1", "Response should contain serial number")
+	assert.Contains(t, rr.Body.String(), "Home Defense", "Response should contain purpose")
+	assert.Contains(t, rr.Body.String(), manufacturer.Name, "Response should contain manufacturer name")
+	assert.Contains(t, rr.Body.String(), caliber.Caliber, "Response should contain caliber")
+	assert.Contains(t, rr.Body.String(), weaponType.Type, "Response should contain weapon type")
+	assert.Contains(t, rr.Body.String(), "$1299.99", "Response should contain paid amount")
 }
