@@ -566,3 +566,257 @@ func TestGunShow(t *testing.T) {
 	assert.Contains(t, rr.Body.String(), weaponType.Type, "Response should contain weapon type")
 	assert.Contains(t, rr.Body.String(), "$1299.99", "Response should contain paid amount")
 }
+
+// TestGunEdit tests the edit action for firearms
+func TestGunEdit(t *testing.T) {
+	// Setup test environment
+	middleware.EnableTestMode()
+	defer middleware.DisableTestMode()
+
+	db := testutils.NewTestDB()
+	defer db.Close()
+	service := testutils.NewTestService(db.DB)
+	helper := testhelper.NewControllerTestHelper(db.DB, service)
+	defer helper.CleanupTest()
+
+	// Create a test user
+	testUser := helper.CreateTestUser(t)
+
+	// Create test data
+	weaponType := models.WeaponType{Type: "Pistol", Popularity: 1}
+	err := service.CreateWeaponType(&weaponType)
+	require.NoError(t, err)
+
+	caliber := models.Caliber{Caliber: "9mm", Popularity: 1}
+	err = service.CreateCaliber(&caliber)
+	require.NoError(t, err)
+
+	manufacturer := models.Manufacturer{Name: "Glock", Country: "Austria", Popularity: 1}
+	err = service.CreateManufacturer(&manufacturer)
+	require.NoError(t, err)
+
+	paid := 599.99
+	acquiredDate := time.Now().AddDate(0, -2, 0) // 2 months ago
+
+	testGun := models.Gun{
+		Name:           "Test Edit Gun",
+		SerialNumber:   "SN-EDIT-1",
+		Purpose:        "Home Defense",
+		WeaponTypeID:   weaponType.ID,
+		CaliberID:      caliber.ID,
+		ManufacturerID: manufacturer.ID,
+		OwnerID:        testUser.ID,
+		Paid:           &paid,
+		Acquired:       &acquiredDate,
+	}
+	err = db.DB.Create(&testGun).Error
+	require.NoError(t, err, "Failed to create test gun")
+
+	// Setup the controller and router
+	controller := controller.NewOwnerController(service)
+	router := helper.GetAuthenticatedRouter(testUser.ID, testUser.Email)
+	router.GET("/owner/guns/:id/edit", controller.Edit)
+
+	// Make the request
+	req, err := http.NewRequest("GET", fmt.Sprintf("/owner/guns/%d/edit", testGun.ID), nil)
+	require.NoError(t, err, "Failed to create request")
+	req.Header.Set("X-CSRF-TEST-MODE", "1")
+	rr := httptest.NewRecorder()
+
+	router.ServeHTTP(rr, req)
+
+	// Verify response
+	assert.Equal(t, http.StatusOK, rr.Code, "Expected status OK")
+	assert.Contains(t, rr.Body.String(), "Edit Firearm", "Response should contain page title")
+	assert.Contains(t, rr.Body.String(), "Test Edit Gun", "Response should contain gun name")
+	assert.Contains(t, rr.Body.String(), "SN-EDIT-1", "Response should contain serial number")
+	assert.Contains(t, rr.Body.String(), "Home Defense", "Response should contain purpose")
+	assert.Contains(t, rr.Body.String(), "599.99", "Response should contain price")
+}
+
+// TestGunUpdate tests the update action for firearms
+func TestGunUpdate(t *testing.T) {
+	// Setup test environment
+	middleware.EnableTestMode()
+	defer middleware.DisableTestMode()
+
+	db := testutils.NewTestDB()
+	defer db.Close()
+	service := testutils.NewTestService(db.DB)
+	helper := testhelper.NewControllerTestHelper(db.DB, service)
+	defer helper.CleanupTest()
+
+	// Create a test user
+	testUser := helper.CreateTestUser(t)
+
+	// Create test data
+	weaponType := models.WeaponType{Type: "Pistol", Popularity: 1}
+	err := service.CreateWeaponType(&weaponType)
+	require.NoError(t, err)
+
+	newWeaponType := models.WeaponType{Type: "Rifle", Popularity: 1}
+	err = service.CreateWeaponType(&newWeaponType)
+	require.NoError(t, err)
+
+	caliber := models.Caliber{Caliber: "9mm", Popularity: 1}
+	err = service.CreateCaliber(&caliber)
+	require.NoError(t, err)
+
+	newCaliber := models.Caliber{Caliber: "5.56 NATO", Popularity: 1}
+	err = service.CreateCaliber(&newCaliber)
+	require.NoError(t, err)
+
+	manufacturer := models.Manufacturer{Name: "Glock", Country: "Austria", Popularity: 1}
+	err = service.CreateManufacturer(&manufacturer)
+	require.NoError(t, err)
+
+	newManufacturer := models.Manufacturer{Name: "Smith & Wesson", Country: "USA", Popularity: 1}
+	err = service.CreateManufacturer(&newManufacturer)
+	require.NoError(t, err)
+
+	// Create a test gun
+	testGun := models.Gun{
+		Name:           "Test Update Gun",
+		SerialNumber:   "SN-UPDATE-1",
+		Purpose:        "Home Defense",
+		WeaponTypeID:   weaponType.ID,
+		CaliberID:      caliber.ID,
+		ManufacturerID: manufacturer.ID,
+		OwnerID:        testUser.ID,
+	}
+	err = db.DB.Create(&testGun).Error
+	require.NoError(t, err, "Failed to create test gun")
+
+	// Create form data for update
+	newPaid := "899.99"
+	newAcquiredDate := time.Now().AddDate(0, -1, 0).Format("2006-01-02") // 1 month ago
+
+	formData := url.Values{}
+	formData.Set("name", "Updated Gun Name")
+	formData.Set("serial_number", "SN-UPDATED")
+	formData.Set("purpose", "Range & Competition")
+	formData.Set("weapon_type_id", fmt.Sprintf("%d", newWeaponType.ID))
+	formData.Set("caliber_id", fmt.Sprintf("%d", newCaliber.ID))
+	formData.Set("manufacturer_id", fmt.Sprintf("%d", newManufacturer.ID))
+	formData.Set("paid", newPaid)
+	formData.Set("acquired_date", newAcquiredDate)
+	formData.Set("csrf_token", "test_token")
+
+	// Setup the controller and router
+	controller := controller.NewOwnerController(service)
+	router := helper.GetAuthenticatedRouter(testUser.ID, testUser.Email)
+	router.POST("/owner/guns/:id", controller.Update)
+
+	// Make request with error handling
+	req, err := http.NewRequest("POST", fmt.Sprintf("/owner/guns/%d", testGun.ID), strings.NewReader(formData.Encode()))
+	require.NoError(t, err, "Failed to create request")
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("X-CSRF-TEST-MODE", "1")
+	rr := httptest.NewRecorder()
+
+	router.ServeHTTP(rr, req)
+
+	// Check if we were redirected - update to match actual controller behavior
+	assert.Equal(t, http.StatusSeeOther, rr.Code, "Expected redirect status")
+	assert.Equal(t, "/owner", rr.Header().Get("Location"), "Expected redirect to owner dashboard")
+
+	// Verify the update was successful
+	var updatedGun models.Gun
+	err = db.DB.First(&updatedGun, testGun.ID).Error
+	require.NoError(t, err, "Failed to retrieve updated gun")
+
+	assert.Equal(t, "Updated Gun Name", updatedGun.Name, "Name should be updated")
+	assert.Equal(t, "SN-UPDATED", updatedGun.SerialNumber, "Serial number should be updated")
+	assert.Equal(t, "Range & Competition", updatedGun.Purpose, "Purpose should be updated")
+	assert.Equal(t, newWeaponType.ID, updatedGun.WeaponTypeID, "Weapon type should be updated")
+	assert.Equal(t, newCaliber.ID, updatedGun.CaliberID, "Caliber should be updated")
+	assert.Equal(t, newManufacturer.ID, updatedGun.ManufacturerID, "Manufacturer should be updated")
+
+	// Check the optional fields
+	require.NotNil(t, updatedGun.Paid, "Paid should be set")
+	assert.InDelta(t, 899.99, *updatedGun.Paid, 0.01, "Paid amount should be updated")
+
+	require.NotNil(t, updatedGun.Acquired, "Acquired date should be set")
+	expectedDate, _ := time.Parse("2006-01-02", newAcquiredDate)
+	assert.Equal(t, expectedDate.Format("2006-01-02"), updatedGun.Acquired.Format("2006-01-02"), "Acquired date should be updated")
+}
+
+// TestGunUpdateValidationErrors tests validation errors during gun updates
+func TestGunUpdateValidationErrors(t *testing.T) {
+	// Setup test environment
+	middleware.EnableTestMode()
+	defer middleware.DisableTestMode()
+
+	db := testutils.NewTestDB()
+	defer db.Close()
+	service := testutils.NewTestService(db.DB)
+	helper := testhelper.NewControllerTestHelper(db.DB, service)
+	defer helper.CleanupTest()
+
+	// Create a test user
+	testUser := helper.CreateTestUser(t)
+
+	// Create test data
+	weaponType := models.WeaponType{Type: "Pistol", Popularity: 1}
+	err := service.CreateWeaponType(&weaponType)
+	require.NoError(t, err)
+
+	caliber := models.Caliber{Caliber: "9mm", Popularity: 1}
+	err = service.CreateCaliber(&caliber)
+	require.NoError(t, err)
+
+	manufacturer := models.Manufacturer{Name: "Glock", Country: "Austria", Popularity: 1}
+	err = service.CreateManufacturer(&manufacturer)
+	require.NoError(t, err)
+
+	// Create a test gun
+	testGun := models.Gun{
+		Name:           "Test Validation Gun",
+		SerialNumber:   "SN-VALIDATE-1",
+		Purpose:        "Home Defense",
+		WeaponTypeID:   weaponType.ID,
+		CaliberID:      caliber.ID,
+		ManufacturerID: manufacturer.ID,
+		OwnerID:        testUser.ID,
+	}
+	err = db.DB.Create(&testGun).Error
+	require.NoError(t, err, "Failed to create test gun")
+
+	// Create form data with validation errors
+	formData := url.Values{}
+	formData.Set("name", "") // Empty name should fail validation
+	formData.Set("serial_number", "SN-VALIDATE-1")
+	formData.Set("purpose", string(make([]byte, 101))) // Purpose too long (over 100 chars)
+	formData.Set("weapon_type_id", fmt.Sprintf("%d", weaponType.ID))
+	formData.Set("caliber_id", fmt.Sprintf("%d", caliber.ID))
+	formData.Set("manufacturer_id", fmt.Sprintf("%d", manufacturer.ID))
+	formData.Set("paid", "-100") // Negative price should fail validation
+	formData.Set("csrf_token", "test_token")
+
+	// Setup the controller and router
+	controller := controller.NewOwnerController(service)
+	router := helper.GetAuthenticatedRouter(testUser.ID, testUser.Email)
+	router.POST("/owner/guns/:id", controller.Update)
+
+	// Make request with error handling
+	req, err := http.NewRequest("POST", fmt.Sprintf("/owner/guns/%d", testGun.ID), strings.NewReader(formData.Encode()))
+	require.NoError(t, err, "Failed to create request")
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("X-CSRF-TEST-MODE", "1")
+	rr := httptest.NewRecorder()
+
+	router.ServeHTTP(rr, req)
+
+	// Update assertions to match actual controller behavior
+	assert.Equal(t, http.StatusSeeOther, rr.Code, "Expected redirect status")
+	expectedRedirect := fmt.Sprintf("/owner/guns/%d/edit", testGun.ID)
+	assert.Equal(t, expectedRedirect, rr.Header().Get("Location"), "Expected redirect to edit page with validation errors")
+
+	// Verify gun was not updated (the validation should still prevent updates)
+	var unchangedGun models.Gun
+	err = db.DB.First(&unchangedGun, testGun.ID).Error
+	require.NoError(t, err, "Failed to retrieve gun")
+
+	assert.Equal(t, "Test Validation Gun", unchangedGun.Name, "Name should remain unchanged")
+	assert.Equal(t, "Home Defense", unchangedGun.Purpose, "Purpose should remain unchanged")
+}
