@@ -3269,6 +3269,18 @@ func (o *OwnerController) AmmoNew(c *gin.Context) {
 		if authData, ok := authDataInterface.(data.AuthData); ok {
 			// Use the auth data that already has roles, maintaining our title and other changes
 			ownerData.Auth = authData.WithTitle("New Ammunition")
+
+			// Re-fetch roles from Casbin to ensure they're up to date
+			if casbinAuth, exists := c.Get("casbinAuth"); exists && casbinAuth != nil {
+				if ca, ok := casbinAuth.(interface{ GetUserRoles(string) []string }); ok {
+					roles := ca.GetUserRoles(userInfo.GetUserName())
+					logger.Info("Casbin roles for user in ammunition page", map[string]interface{}{
+						"email": userInfo.GetUserName(),
+						"roles": roles,
+					})
+					ownerData.Auth = ownerData.Auth.WithRoles(roles)
+				}
+			}
 		}
 	}
 
