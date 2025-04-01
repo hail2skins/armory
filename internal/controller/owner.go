@@ -1743,6 +1743,7 @@ func (o *OwnerController) Delete(c *gin.Context) {
 }
 
 // SearchCalibers handles the caliber search API
+// Deprecated: No longer used with Choices.js implementation for munitions form, still used by API
 func (o *OwnerController) SearchCalibers(c *gin.Context) {
 	query := c.Query("q")
 	db := o.db.GetDB()
@@ -1771,6 +1772,7 @@ func (o *OwnerController) SearchCalibers(c *gin.Context) {
 }
 
 // SearchBrands handles the brand search for HTMX dropdown
+// Deprecated: No longer used with Choices.js implementation
 func (o *OwnerController) SearchBrands(c *gin.Context) {
 	query := c.Query("q")
 	logger.Info("Brand search request received", map[string]interface{}{
@@ -1803,6 +1805,7 @@ func (o *OwnerController) SearchBrands(c *gin.Context) {
 }
 
 // SearchBulletStyles handles the bullet style search for HTMX dropdown
+// Deprecated: No longer used with Choices.js implementation
 func (o *OwnerController) SearchBulletStyles(c *gin.Context) {
 	query := c.Query("q")
 	db := o.db.GetDB()
@@ -1823,6 +1826,7 @@ func (o *OwnerController) SearchBulletStyles(c *gin.Context) {
 }
 
 // SearchGrains handles the grain search for HTMX dropdown
+// Deprecated: No longer used with Choices.js implementation
 func (o *OwnerController) SearchGrains(c *gin.Context) {
 	query := c.Query("q")
 	db := o.db.GetDB()
@@ -1849,6 +1853,7 @@ func (o *OwnerController) SearchGrains(c *gin.Context) {
 }
 
 // SearchCasings handles the casing search for HTMX dropdown
+// Deprecated: No longer used with Choices.js implementation
 func (o *OwnerController) SearchCasings(c *gin.Context) {
 	query := c.Query("q")
 	db := o.db.GetDB()
@@ -3390,11 +3395,24 @@ func (o *OwnerController) AmmoCreate(c *gin.Context) {
 		Count:     count,
 	}
 
+	db := o.db.GetDB()
+
 	// Parse bullet style ID (optional)
 	if bulletStyleIDStr != "" {
 		bulletStyleID, err := strconv.ParseUint(bulletStyleIDStr, 10, 64)
 		if err == nil {
 			ammo.BulletStyleID = uint(bulletStyleID)
+		}
+	} else {
+		// Find bullet style with Type="Other" and use it as default
+		var defaultBulletStyle models.BulletStyle
+		if err := db.Where("type = ?", "Other").First(&defaultBulletStyle).Error; err == nil {
+			ammo.BulletStyleID = defaultBulletStyle.ID
+			logger.Info("Using default BulletStyle 'Other'", map[string]interface{}{
+				"id": defaultBulletStyle.ID,
+			})
+		} else {
+			logger.Error("Failed to find default BulletStyle 'Other'", err, nil)
 		}
 	}
 
@@ -3404,6 +3422,17 @@ func (o *OwnerController) AmmoCreate(c *gin.Context) {
 		if err == nil {
 			ammo.GrainID = uint(grainID)
 		}
+	} else {
+		// Find grain with Weight=0 and use it as default
+		var defaultGrain models.Grain
+		if err := db.Where("weight = ?", 0).First(&defaultGrain).Error; err == nil {
+			ammo.GrainID = defaultGrain.ID
+			logger.Info("Using default Grain weight '0'", map[string]interface{}{
+				"id": defaultGrain.ID,
+			})
+		} else {
+			logger.Error("Failed to find default Grain weight '0'", err, nil)
+		}
 	}
 
 	// Parse casing ID (optional)
@@ -3411,6 +3440,17 @@ func (o *OwnerController) AmmoCreate(c *gin.Context) {
 		casingID, err := strconv.ParseUint(casingIDStr, 10, 64)
 		if err == nil {
 			ammo.CasingID = uint(casingID)
+		}
+	} else {
+		// Find casing with Type="Other" and use it as default
+		var defaultCasing models.Casing
+		if err := db.Where("type = ?", "Other").First(&defaultCasing).Error; err == nil {
+			ammo.CasingID = defaultCasing.ID
+			logger.Info("Using default Casing 'Other'", map[string]interface{}{
+				"id": defaultCasing.ID,
+			})
+		} else {
+			logger.Error("Failed to find default Casing 'Other'", err, nil)
 		}
 	}
 
@@ -3431,7 +3471,6 @@ func (o *OwnerController) AmmoCreate(c *gin.Context) {
 	}
 
 	// Validate and create the ammunition using the DB service
-	db := o.db.GetDB()
 	if err := models.CreateAmmoWithValidation(db, ammo); err != nil {
 		// Create detailed error message based on the validation error
 		handleAmmoCreateError(c, dbUser, "Failed to create ammunition: "+err.Error(), nil, http.StatusUnprocessableEntity, db)

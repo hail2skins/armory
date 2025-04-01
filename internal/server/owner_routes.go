@@ -235,12 +235,12 @@ func RegisterOwnerRoutes(router *gin.Engine, db database.Service, authController
 			// ammoGroup.POST("/:id", ownerController.AmmoUpdate)
 			// ammoGroup.POST("/:id/delete", ownerController.AmmoDelete)
 
-			// Search routes for HTMX dropdown filters
-			ammoGroup.GET("/search/brands", ownerController.SearchBrands)
-			ammoGroup.GET("/search/calibers", ownerController.SearchCalibers)
-			ammoGroup.GET("/search/bullet-styles", ownerController.SearchBulletStyles)
-			ammoGroup.GET("/search/grains", ownerController.SearchGrains)
-			ammoGroup.GET("/search/casings", ownerController.SearchCasings)
+			// Search routes for HTMX dropdown filters - Removed in favor of client-side filtering with Choices.js
+			// ammoGroup.GET("/search/brands", ownerController.SearchBrands)
+			// ammoGroup.GET("/search/calibers", ownerController.SearchCalibers)
+			// ammoGroup.GET("/search/bullet-styles", ownerController.SearchBulletStyles)
+			// ammoGroup.GET("/search/grains", ownerController.SearchGrains)
+			// ammoGroup.GET("/search/casings", ownerController.SearchCasings)
 		}
 	}
 }
