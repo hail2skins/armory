@@ -28,6 +28,9 @@ type OwnerData struct {
 	Guns []models.Gun
 	Gun  *models.Gun
 
+	// For ammunition
+	Ammo []models.Ammo
+
 	// For gun form
 	WeaponTypes   []models.WeaponType
 	Calibers      []models.Caliber
@@ -125,6 +128,12 @@ func (o *OwnerData) WithGuns(guns []models.Gun) *OwnerData {
 // WithGun returns a copy of the OwnerData with a gun
 func (o *OwnerData) WithGun(gun *models.Gun) *OwnerData {
 	o.Gun = gun
+	return o
+}
+
+// WithAmmo returns a copy of the OwnerData with ammunition
+func (o *OwnerData) WithAmmo(ammo []models.Ammo) *OwnerData {
+	o.Ammo = ammo
 	return o
 }
 

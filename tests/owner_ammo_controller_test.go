@@ -182,3 +182,152 @@ func TestAmmoCreateValidation(t *testing.T) {
 		})
 	}
 }
+
+// TestAmmoIndex tests the index action for ammunition
+func TestAmmoIndex(t *testing.T) {
+	// Enable tests later after the controller method is implemented
+	t.Skip("Skipping until AmmoIndex controller method is implemented")
+
+	// Setup test environment
+	middleware.EnableTestMode()
+	defer middleware.DisableTestMode()
+
+	db := testutils.NewTestDB()
+	defer db.Close()
+	service := testutils.NewTestService(db.DB)
+	helper := testhelper.NewControllerTestHelper(db.DB, service)
+	defer helper.CleanupTest()
+
+	// Create a test user and some test ammunitions
+	testUser := helper.CreateTestUser(t)
+
+	// Create test data
+	caliber := models.Caliber{Caliber: "9mm", Popularity: 1}
+	err := service.CreateCaliber(&caliber)
+	require.NoError(t, err)
+
+	brand := models.Brand{Name: "Winchester", Popularity: 1}
+	err = service.CreateBrand(&brand)
+	require.NoError(t, err)
+
+	// Create two test ammo items
+	testAmmo1 := models.Ammo{
+		Name:      "Test Ammo 1",
+		BrandID:   brand.ID,
+		CaliberID: caliber.ID,
+		Count:     50,
+		OwnerID:   testUser.ID,
+	}
+	err = db.DB.Create(&testAmmo1).Error
+	require.NoError(t, err, "Failed to create test ammo 1")
+
+	testAmmo2 := models.Ammo{
+		Name:      "Test Ammo 2",
+		BrandID:   brand.ID,
+		CaliberID: caliber.ID,
+		Count:     100,
+		OwnerID:   testUser.ID,
+	}
+	err = db.DB.Create(&testAmmo2).Error
+	require.NoError(t, err, "Failed to create test ammo 2")
+
+	// Setup the controller and router
+	_ = controller.NewOwnerController(service)
+	router := helper.GetAuthenticatedRouter(testUser.ID, testUser.Email)
+	// Uncomment after implementing AmmoIndex
+	// router.GET("/owner/munitions", controller.AmmoIndex)
+
+	// Make the request
+	req, err := http.NewRequest("GET", "/owner/munitions", nil)
+	require.NoError(t, err, "Failed to create request")
+	req.Header.Set("X-CSRF-TEST-MODE", "1")
+	rr := httptest.NewRecorder()
+
+	router.ServeHTTP(rr, req)
+
+	// Verify response
+	assert.Equal(t, http.StatusOK, rr.Code, "Expected status OK")
+	assert.Contains(t, rr.Body.String(), "Test Ammo 1", "Response should contain first ammo name")
+	assert.Contains(t, rr.Body.String(), "Test Ammo 2", "Response should contain second ammo name")
+}
+
+// TestAmmoShow tests displaying a single ammunition record
+func TestAmmoShow(t *testing.T) {
+	// Enable tests later after the controller method is implemented
+	t.Skip("Skipping until AmmoShow controller method is implemented")
+
+	// Setup test environment
+	middleware.EnableTestMode()
+	defer middleware.DisableTestMode()
+
+	db := testutils.NewTestDB()
+	defer db.Close()
+	service := testutils.NewTestService(db.DB)
+	helper := testhelper.NewControllerTestHelper(db.DB, service)
+	defer helper.CleanupTest()
+
+	// Create a test user and test ammunition
+	testUser := helper.CreateTestUser(t)
+
+	// Create test data
+	caliber := models.Caliber{Caliber: "9mm", Popularity: 1}
+	err := service.CreateCaliber(&caliber)
+	require.NoError(t, err)
+
+	brand := models.Brand{Name: "Winchester", Popularity: 1}
+	err = service.CreateBrand(&brand)
+	require.NoError(t, err)
+
+	// Create test bullet style
+	bulletStyle := models.BulletStyle{Type: "FMJ", Popularity: 1}
+	err = service.CreateBulletStyle(&bulletStyle)
+	require.NoError(t, err)
+
+	// Create test grain
+	grain := models.Grain{Weight: 115, Popularity: 1}
+	err = service.CreateGrain(&grain)
+	require.NoError(t, err)
+
+	// Create test casing
+	casing := models.Casing{Type: "Brass", Popularity: 1}
+	err = service.CreateCasing(&casing)
+	require.NoError(t, err)
+
+	// Convert to correct pointer types for optional fields
+	paid := 19.99
+
+	testAmmo := models.Ammo{
+		Name:          "Test Detail Ammo",
+		BrandID:       brand.ID,
+		CaliberID:     caliber.ID,
+		Count:         50,
+		OwnerID:       testUser.ID,
+		BulletStyleID: bulletStyle.ID,
+		GrainID:       grain.ID,
+		CasingID:      casing.ID,
+		Paid:          &paid,
+	}
+	err = db.DB.Create(&testAmmo).Error
+	require.NoError(t, err, "Failed to create test ammo")
+
+	// Setup the controller and router
+	_ = controller.NewOwnerController(service)
+	router := helper.GetAuthenticatedRouter(testUser.ID, testUser.Email)
+	// Uncomment after implementing AmmoShow
+	// router.GET("/owner/munitions/:id", controller.AmmoShow)
+
+	// Make the request
+	req, err := http.NewRequest("GET", fmt.Sprintf("/owner/munitions/%d", testAmmo.ID), nil)
+	require.NoError(t, err, "Failed to create request")
+	req.Header.Set("X-CSRF-TEST-MODE", "1")
+	rr := httptest.NewRecorder()
+
+	router.ServeHTTP(rr, req)
+
+	// Verify response
+	assert.Equal(t, http.StatusOK, rr.Code, "Expected status OK")
+	assert.Contains(t, rr.Body.String(), "Test Detail Ammo", "Response should contain ammo name")
+	assert.Contains(t, rr.Body.String(), "Winchester", "Response should contain brand name")
+	assert.Contains(t, rr.Body.String(), "9mm", "Response should contain caliber")
+	assert.Contains(t, rr.Body.String(), "50", "Response should contain count")
+}

@@ -226,11 +226,15 @@ func RegisterOwnerRoutes(router *gin.Engine, db database.Service, authController
 			}
 		})
 		{
-			// These are placeholders - create the controller methods as needed
-			// ammoGroup.GET("", ownerController.AmmoIndex)
+			// Index and Create ammunition
+			ammoGroup.GET("", ownerController.AmmoIndex)
 			ammoGroup.GET("/new", ownerController.AmmoNew)
 			ammoGroup.POST("", ownerController.AmmoCreate)
-			// ammoGroup.GET("/:id", ownerController.AmmoShow)
+
+			// Show ammunition details
+			ammoGroup.GET("/:id", ownerController.AmmoShow)
+
+			// Edit, Update and Delete will be implemented later
 			// ammoGroup.GET("/:id/edit", ownerController.AmmoEdit)
 			// ammoGroup.POST("/:id", ownerController.AmmoUpdate)
 			// ammoGroup.POST("/:id/delete", ownerController.AmmoDelete)
