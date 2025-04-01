@@ -1,0 +1,85 @@
+package munitions
+
+import (
+	"fmt"
+	"github.com/hail2skins/armory/internal/models"
+)
+
+type SearchResult struct {
+	ID   uint
+	Text string
+}
+
+templ BrandResults(brands []models.Brand) {
+	<div class="absolute z-10 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+		for _, brand := range brands {
+			<div 
+				class="px-4 py-2 hover:bg-gray-100 cursor-pointer search-result" 
+				data-id={ fmt.Sprint(brand.ID) } 
+				data-select="brand_id"
+			>
+				{ brand.Name }
+			</div>
+		}
+	</div>
+}
+
+templ CaliberResults(calibers []models.Caliber) {
+	<div class="absolute z-10 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+		for _, caliber := range calibers {
+			<div 
+				class="px-4 py-2 hover:bg-gray-100 cursor-pointer search-result" 
+				data-id={ fmt.Sprint(caliber.ID) } 
+				data-select="caliber_id"
+			>
+				if caliber.Nickname != "" {
+					{ caliber.Caliber } ({ caliber.Nickname })
+				} else {
+					{ caliber.Caliber }
+				}
+			</div>
+		}
+	</div>
+}
+
+templ BulletStyleResults(styles []models.BulletStyle) {
+	<div class="absolute z-10 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+		for _, style := range styles {
+			<div 
+				class="px-4 py-2 hover:bg-gray-100 cursor-pointer search-result" 
+				data-id={ fmt.Sprint(style.ID) } 
+				data-select="bullet_style_id"
+			>
+				{ style.Type }
+			</div>
+		}
+	</div>
+}
+
+templ GrainResults(grains []models.Grain) {
+	<div class="absolute z-10 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+		for _, grain := range grains {
+			<div 
+				class="px-4 py-2 hover:bg-gray-100 cursor-pointer search-result" 
+				data-id={ fmt.Sprint(grain.ID) } 
+				data-select="grain_id"
+			>
+				{ fmt.Sprintf("%d gr", grain.Weight) }
+			</div>
+		}
+	</div>
+}
+
+templ CasingResults(casings []models.Casing) {
+	<div class="absolute z-10 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+		for _, casing := range casings {
+			<div 
+				class="px-4 py-2 hover:bg-gray-100 cursor-pointer search-result" 
+				data-id={ fmt.Sprint(casing.ID) } 
+				data-select="casing_id"
+			>
+				{ casing.Type }
+			</div>
+		}
+	</div>
+} 

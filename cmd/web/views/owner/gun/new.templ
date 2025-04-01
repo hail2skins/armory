@@ -12,6 +12,54 @@ import (
 templ New(data *data.OwnerData) {
 	@partials.Base(data.Auth, templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
 		_, err := io.WriteString(w, `
+		<link href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" rel="stylesheet" />
+		<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+
+		<!-- Custom styles for our selects -->
+		<style>
+			/* Style for Choices.js dropdowns */
+			.choices {
+				margin-bottom: 16px;
+				width: 100%;
+			}
+			
+			.choices__inner {
+				border: 1px solid #E2E8F0 !important;
+				border-radius: 0.375rem !important;
+				box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1) !important;
+				padding: 8px 16px !important;
+				min-height: 42px !important;
+				background-color: white;
+			}
+			
+			.choices__list--dropdown {
+				border: 1px solid #E2E8F0 !important;
+				box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1) !important;
+				border-radius: 0.375rem !important;
+			}
+			
+			.choices__list--dropdown .choices__item--selectable {
+				padding: 8px 16px !important;
+			}
+			
+			.choices__list--dropdown .choices__item--selectable.is-highlighted {
+				background-color: #4B5563 !important;
+				color: white !important;
+			}
+			
+			.choices__input {
+				background-color: transparent !important;
+			}
+			
+			.choices[data-type*="select-one"] .choices__inner {
+				padding-bottom: 8px !important;
+			}
+			
+			.choices[data-type*="select-one"]:after {
+				right: 16px !important;
+			}
+		</style>
+
 		<div class="container mx-auto px-4 py-8">
 			<div class="flex justify-between items-center mb-6">
 				<h1 class="text-3xl font-bold text-gunmetal-800">Add New Firearm</h1>
@@ -133,7 +181,7 @@ templ New(data *data.OwnerData) {
 					<label class="block text-gunmetal-700 text-sm font-bold mb-2" for="weapon_type_id">
 						Weapon Type
 					</label>
-					<select class="shadow appearance-none border rounded w-full py-2 px-3 text-gunmetal-800 leading-tight focus:outline-none focus:shadow-outline filterable-select" 
+					<select class="filterable-select" 
 						id="weapon_type_id" name="weapon_type_id" required>
 						<option value="">Select a weapon type</option>
 					`)
@@ -177,7 +225,7 @@ templ New(data *data.OwnerData) {
 					<label class="block text-gunmetal-700 text-sm font-bold mb-2" for="caliber_id">
 						Caliber
 					</label>
-					<select class="shadow appearance-none border rounded w-full py-2 px-3 text-gunmetal-800 leading-tight focus:outline-none focus:shadow-outline filterable-select" 
+					<select class="filterable-select" 
 						id="caliber_id" name="caliber_id" required>
 						<option value="">Select a caliber</option>
 					`)
@@ -221,7 +269,7 @@ templ New(data *data.OwnerData) {
 					<label class="block text-gunmetal-700 text-sm font-bold mb-2" for="manufacturer_id">
 						Manufacturer
 					</label>
-					<select class="shadow appearance-none border rounded w-full py-2 px-3 text-gunmetal-800 leading-tight focus:outline-none focus:shadow-outline filterable-select" 
+					<select class="filterable-select" 
 						id="manufacturer_id" name="manufacturer_id" required>
 						<option value="">Select a manufacturer</option>
 					`)
@@ -283,44 +331,26 @@ templ New(data *data.OwnerData) {
 			</form>
 			
 			<script>
-				// Add filtering functionality to select elements
 				document.addEventListener('DOMContentLoaded', function() {
-					// Get all filterable select elements
-					const filterableSelects = document.querySelectorAll('.filterable-select');
+					// Initialize Choices.js on all selects with filterable-select class
+					var filterableSelects = document.querySelectorAll('.filterable-select');
 					
-					// Add event listeners to each select
-					filterableSelects.forEach(select => {
-						// Store all original options
-						const allOptions = Array.from(select.options);
-						
-						// Add keyup event listener
-						select.addEventListener('keyup', function(e) {
-							const searchText = e.target.value.toLowerCase();
-							
-							// If backspace or delete is pressed, restore all options first
-							if (e.key === 'Backspace' || e.key === 'Delete') {
-								// Remove all current options
-								while (select.options.length > 0) {
-									select.remove(0);
-								}
-								
-								// Add back all options
-								allOptions.forEach(option => {
-									select.add(option);
-								});
-							}
-							
-							// Filter options based on search text
-							if (searchText.length > 0) {
-								// Get all options that don't match the search text
-								const optionsToRemove = Array.from(select.options).filter(option => {
-									return !option.text.toLowerCase().includes(searchText);
-								});
-								
-								// Remove non-matching options
-								optionsToRemove.forEach(option => {
-									select.remove(select.options.indexOf(option));
-								});
+					filterableSelects.forEach(function(select) {
+						new Choices(select, {
+							searchEnabled: true,
+							searchPlaceholderValue: 'Type to search...',
+							itemSelectText: '',
+							shouldSort: false,
+							searchResultLimit: 50,
+							position: 'auto',
+							placeholder: true,
+							placeholderValue: 'Select an option',
+							// Disable fuzzy search completely - only exact substring matching
+							fuseOptions: {
+								// 0 = exact match only
+								threshold: 0,
+								// Only search in these properties
+								keys: ['label', 'value', 'customProperties.displayText']
 							}
 						});
 					});

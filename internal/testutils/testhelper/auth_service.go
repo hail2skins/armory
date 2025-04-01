@@ -3,6 +3,8 @@ package testhelper
 import (
 	"context"
 
+	"github.com/gin-contrib/sessions"
+	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
 	"github.com/hail2skins/armory/internal/database"
 	"github.com/shaj13/go-guardian/v2/auth"
@@ -141,6 +143,10 @@ func (m *MockAuthService) SetupAuthenticatedRouter(userID uint, email string) *g
 	router := gin.New()
 	router.Use(gin.Recovery())
 
+	// Add sessions middleware
+	store := cookie.NewStore([]byte("secret"))
+	router.Use(sessions.Sessions("armory_session", store))
+
 	// Add flash middleware
 	router.Use(func(c *gin.Context) {
 		c.Set("setFlash", func(msg string) {
@@ -151,8 +157,24 @@ func (m *MockAuthService) SetupAuthenticatedRouter(userID uint, email string) *g
 
 	// Add authentication middleware
 	router.Use(func(c *gin.Context) {
+		// Create user data
 		c.Set("user", gin.H{"id": userID, "email": email})
 		c.Set("authenticated", true)
+
+		// Set the auth controller for controller methods that check it
+		c.Set("authController", m)
+
+		// Set a csrf token for forms
+		c.Set("csrf_token", "test_csrf_token")
+
+		// Set auth data for views
+		c.Set("authData", gin.H{
+			"IsAuthenticated": true,
+			"UserEmail":       email,
+			"UserID":          userID,
+			"CSRFToken":       "test_csrf_token",
+		})
+
 		c.Next()
 	})
 

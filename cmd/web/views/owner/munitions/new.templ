@@ -2,32 +2,504 @@ package munitions
 
 import (
 	"context"
+	"fmt"
 	"io"
+	"strconv"
+	"time"
 
 	"github.com/hail2skins/armory/cmd/web/views/data"
 	"github.com/hail2skins/armory/cmd/web/views/partials"
+	"github.com/hail2skins/armory/internal/models"
 )
+
+// Helper function to render error messages for a form field
+func renderErrorForField(errors map[string]string, fieldName string) string {
+	if errorMsg, exists := errors[fieldName]; exists && errorMsg != "" {
+		return `<p class="text-red-500 text-xs italic mt-1">` + errorMsg + `</p>`
+	}
+	return ""
+}
+
+// Helper functions for dropdown options
+func brandOptions(brands []models.Brand) string {
+	options := ""
+	for _, brand := range brands {
+		options += fmt.Sprintf(`<option value="%d">%s</option>`, brand.ID, brand.Name)
+	}
+	return options
+}
+
+func caliberOptions(calibers []models.Caliber) string {
+	options := ""
+	for _, caliber := range calibers {
+		options += fmt.Sprintf(`<option value="%d">%s</option>`, caliber.ID, caliber.Caliber)
+	}
+	return options
+}
+
+func bulletStyleOptions(styles []models.BulletStyle) string {
+	options := ""
+	for _, style := range styles {
+		options += fmt.Sprintf(`<option value="%d">%s</option>`, style.ID, style.Type)
+	}
+	return options
+}
+
+func grainOptions(grains []models.Grain) string {
+	options := ""
+	for _, grain := range grains {
+		displayText := ""
+		if grain.Weight == 0 {
+			displayText = "Other"
+		} else {
+			displayText = fmt.Sprintf("%d gr", grain.Weight)
+		}
+		options += fmt.Sprintf(`<option value="%d">%s</option>`, grain.ID, displayText)
+	}
+	return options
+}
+
+func casingOptions(casings []models.Casing) string {
+	options := ""
+	for _, casing := range casings {
+		options += fmt.Sprintf(`<option value="%d">%s</option>`, casing.ID, casing.Type)
+	}
+	return options
+}
 
 templ New(data *data.OwnerData) {
 	@partials.Base(data.Auth, templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
 		_, err := io.WriteString(w, `
+		<link href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" rel="stylesheet" />
+		<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+
+		<!-- Custom styles for our selects -->
+		<style>
+			/* Style for Choices.js dropdowns */
+			.choices {
+				margin-bottom: 16px;
+				width: 100%;
+			}
+			
+			.choices__inner {
+				border: 1px solid #E2E8F0 !important;
+				border-radius: 0.375rem !important;
+				box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1) !important;
+				padding: 8px 16px !important;
+				min-height: 42px !important;
+				background-color: white;
+			}
+			
+			.choices__list--dropdown {
+				border: 1px solid #E2E8F0 !important;
+				box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1) !important;
+				border-radius: 0.375rem !important;
+			}
+			
+			.choices__list--dropdown .choices__item--selectable {
+				padding: 8px 16px !important;
+			}
+			
+			.choices__list--dropdown .choices__item--selectable.is-highlighted {
+				background-color: #4B5563 !important;
+				color: white !important;
+			}
+			
+			.choices__input {
+				background-color: transparent !important;
+			}
+			
+			.choices[data-type*="select-one"] .choices__inner {
+				padding-bottom: 8px !important;
+			}
+			
+			.choices[data-type*="select-one"]:after {
+				right: 16px !important;
+			}
+		</style>
+
 		<div class="container mx-auto px-4 py-8">
 			<div class="flex justify-between items-center mb-6">
 				<h1 class="text-3xl font-bold text-gunmetal-800">Add New Ammunition</h1>
-				<a href="/owner" class="bg-gunmetal-500 hover:bg-gunmetal-600 text-white font-bold py-2 px-4 rounded">
-					Back to Dashboard
-				</a>
+				<a href="/owner" class="bg-gunmetal-500 hover:bg-gunmetal-600 text-white font-bold py-2 px-4 rounded">Back to Dashboard</a>
 			</div>
-			
+		`)
+		if err != nil {
+			return err
+		}
+
+		if data.Auth.Error != "" {
+			_, err = io.WriteString(w, `
+			<div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+				<span class="block sm:inline">`+data.Auth.Error+`</span>
+			</div>
+			`)
+			if err != nil {
+				return err
+			}
+		}
+
+		_, err = io.WriteString(w, `
 			<div class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
-				<p class="text-xl text-center py-8">
-					This is a test page for ammunition management permissions. 
-					<br>
-					If you can see this page, you have the proper permissions!
-				</p>
+				<form action="/owner/munitions" method="POST" class="space-y-6">
+					<input type="hidden" name="csrf_token" value="` + data.Auth.CSRFToken + `" />
+					
+					<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+						<!-- Left Column - Required Fields -->
+						<div>
+							<h3 class="text-lg font-medium text-gunmetal-800 mb-4">Required Information</h3>
+							
+							<!-- Name -->
+							<div class="mb-4">
+								<label for="name" class="block text-gunmetal-700 text-sm font-bold mb-2">Purchase Note *</label>
+								<input type="text" id="name" name="name" class="shadow appearance-none border rounded w-full py-2 px-3 text-gunmetal-700 leading-tight focus:outline-none focus:shadow-outline" maxlength="100" value="` + data.FormErrors["value_name"] + `" required />
+								<p class="text-xs text-gray-500 mt-1">Maximum 100 characters</p>
+								`)
+		if err != nil {
+			return err
+		}
+
+		if nameError, ok := data.FormErrors["name"]; ok {
+			_, err = io.WriteString(w, `<p class="text-red-500 text-xs italic mt-1">`+nameError+`</p>`)
+			if err != nil {
+				return err
+			}
+		}
+
+		_, err = io.WriteString(w, `
+							</div>
+							
+							<!-- Count -->
+							<div class="mb-4">
+								<label for="count" class="block text-gunmetal-700 text-sm font-bold mb-2">Quantity (Rounds) *</label>
+								<input type="number" id="count" name="count" class="shadow appearance-none border rounded w-full py-2 px-3 text-gunmetal-700 leading-tight focus:outline-none focus:shadow-outline" min="1" value="` + data.FormErrors["value_count"] + `" required />
+								`)
+		if err != nil {
+			return err
+		}
+
+		if countError, ok := data.FormErrors["count"]; ok {
+			_, err = io.WriteString(w, `<p class="text-red-500 text-xs italic mt-1">`+countError+`</p>`)
+			if err != nil {
+				return err
+			}
+		}
+
+		_, err = io.WriteString(w, `
+							</div>
+							
+							<!-- Brand -->
+							<div class="mb-4">
+								<label class="block text-gunmetal-700 text-sm font-bold mb-2" for="brand_id">
+									Brand *
+								</label>
+								<select class="filterable-select" id="brand_id" name="brand_id" required>
+									<option value="">Select a brand</option>
+								`)
+		if err != nil {
+			return err
+		}
+
+		for _, brand := range data.Brands {
+			displayText := brand.Name
+			_, err = io.WriteString(w, `<option value="`+strconv.FormatUint(uint64(brand.ID), 10)+`">`+displayText+`</option>`)
+			if err != nil {
+				return err
+			}
+		}
+
+		_, err = io.WriteString(w, `
+								</select>
+								`)
+		if err != nil {
+			return err
+		}
+
+		if brandError, ok := data.FormErrors["brand_id"]; ok {
+			_, err = io.WriteString(w, `<p class="text-red-500 text-xs italic mt-1">`+brandError+`</p>`)
+			if err != nil {
+				return err
+			}
+		}
+
+		_, err = io.WriteString(w, `
+							</div>
+							
+							<!-- Caliber -->
+							<div class="mb-4">
+								<label class="block text-gunmetal-700 text-sm font-bold mb-2" for="caliber_id">
+									Caliber *
+								</label>
+								<select class="filterable-select" id="caliber_id" name="caliber_id" required>
+									<option value="">Select a caliber</option>
+								`)
+		if err != nil {
+			return err
+		}
+
+		for _, caliber := range data.Calibers {
+			displayText := caliber.Caliber
+			if caliber.Nickname != "" {
+				displayText = caliber.Caliber + " (" + caliber.Nickname + ")"
+			}
+			_, err = io.WriteString(w, `<option value="`+strconv.FormatUint(uint64(caliber.ID), 10)+`">`+displayText+`</option>`)
+			if err != nil {
+				return err
+			}
+		}
+
+		_, err = io.WriteString(w, `
+								</select>
+								`)
+		if err != nil {
+			return err
+		}
+
+		if caliberError, ok := data.FormErrors["caliber_id"]; ok {
+			_, err = io.WriteString(w, `<p class="text-red-500 text-xs italic mt-1">`+caliberError+`</p>`)
+			if err != nil {
+				return err
+			}
+		}
+
+		_, err = io.WriteString(w, `
+							</div>
+						</div>
+
+						<!-- Right Column - Optional Fields -->
+						<div>
+							<h3 class="text-lg font-medium text-gunmetal-800 mb-4">Optional Details</h3>
+							
+							<!-- Price -->
+							<div class="mb-4">
+								<label for="paid" class="block text-gunmetal-700 text-sm font-bold mb-2">Price Paid (USD)</label>
+								<div class="relative">
+									<span class="absolute left-3 top-2 text-gunmetal-700">$</span>
+									<input type="number" id="paid" name="paid" step="0.01" min="0" value="` + data.FormErrors["value_paid"] + `" class="shadow appearance-none border rounded w-full py-2 pl-6 pr-3 text-gunmetal-700 leading-tight focus:outline-none focus:shadow-outline" />
+								</div>
+								`)
+		if err != nil {
+			return err
+		}
+
+		if paidError, ok := data.FormErrors["paid"]; ok {
+			_, err = io.WriteString(w, `<p class="text-red-500 text-xs italic mt-1">`+paidError+`</p>`)
+			if err != nil {
+				return err
+			}
+		}
+
+		_, err = io.WriteString(w, `
+							</div>
+
+							<!-- Date -->
+							<div class="mb-4">
+								<label for="acquired_date" class="block text-gunmetal-700 text-sm font-bold mb-2">Acquisition Date</label>
+								<input type="date" id="acquired_date" name="acquired_date" value="` + data.FormErrors["value_acquired_date"] + `" class="shadow appearance-none border rounded w-full py-2 px-3 text-gunmetal-700 leading-tight focus:outline-none focus:shadow-outline" max="` + time.Now().Format("2006-01-02") + `" />
+								`)
+		if err != nil {
+			return err
+		}
+
+		if dateError, ok := data.FormErrors["acquired_date"]; ok {
+			_, err = io.WriteString(w, `<p class="text-red-500 text-xs italic mt-1">`+dateError+`</p>`)
+			if err != nil {
+				return err
+			}
+		}
+
+		_, err = io.WriteString(w, `
+							</div>
+							
+							<!-- Bullet Style -->
+							<div class="mb-4">
+								<label class="block text-gunmetal-700 text-sm font-bold mb-2" for="bullet_style_id">
+									Bullet Style
+								</label>
+								<select class="filterable-select" id="bullet_style_id" name="bullet_style_id">
+									<option value="">Select a bullet style</option>
+								`)
+		if err != nil {
+			return err
+		}
+
+		for _, style := range data.BulletStyles {
+			displayText := style.Type
+			_, err = io.WriteString(w, `<option value="`+strconv.FormatUint(uint64(style.ID), 10)+`">`+displayText+`</option>`)
+			if err != nil {
+				return err
+			}
+		}
+
+		_, err = io.WriteString(w, `
+								</select>
+								`)
+		if err != nil {
+			return err
+		}
+
+		if styleError, ok := data.FormErrors["bullet_style_id"]; ok {
+			_, err = io.WriteString(w, `<p class="text-red-500 text-xs italic mt-1">`+styleError+`</p>`)
+			if err != nil {
+				return err
+			}
+		}
+
+		_, err = io.WriteString(w, `
+							</div>
+							
+							<!-- Grain -->
+							<div class="mb-4">
+								<label class="block text-gunmetal-700 text-sm font-bold mb-2" for="grain_id">
+									Grain Weight
+								</label>
+								<select class="filterable-select" id="grain_id" name="grain_id">
+									<option value="">Select a grain weight</option>
+								`)
+		if err != nil {
+			return err
+		}
+
+		for _, grain := range data.Grains {
+			displayText := ""
+			if grain.Weight == 0 {
+				displayText = "Other"
+			} else {
+				displayText = fmt.Sprintf("%d gr", grain.Weight)
+			}
+			_, err = io.WriteString(w, `<option value="`+strconv.FormatUint(uint64(grain.ID), 10)+`">`+displayText+`</option>`)
+			if err != nil {
+				return err
+			}
+		}
+
+		_, err = io.WriteString(w, `
+								</select>
+								`)
+		if err != nil {
+			return err
+		}
+
+		if grainError, ok := data.FormErrors["grain_id"]; ok {
+			_, err = io.WriteString(w, `<p class="text-red-500 text-xs italic mt-1">`+grainError+`</p>`)
+			if err != nil {
+				return err
+			}
+		}
+
+		_, err = io.WriteString(w, `
+							</div>
+							
+							<!-- Casing -->
+							<div class="mb-4">
+								<label class="block text-gunmetal-700 text-sm font-bold mb-2" for="casing_id">
+									Casing Material
+								</label>
+								<select class="filterable-select" id="casing_id" name="casing_id">
+									<option value="">Select a casing material</option>
+								`)
+		if err != nil {
+			return err
+		}
+
+		for _, casing := range data.Casings {
+			displayText := casing.Type
+			_, err = io.WriteString(w, `<option value="`+strconv.FormatUint(uint64(casing.ID), 10)+`">`+displayText+`</option>`)
+			if err != nil {
+				return err
+			}
+		}
+
+		_, err = io.WriteString(w, `
+								</select>
+								`)
+		if err != nil {
+			return err
+		}
+
+		if casingError, ok := data.FormErrors["casing_id"]; ok {
+			_, err = io.WriteString(w, `<p class="text-red-500 text-xs italic mt-1">`+casingError+`</p>`)
+			if err != nil {
+				return err
+			}
+		}
+
+		_, err = io.WriteString(w, `
+							</div>
+						</div>
+					</div>
+					
+					<!-- Submit -->
+					<div class="flex items-center justify-end pt-4 border-t border-gray-200">
+						<button type="submit" class="bg-gunmetal-500 hover:bg-gunmetal-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+							Add Ammunition
+						</button>
+					</div>
+				</form>
 			</div>
 		</div>
+		
+		<script>
+			document.addEventListener('DOMContentLoaded', function() {
+				// Initialize Choices.js on all selects with filterable-select class
+				var filterableSelects = document.querySelectorAll('.filterable-select');
+				
+				filterableSelects.forEach(function(select) {
+					new Choices(select, {
+						searchEnabled: true,
+						searchPlaceholderValue: 'Type to search...',
+						itemSelectText: '',
+						shouldSort: false,
+						searchResultLimit: 50,
+						position: 'auto',
+						placeholder: true,
+						placeholderValue: 'Select an option',
+						// Disable fuzzy search completely - only exact substring matching
+						fuseOptions: {
+							// 0 = exact match only
+							threshold: 0,
+							// Only search in these properties
+							keys: ['label', 'value', 'customProperties.displayText']
+						}
+					});
+				});
+				
+				// Date validation
+				const dateField = document.getElementById('acquired_date');
+				if (dateField) {
+					dateField.addEventListener('input', function() {
+						const selectedDate = new Date(this.value);
+						const today = new Date();
+						today.setHours(0, 0, 0, 0); // Reset time part for date comparison
+						
+						if (selectedDate > today) {
+							// Show client-side warning but allow submission
+							if (!this.nextElementSibling || !this.nextElementSibling.classList.contains('date-warning')) {
+								const warning = document.createElement('p');
+								warning.textContent = 'Warning: Date is in the future';
+								warning.className = 'text-yellow-500 text-xs italic date-warning';
+								this.parentNode.insertBefore(warning, this.nextElementSibling);
+							}
+						} else {
+							// Remove warning if date is valid
+							const warning = this.nextElementSibling;
+							if (warning && warning.classList.contains('date-warning')) {
+								warning.remove();
+							}
+						}
+					});
+				}
+			});
+		</script>
 		`)
-		return err
+		if err != nil {
+			return err
+		}
+		return nil
 	}))
+}
+
+// Helper function to format the current date for the max attribute of date inputs
+func formatCurrentDate() string {
+	return time.Now().Format("2006-01-02")
 } 

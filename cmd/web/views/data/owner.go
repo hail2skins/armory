@@ -34,6 +34,12 @@ type OwnerData struct {
 	Manufacturers []models.Manufacturer
 	FormErrors    map[string]string
 
+	// For ammunition form
+	Brands       []models.Brand
+	BulletStyles []models.BulletStyle
+	Grains       []models.Grain
+	Casings      []models.Casing
+
 	// For subscription information
 	HasActiveSubscription bool
 	SubscriptionTier      string

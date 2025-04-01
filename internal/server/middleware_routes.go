@@ -19,7 +19,7 @@ import (
 func securityHeaders() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Content Security Policy
-		c.Header("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com; style-src 'self' 'unsafe-inline' https://unpkg.com; img-src 'self' data:;")
+		c.Header("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com https://www.googletagmanager.com https://cdn.tailwindcss.com https://cdn.jsdelivr.net https://code.jquery.com; style-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.tailwindcss.com https://cdn.jsdelivr.net; img-src 'self' data:; connect-src 'self' https://www.google-analytics.com;")
 
 		// X-Content-Type-Options
 		c.Header("X-Content-Type-Options", "nosniff")

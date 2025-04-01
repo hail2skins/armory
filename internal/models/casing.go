@@ -53,3 +53,13 @@ func UpdateCasing(db *gorm.DB, casing *Casing) error {
 func DeleteCasing(db *gorm.DB, id uint) error {
 	return db.Delete(&Casing{}, id).Error
 }
+
+// GetAllCasings returns all casings from the database
+func GetAllCasings(db *gorm.DB) ([]Casing, error) {
+	var casings []Casing
+	result := db.Find(&casings)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return casings, nil
+}
