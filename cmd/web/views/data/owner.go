@@ -73,6 +73,9 @@ type OwnerData struct {
 
 	// For gun costs
 	TotalPaid float64
+
+	// Notes or additional messages to display
+	Note string
 }
 
 // NewOwnerData creates a new OwnerData with default values
@@ -272,5 +275,11 @@ func (o *OwnerData) GetGunURL(gun models.Gun, action string) string {
 // WithTotalPaid returns a copy of the OwnerData with the total paid amount
 func (o *OwnerData) WithTotalPaid(totalPaid float64) *OwnerData {
 	o.TotalPaid = totalPaid
+	return o
+}
+
+// WithNote returns a copy of the OwnerData with a note message
+func (o *OwnerData) WithNote(note string) *OwnerData {
+	o.Note = note
 	return o
 }

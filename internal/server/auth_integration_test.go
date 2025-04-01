@@ -974,3 +974,9 @@ func (m *MockDBWithContext) DeleteBrand(id uint) error {
 	args := m.Called(id)
 	return args.Error(0)
 }
+
+// CheckExpiredPromotionSubscription checks if a user's subscription has expired and updates the status to "expired" if it has.
+func (m *MockDBWithContext) CheckExpiredPromotionSubscription(user *database.User) (bool, error) {
+	args := m.Called(user)
+	return args.Bool(0), args.Error(1)
+}

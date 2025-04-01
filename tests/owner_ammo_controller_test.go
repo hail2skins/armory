@@ -331,3 +331,155 @@ func TestAmmoShow(t *testing.T) {
 	assert.Contains(t, rr.Body.String(), "9mm", "Response should contain caliber")
 	assert.Contains(t, rr.Body.String(), "50", "Response should contain count")
 }
+
+// TestAmmoEdit tests the edit action for ammunition
+func TestAmmoEdit(t *testing.T) {
+	// Setup test environment
+	middleware.EnableTestMode()
+	defer middleware.DisableTestMode()
+
+	db := testutils.NewTestDB()
+	defer db.Close()
+	service := testutils.NewTestService(db.DB)
+	helper := testhelper.NewControllerTestHelper(db.DB, service)
+	defer helper.CleanupTest()
+
+	// Create a test user and test ammunition
+	testUser := helper.CreateTestUser(t)
+
+	// Create test data
+	caliber := models.Caliber{Caliber: "9mm", Popularity: 1}
+	err := service.CreateCaliber(&caliber)
+	require.NoError(t, err)
+
+	brand := models.Brand{Name: "Winchester", Popularity: 1}
+	err = service.CreateBrand(&brand)
+	require.NoError(t, err)
+
+	bulletStyle := models.BulletStyle{Type: "FMJ", Popularity: 1}
+	err = service.CreateBulletStyle(&bulletStyle)
+	require.NoError(t, err)
+
+	grain := models.Grain{Weight: 115, Popularity: 1}
+	err = service.CreateGrain(&grain)
+	require.NoError(t, err)
+
+	casing := models.Casing{Type: "Brass", Popularity: 1}
+	err = service.CreateCasing(&casing)
+	require.NoError(t, err)
+
+	paid := 19.99
+
+	testAmmo := models.Ammo{
+		Name:          "Test Edit Ammo",
+		BrandID:       brand.ID,
+		CaliberID:     caliber.ID,
+		Count:         50,
+		OwnerID:       testUser.ID,
+		BulletStyleID: bulletStyle.ID,
+		GrainID:       grain.ID,
+		CasingID:      casing.ID,
+		Paid:          &paid,
+	}
+	err = db.DB.Create(&testAmmo).Error
+	require.NoError(t, err, "Failed to create test ammo")
+
+	// Setup the controller and router
+	controller := controller.NewOwnerController(service)
+	router := helper.GetAuthenticatedRouter(testUser.ID, testUser.Email)
+	router.GET("/owner/munitions/:id/edit", controller.AmmoEdit)
+
+	// Make the request
+	req, err := http.NewRequest("GET", fmt.Sprintf("/owner/munitions/%d/edit", testAmmo.ID), nil)
+	require.NoError(t, err, "Failed to create request")
+	req.Header.Set("X-CSRF-TEST-MODE", "1")
+	rr := httptest.NewRecorder()
+
+	router.ServeHTTP(rr, req)
+
+	// Verify response
+	assert.Equal(t, http.StatusOK, rr.Code, "Expected status OK")
+	assert.Contains(t, rr.Body.String(), "Test Edit Ammo", "Response should contain ammo name")
+	assert.Contains(t, rr.Body.String(), "Winchester", "Response should contain brand name")
+	assert.Contains(t, rr.Body.String(), "9mm", "Response should contain caliber")
+	assert.Contains(t, rr.Body.String(), "19.99", "Response should contain price")
+}
+
+// TestAmmoUpdate tests the update action for ammunition
+func TestAmmoUpdate(t *testing.T) {
+	// Setup test environment
+	middleware.EnableTestMode()
+	defer middleware.DisableTestMode()
+
+	db := testutils.NewTestDB()
+	defer db.Close()
+	service := testutils.NewTestService(db.DB)
+	helper := testhelper.NewControllerTestHelper(db.DB, service)
+	defer helper.CleanupTest()
+
+	// Create a test user and test ammunition
+	testUser := helper.CreateTestUser(t)
+
+	// Create test data
+	caliber := models.Caliber{Caliber: "9mm", Popularity: 1}
+	err := service.CreateCaliber(&caliber)
+	require.NoError(t, err)
+
+	newCaliber := models.Caliber{Caliber: ".45 ACP", Popularity: 1}
+	err = service.CreateCaliber(&newCaliber)
+	require.NoError(t, err)
+
+	brand := models.Brand{Name: "Winchester", Popularity: 1}
+	err = service.CreateBrand(&brand)
+	require.NoError(t, err)
+
+	newBrand := models.Brand{Name: "Federal", Popularity: 1}
+	err = service.CreateBrand(&newBrand)
+	require.NoError(t, err)
+
+	testAmmo := models.Ammo{
+		Name:      "Test Update Ammo",
+		BrandID:   brand.ID,
+		CaliberID: caliber.ID,
+		Count:     50,
+		OwnerID:   testUser.ID,
+	}
+	err = db.DB.Create(&testAmmo).Error
+	require.NoError(t, err, "Failed to create test ammo")
+
+	// Create form data for update
+	formData := url.Values{}
+	formData.Set("name", "Updated Ammo Name")
+	formData.Set("brand_id", fmt.Sprintf("%d", newBrand.ID))
+	formData.Set("caliber_id", fmt.Sprintf("%d", newCaliber.ID))
+	formData.Set("count", "100")
+	formData.Set("csrf_token", "test_token")
+
+	// Setup the controller and router
+	controller := controller.NewOwnerController(service)
+	router := helper.GetAuthenticatedRouter(testUser.ID, testUser.Email)
+	router.POST("/owner/munitions/:id", controller.AmmoUpdate)
+
+	// Make request with error handling
+	req, err := http.NewRequest("POST", fmt.Sprintf("/owner/munitions/%d", testAmmo.ID), strings.NewReader(formData.Encode()))
+	require.NoError(t, err, "Failed to create request")
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("X-CSRF-TEST-MODE", "1")
+	rr := httptest.NewRecorder()
+
+	router.ServeHTTP(rr, req)
+
+	// Check if we were redirected
+	assert.Equal(t, http.StatusFound, rr.Code, "Expected redirect status")
+	assert.Equal(t, "/owner/munitions", rr.Header().Get("Location"), "Expected redirect to ammo inventory page")
+
+	// Verify the update was successful
+	var updatedAmmo models.Ammo
+	err = db.DB.First(&updatedAmmo, testAmmo.ID).Error
+	require.NoError(t, err, "Failed to retrieve updated ammo")
+
+	assert.Equal(t, "Updated Ammo Name", updatedAmmo.Name, "Name should be updated")
+	assert.Equal(t, newBrand.ID, updatedAmmo.BrandID, "Brand should be updated")
+	assert.Equal(t, newCaliber.ID, updatedAmmo.CaliberID, "Caliber should be updated")
+	assert.Equal(t, 100, updatedAmmo.Count, "Count should be updated")
+}

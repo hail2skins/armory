@@ -1042,3 +1042,35 @@ func (s *TestService) DeleteBrand(id uint) error {
 	// Then delete it
 	return s.db.Delete(&brand).Error
 }
+
+// CheckExpiredPromotionSubscription checks if a user's subscription has expired and updates the status to "expired" if it has.
+// It also resets the subscription tier to "free" and clears the expiration date.
+func (s *TestService) CheckExpiredPromotionSubscription(user *database.User) (bool, error) {
+	// If no subscription tier or already expired, nothing to do
+	if user.SubscriptionTier == "" || user.SubscriptionStatus == "expired" {
+		return false, nil
+	}
+
+	// Check if the subscription has expired
+	if user.SubscriptionEndDate.Before(time.Now()) {
+		// Update the user's subscription status to "expired", reset tier to "free", and clear end date
+		user.SubscriptionStatus = "expired"
+
+		// Save the updated user to the database
+		if err := s.db.Model(&database.User{}).Where("id = ?", user.ID).Updates(map[string]interface{}{
+			"subscription_status":   "expired",
+			"subscription_tier":     "free",
+			"subscription_end_date": nil,
+		}).Error; err != nil {
+			return false, err
+		}
+
+		// Also update the user struct
+		user.SubscriptionTier = "free"
+		user.SubscriptionEndDate = time.Time{} // zero time
+
+		return true, nil
+	}
+
+	return false, nil
+}

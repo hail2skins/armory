@@ -234,9 +234,11 @@ func RegisterOwnerRoutes(router *gin.Engine, db database.Service, authController
 			// Show ammunition details
 			ammoGroup.GET("/:id", ownerController.AmmoShow)
 
-			// Edit, Update and Delete will be implemented later
-			// ammoGroup.GET("/:id/edit", ownerController.AmmoEdit)
-			// ammoGroup.POST("/:id", ownerController.AmmoUpdate)
+			// Edit and Update ammunition
+			ammoGroup.GET("/:id/edit", ownerController.AmmoEdit)
+			ammoGroup.POST("/:id", ownerController.AmmoUpdate)
+
+			// Delete will be implemented later
 			// ammoGroup.POST("/:id/delete", ownerController.AmmoDelete)
 
 			// Search routes for HTMX dropdown filters - Removed in favor of client-side filtering with Choices.js
