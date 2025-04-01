@@ -3788,3 +3788,447 @@ func (o *OwnerController) AmmoShow(c *gin.Context) {
 	// Render the ammunition details view
 	munitions.Show(ownerData).Render(c.Request.Context(), c.Writer)
 }
+
+// AmmoEdit displays the form to edit ammunition
+func (o *OwnerController) AmmoEdit(c *gin.Context) {
+	// Get the current user's authentication status and email
+	authController, exists := c.Get("authController")
+	if !exists {
+		c.Redirect(http.StatusSeeOther, "/login")
+		return
+	}
+
+	// Get current user information
+	authInterface := authController.(AuthControllerInterface)
+	userInfo, authenticated := authInterface.GetCurrentUser(c)
+	if !authenticated {
+		// Set flash message
+		if setFlash, exists := c.Get("setFlash"); exists {
+			setFlash.(func(string))("You must be logged in to access this page")
+		}
+		c.Redirect(http.StatusSeeOther, "/login")
+		return
+	}
+
+	// Get the user from the database
+	ctx := context.Background()
+	dbUser, err := o.db.GetUserByEmail(ctx, userInfo.GetUserName())
+	if err != nil {
+		c.Redirect(http.StatusSeeOther, "/login")
+		return
+	}
+
+	// Get ammo ID from URL
+	ammoIDStr := c.Param("id")
+	ammoID, err := strconv.ParseUint(ammoIDStr, 10, 64)
+	if err != nil {
+		// Set error flash message
+		session := sessions.Default(c)
+		session.AddFlash("Invalid ammunition ID")
+		session.Save()
+		c.Redirect(http.StatusSeeOther, "/owner/munitions")
+		return
+	}
+
+	// Get ammunition details
+	db := o.db.GetDB()
+	ammo, err := models.FindAmmoByID(db, uint(ammoID), dbUser.ID)
+	if err != nil {
+		logger.Error("Failed to fetch ammunition details", err, map[string]interface{}{
+			"user_id": dbUser.ID,
+			"email":   dbUser.Email,
+			"ammo_id": ammoID,
+		})
+
+		// Set error flash message
+		session := sessions.Default(c)
+		session.AddFlash("Ammunition not found")
+		session.Save()
+		c.Redirect(http.StatusSeeOther, "/owner/munitions")
+		return
+	}
+
+	// Fetch brands ordered by popularity
+	var brands []models.Brand
+	if err := db.Order("popularity DESC, name ASC").Find(&brands).Error; err != nil {
+		logger.Error("Failed to fetch brands", err, nil)
+		brands = []models.Brand{}
+	}
+
+	// Fetch calibers ordered by popularity
+	var calibers []models.Caliber
+	if err := db.Order("popularity DESC, caliber ASC").Find(&calibers).Error; err != nil {
+		logger.Error("Failed to fetch calibers", err, nil)
+		calibers = []models.Caliber{}
+	}
+
+	// Fetch bullet styles ordered by popularity
+	var bulletStyles []models.BulletStyle
+	if err := db.Order("popularity DESC, type ASC").Find(&bulletStyles).Error; err != nil {
+		logger.Error("Failed to fetch bullet styles", err, nil)
+		bulletStyles = []models.BulletStyle{}
+	}
+
+	// Fetch grains ordered by popularity
+	var grains []models.Grain
+	if err := db.Order("popularity DESC, weight ASC").Find(&grains).Error; err != nil {
+		logger.Error("Failed to fetch grains", err, nil)
+		grains = []models.Grain{}
+	}
+
+	// Fetch casings ordered by popularity
+	var casings []models.Casing
+	if err := db.Order("popularity DESC, type ASC").Find(&casings).Error; err != nil {
+		logger.Error("Failed to fetch casings", err, nil)
+		casings = []models.Casing{}
+	}
+
+	// Create owner data for the view
+	ownerData := data.NewOwnerData().
+		WithTitle("Edit Ammunition").
+		WithAuthenticated(true).
+		WithUser(dbUser).
+		WithAmmo([]models.Ammo{*ammo}) // Put in a slice for consistency with other views
+
+	// Add the data for dropdowns
+	ownerData.Brands = brands
+	ownerData.Calibers = calibers
+	ownerData.BulletStyles = bulletStyles
+	ownerData.Grains = grains
+	ownerData.Casings = casings
+
+	// Set authentication data
+	if csrfToken, exists := c.Get("csrf_token"); exists {
+		if token, ok := csrfToken.(string); ok {
+			ownerData.Auth.CSRFToken = token
+		}
+	}
+
+	// Get authData from context to preserve roles
+	if authDataInterface, exists := c.Get("authData"); exists {
+		if authData, ok := authDataInterface.(data.AuthData); ok {
+			// Use the auth data that already has roles, maintaining our title and other changes
+			ownerData.Auth = authData.WithTitle("Edit Ammunition")
+
+			// Re-fetch roles from Casbin to ensure they're up to date
+			if casbinAuth, exists := c.Get("casbinAuth"); exists && casbinAuth != nil {
+				if ca, ok := casbinAuth.(interface{ GetUserRoles(string) []string }); ok {
+					roles := ca.GetUserRoles(userInfo.GetUserName())
+					logger.Info("Casbin roles for user in ammunition edit page", map[string]interface{}{
+						"email": userInfo.GetUserName(),
+						"roles": roles,
+					})
+					ownerData.Auth = ownerData.Auth.WithRoles(roles)
+				}
+			}
+		}
+	}
+
+	// Check for flash messages from session
+	session := sessions.Default(c)
+	flashes := session.Flashes()
+	if len(flashes) > 0 {
+		session.Save()
+		for _, flash := range flashes {
+			if flashMsg, ok := flash.(string); ok {
+				ownerData.WithSuccess(flashMsg)
+			}
+		}
+	}
+
+	// Render the ammo edit view
+	munitions.Edit(ownerData).Render(c.Request.Context(), c.Writer)
+}
+
+// AmmoUpdate handles updating an ammunition record
+func (o *OwnerController) AmmoUpdate(c *gin.Context) {
+	// Get the current user's authentication status and email
+	authController, exists := c.Get("authController")
+	if !exists {
+		c.Redirect(http.StatusSeeOther, "/login")
+		return
+	}
+
+	// Get current user information
+	authInterface := authController.(AuthControllerInterface)
+	userInfo, authenticated := authInterface.GetCurrentUser(c)
+	if !authenticated {
+		// Set flash message
+		if setFlash, exists := c.Get("setFlash"); exists {
+			setFlash.(func(string))("You must be logged in to access this page")
+		}
+		c.Redirect(http.StatusSeeOther, "/login")
+		return
+	}
+
+	// Get the user from the database
+	ctx := context.Background()
+	dbUser, err := o.db.GetUserByEmail(ctx, userInfo.GetUserName())
+	if err != nil {
+		c.Redirect(http.StatusSeeOther, "/login")
+		return
+	}
+
+	// Get ammo ID from URL
+	ammoIDStr := c.Param("id")
+	ammoID, err := strconv.ParseUint(ammoIDStr, 10, 64)
+	if err != nil {
+		// Set error flash message
+		session := sessions.Default(c)
+		session.AddFlash("Invalid ammunition ID")
+		session.Save()
+		c.Redirect(http.StatusSeeOther, "/owner/munitions")
+		return
+	}
+
+	// Get the original ammunition
+	db := o.db.GetDB()
+	ammo, err := models.FindAmmoByID(db, uint(ammoID), dbUser.ID)
+	if err != nil {
+		logger.Error("Failed to fetch ammunition for update", err, map[string]interface{}{
+			"user_id": dbUser.ID,
+			"email":   dbUser.Email,
+			"ammo_id": ammoID,
+		})
+
+		// Set error flash message
+		session := sessions.Default(c)
+		session.AddFlash("Ammunition not found")
+		session.Save()
+		c.Redirect(http.StatusSeeOther, "/owner/munitions")
+		return
+	}
+
+	// Parse form values
+	err = c.Request.ParseForm()
+	if err != nil {
+		// Handle error
+		handleAmmoUpdateError(c, dbUser, "Failed to parse form", nil, http.StatusUnprocessableEntity, o.db.GetDB(), ammo)
+		return
+	}
+
+	// Extract ammunition data from form
+	name := c.Request.PostForm.Get("name")
+	countStr := c.Request.PostForm.Get("count")
+	brandIDStr := c.Request.PostForm.Get("brand_id")
+	bulletStyleIDStr := c.Request.PostForm.Get("bullet_style_id")
+	grainIDStr := c.Request.PostForm.Get("grain_id")
+	caliberIDStr := c.Request.PostForm.Get("caliber_id")
+	casingIDStr := c.Request.PostForm.Get("casing_id")
+	acquiredDateStr := c.Request.PostForm.Get("acquired_date")
+	paidStr := c.Request.PostForm.Get("paid")
+
+	// Prepare form errors map
+	formErrors := make(map[string]string)
+
+	// Validate name (required and max 100 chars)
+	if name == "" {
+		formErrors["name"] = "Name is required"
+	} else if len(name) > 100 {
+		formErrors["name"] = "Name is too long (maximum 100 characters)"
+	}
+
+	// Parse count (required)
+	var count int
+	if countStr == "" {
+		formErrors["count"] = "Count is required"
+	} else {
+		count, err = strconv.Atoi(countStr)
+		if err != nil || count < 0 {
+			formErrors["count"] = "Count must be a non-negative number"
+		}
+	}
+
+	// Parse brand ID (required)
+	var brandID uint64
+	if brandIDStr == "" {
+		formErrors["brand_id"] = "Brand is required"
+	} else {
+		brandID, err = strconv.ParseUint(brandIDStr, 10, 64)
+		if err != nil {
+			formErrors["brand_id"] = "Invalid brand"
+		}
+	}
+
+	// Parse caliber ID (required)
+	var caliberID uint64
+	if caliberIDStr == "" {
+		formErrors["caliber_id"] = "Caliber is required"
+	} else {
+		caliberID, err = strconv.ParseUint(caliberIDStr, 10, 64)
+		if err != nil {
+			formErrors["caliber_id"] = "Invalid caliber"
+		}
+	}
+
+	// If there are validation errors, respond with them
+	if len(formErrors) > 0 {
+		// Format and return all errors
+		handleAmmoUpdateError(c, dbUser, "Please fix the errors below", formErrors, http.StatusUnprocessableEntity, o.db.GetDB(), ammo)
+		return
+	}
+
+	// Update ammo properties
+	ammo.Name = name
+	ammo.BrandID = uint(brandID)
+	ammo.CaliberID = uint(caliberID)
+	ammo.Count = count
+
+	// Parse optional fields
+	// Parse bullet style ID (optional)
+	if bulletStyleIDStr != "" {
+		bulletStyleID, err := strconv.ParseUint(bulletStyleIDStr, 10, 64)
+		if err == nil {
+			ammo.BulletStyleID = uint(bulletStyleID)
+		}
+	} else {
+		ammo.BulletStyleID = 0 // Clear the association if none selected
+	}
+
+	// Parse grain ID (optional)
+	if grainIDStr != "" {
+		grainID, err := strconv.ParseUint(grainIDStr, 10, 64)
+		if err == nil {
+			ammo.GrainID = uint(grainID)
+		}
+	} else {
+		ammo.GrainID = 0 // Clear the association if none selected
+	}
+
+	// Parse casing ID (optional)
+	if casingIDStr != "" {
+		casingID, err := strconv.ParseUint(casingIDStr, 10, 64)
+		if err == nil {
+			ammo.CasingID = uint(casingID)
+		}
+	} else {
+		ammo.CasingID = 0 // Clear the association if none selected
+	}
+
+	// Parse acquisition date (optional)
+	if acquiredDateStr != "" {
+		acquiredDate, err := time.Parse("2006-01-02", acquiredDateStr)
+		if err == nil {
+			ammo.Acquired = &acquiredDate
+		}
+	} else {
+		ammo.Acquired = nil // Clear the date if none provided
+	}
+
+	// Parse paid amount (optional)
+	if paidStr != "" {
+		paid, err := strconv.ParseFloat(paidStr, 64)
+		if err == nil {
+			ammo.Paid = &paid
+		}
+	} else {
+		ammo.Paid = nil // Clear the amount if none provided
+	}
+
+	// Validate the ammo model
+	if err := ammo.Validate(db); err != nil {
+		handleAmmoUpdateError(c, dbUser, "Validation error: "+err.Error(), formErrors, http.StatusUnprocessableEntity, db, ammo)
+		return
+	}
+
+	// Update the ammunition in the database
+	if err := models.UpdateAmmoWithValidation(db, ammo); err != nil {
+		logger.Error("Failed to update ammunition", err, map[string]interface{}{
+			"user_id": dbUser.ID,
+			"email":   dbUser.Email,
+			"ammo_id": ammoID,
+		})
+		handleAmmoUpdateError(c, dbUser, "Database error: "+err.Error(), formErrors, http.StatusInternalServerError, db, ammo)
+		return
+	}
+
+	// Update was successful
+	session := sessions.Default(c)
+	session.AddFlash("Ammunition updated successfully")
+	session.Save()
+
+	// Redirect to the ammunition index page
+	c.Redirect(http.StatusFound, "/owner/munitions")
+}
+
+// Helper function to handle ammunition update errors
+func handleAmmoUpdateError(c *gin.Context, dbUser *database.User, errMsg string, formErrors map[string]string, statusCode int, db *gorm.DB, ammo *models.Ammo) {
+	// Fetch brands ordered by popularity
+	var brands []models.Brand
+	if err := db.Order("popularity DESC, name ASC").Find(&brands).Error; err != nil {
+		logger.Error("Failed to fetch brands", err, nil)
+		brands = []models.Brand{}
+	}
+
+	// Fetch calibers ordered by popularity
+	var calibers []models.Caliber
+	if err := db.Order("popularity DESC, caliber ASC").Find(&calibers).Error; err != nil {
+		logger.Error("Failed to fetch calibers", err, nil)
+		calibers = []models.Caliber{}
+	}
+
+	// Fetch bullet styles ordered by popularity
+	var bulletStyles []models.BulletStyle
+	if err := db.Order("popularity DESC, type ASC").Find(&bulletStyles).Error; err != nil {
+		logger.Error("Failed to fetch bullet styles", err, nil)
+		bulletStyles = []models.BulletStyle{}
+	}
+
+	// Fetch grains ordered by popularity
+	var grains []models.Grain
+	if err := db.Order("popularity DESC, weight ASC").Find(&grains).Error; err != nil {
+		logger.Error("Failed to fetch grains", err, nil)
+		grains = []models.Grain{}
+	}
+
+	// Fetch casings ordered by popularity
+	var casings []models.Casing
+	if err := db.Order("popularity DESC, type ASC").Find(&casings).Error; err != nil {
+		logger.Error("Failed to fetch casings", err, nil)
+		casings = []models.Casing{}
+	}
+
+	// Create owner data for the view
+	ownerData := data.NewOwnerData().
+		WithTitle("Edit Ammunition").
+		WithAuthenticated(true).
+		WithUser(dbUser).
+		WithError(errMsg).
+		WithAmmo([]models.Ammo{*ammo}) // Keep the current ammo data for re-displaying
+
+	// Add the data for dropdowns
+	ownerData.Brands = brands
+	ownerData.Calibers = calibers
+	ownerData.BulletStyles = bulletStyles
+	ownerData.Grains = grains
+	ownerData.Casings = casings
+
+	// Initialize form errors if not provided
+	if formErrors == nil {
+		formErrors = make(map[string]string)
+	}
+
+	// Add form errors to the ownerData
+	ownerData = ownerData.WithFormErrors(formErrors)
+
+	// Set authentication data from context
+	if csrfToken, exists := c.Get("csrf_token"); exists {
+		if token, ok := csrfToken.(string); ok {
+			ownerData.Auth.CSRFToken = token
+		}
+	}
+
+	// Get authData from context to preserve roles
+	if authDataInterface, exists := c.Get("authData"); exists {
+		if authData, ok := authDataInterface.(data.AuthData); ok {
+			// Use the auth data that already has roles, maintaining our title and other changes
+			ownerData.Auth = authData.WithTitle("Edit Ammunition").WithError(errMsg)
+		}
+	}
+
+	// Set appropriate HTTP status code
+	c.Status(statusCode)
+
+	// Render the ammo edit view with error
+	munitions.Edit(ownerData).Render(c.Request.Context(), c.Writer)
+}
