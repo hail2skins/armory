@@ -309,6 +309,13 @@ templ Owner(data *data.OwnerData) {
 								</table>
 							</div>`
 							
+							// Display note if present
+							if data.Note != "" {
+								result += `<div class="mt-2 p-3 bg-brass-50 text-brass-800 border border-brass-300 rounded-md">
+									<p class="text-center font-medium">` + data.Note + `</p>
+								</div>`
+							}
+							
 							// Pagination
 							if data.TotalPages > 1 {
 								result += `<div class="mt-4 flex justify-between items-center">

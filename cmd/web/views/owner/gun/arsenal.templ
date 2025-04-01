@@ -227,6 +227,18 @@ templ Arsenal(data *data.OwnerData) {
 			return err
 		}
 		
+		// Display note if present
+		if data.Note != "" {
+			_, err = io.WriteString(w, `
+				<div class="mt-2 p-3 bg-brass-50 text-brass-800 border border-brass-300 rounded-md">
+					<p class="text-center font-medium">`+data.Note+`</p>
+				</div>`)
+				
+			if err != nil {
+				return err
+			}
+		}
+		
 		// Pagination if needed
 		if data.TotalPages > 1 {
 			showingFrom := strconv.Itoa(data.ShowingFrom)

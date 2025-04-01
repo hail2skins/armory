@@ -80,6 +80,23 @@ func (o *OwnerController) LandingPage(c *gin.Context) {
 		return
 	}
 
+	// Check if the user has a promotional subscription that has expired
+	// This will automatically update the subscription status if needed
+	if updated, err := o.db.CheckExpiredPromotionSubscription(dbUser); err != nil {
+		logger.Error("Failed to check expired promotion subscription", err, map[string]interface{}{
+			"user_id": dbUser.ID,
+			"email":   dbUser.Email,
+		})
+	} else if updated {
+		// Log that we updated the user's subscription status
+		logger.Info("Updated expired promotion subscription", map[string]interface{}{
+			"user_id":               dbUser.ID,
+			"email":                 dbUser.Email,
+			"subscription_status":   dbUser.SubscriptionStatus,
+			"subscription_end_date": dbUser.SubscriptionEndDate,
+		})
+	}
+
 	// Parse pagination parameters
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	if page < 1 {
@@ -169,7 +186,11 @@ func (o *OwnerController) LandingPage(c *gin.Context) {
 	if dbUser.SubscriptionTier == "free" && totalGuns > 2 {
 		showingFreeLimit = true
 		totalUserGuns = int(totalGuns)
-		// We don't actually limit the guns here anymore, we'll add a message
+
+		// Limit the guns for free tier users to only 2 guns
+		if len(guns) > 2 {
+			guns = guns[:2]
+		}
 	}
 
 	// Format subscription end date if available
@@ -220,7 +241,9 @@ func (o *OwnerController) LandingPage(c *gin.Context) {
 
 	// If the user has more guns than shown, add a message
 	if showingFreeLimit {
-		ownerData.WithError(fmt.Sprintf("Free Tier shows all %d guns in your collection, but only allows you to add up to 2 guns. Please subscribe to add more firearms.", totalUserGuns))
+		ownerData.WithError(fmt.Sprintf("Free tier only allows 2 guns. You have %d in your arsenal. Subscribe to see more.", totalUserGuns))
+		// Add a note that will display below the table
+		ownerData.WithNote("To see your remaining firearms please subscribe.")
 	}
 
 	// Check for flash messages from session
@@ -1977,7 +2000,11 @@ func (o *OwnerController) Arsenal(c *gin.Context) {
 		if dbUser.SubscriptionTier == "free" && totalGuns > 2 {
 			showFreeLimit = true
 			totalUserGuns = int(totalGuns)
-			// We don't actually limit the guns anymore, just show a message
+
+			// Limit the guns for free tier users to only 2 guns
+			if len(guns) > 2 {
+				guns = guns[:2]
+			}
 		}
 
 		// Format subscription end date if available
@@ -1987,6 +2014,7 @@ func (o *OwnerController) Arsenal(c *gin.Context) {
 		}
 
 		// Calculate the total paid amount for all guns
+
 		totalPaid := calculateTotalPaid(guns)
 
 		// Create owner data
@@ -2028,7 +2056,9 @@ func (o *OwnerController) Arsenal(c *gin.Context) {
 
 		// If the user is on free tier, add a message
 		if showFreeLimit {
-			ownerData.WithError(fmt.Sprintf("Free Tier shows all %d guns in your collection, but only allows you to add up to 2 guns. Please subscribe to add more firearms.", totalUserGuns))
+			ownerData.WithError(fmt.Sprintf("Free tier only allows 2 guns. You have %d in your arsenal. Subscribe to see more.", totalUserGuns))
+			// Add a note that will display below the table
+			ownerData.WithNote("To see your remaining firearms please subscribe.")
 		}
 
 		// Check for flash messages from session
@@ -2151,7 +2181,11 @@ func (o *OwnerController) Arsenal(c *gin.Context) {
 	if dbUser.SubscriptionTier == "free" && totalGuns > 2 {
 		showFreeLimit = true
 		totalUserGuns = int(totalGuns)
-		// We don't actually limit the guns anymore, just show a message
+
+		// Limit the guns for free tier users to only 2 guns
+		if len(guns) > 2 {
+			guns = guns[:2]
+		}
 	}
 
 	// Format subscription end date if available
@@ -2199,7 +2233,9 @@ func (o *OwnerController) Arsenal(c *gin.Context) {
 
 	// If the user is on free tier, add a message
 	if showFreeLimit {
-		ownerData.WithError(fmt.Sprintf("Free Tier shows all %d guns in your collection, but only allows you to add up to 2 guns. Please subscribe to add more firearms.", totalUserGuns))
+		ownerData.WithError(fmt.Sprintf("Free tier only allows 2 guns. You have %d in your arsenal. Subscribe to see more.", totalUserGuns))
+		// Add a note that will display below the table
+		ownerData.WithNote("To see your remaining firearms please subscribe.")
 	}
 
 	// Check for flash messages from session

@@ -66,6 +66,12 @@ type UserService interface {
 
 	// CountNewSubscribersLastMonth returns the number of new subscriptions in the previous month
 	CountNewSubscribersLastMonth() (int64, error)
+
+	// CheckExpiredPromotionSubscription checks if a user's subscription has expired
+	// and updates the status to "expired" if it has.
+	// It also resets the subscription tier to "free" and clears the expiration date.
+	// Returns true if the subscription status was updated, false otherwise.
+	CheckExpiredPromotionSubscription(user *User) (bool, error)
 }
 
 // Ensure service implements UserService
@@ -390,4 +396,34 @@ func (s *service) CountNewSubscribersLastMonth() (int64, error) {
 		Count(&count).Error
 
 	return count, err
+}
+
+// CheckExpiredPromotionSubscription checks if a user's subscription has expired
+// and updates the status to "expired" if it has.
+// It also resets the subscription tier to "free" and clears the expiration date.
+// Returns true if the subscription status was updated, false otherwise.
+func (s *service) CheckExpiredPromotionSubscription(user *User) (bool, error) {
+	// If no subscription tier, already expired or free tier, nothing to do
+	if user.SubscriptionTier == "" || user.SubscriptionStatus == "expired" || user.SubscriptionTier == "free" {
+		return false, nil
+	}
+
+	// If subscription end date is in the past, mark as expired
+	if !user.SubscriptionEndDate.IsZero() && time.Now().After(user.SubscriptionEndDate) {
+		// Update subscription status to expired, reset tier to free, and clear end date
+		user.SubscriptionStatus = "expired"
+		user.SubscriptionTier = "free"
+		user.SubscriptionEndDate = time.Time{} // zero time
+
+		// Save the updated user
+		err := s.db.Save(user).Error
+		if err != nil {
+			return false, err
+		}
+
+		return true, nil
+	}
+
+	// Subscription is still active
+	return false, nil
 }
