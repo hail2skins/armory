@@ -30,18 +30,23 @@ func formatPrice(price *float64) string {
 templ Index(data *data.OwnerData) {
 	@partials.Base(data.Auth, templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
 		_, err := io.WriteString(w, `
-		<div class="container mx-auto px-4 py-8">
-			<div class="flex justify-between items-center mb-6">
-				<h1 class="text-3xl font-bold text-gunmetal-800">Your Ammunition</h1>
-				<div class="flex space-x-4">
-					<a href="/owner" class="bg-gunmetal-600 hover:bg-gunmetal-700 text-white font-bold py-2 px-4 rounded">
-						Back to Dashboard
-					</a>
-					<a href="/owner/munitions/new" class="bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 px-4 rounded">
-						Add New Ammunition
-					</a>
+		<div class="relative min-h-screen" style="background-image: url('/assets/munitions.png'); background-size: cover; background-position: center; background-repeat: no-repeat;">
+			<!-- Overlay to fade the background image -->
+			<div class="absolute inset-0 bg-white bg-opacity-80"></div>
+			
+			<!-- Content on top of the background -->
+			<div class="relative container mx-auto px-4 py-8">
+				<div class="flex justify-between items-center mb-6">
+					<h1 class="text-3xl font-bold text-gunmetal-800">Your Ammunition</h1>
+					<div class="flex space-x-4">
+						<a href="/owner" class="bg-gunmetal-600 hover:bg-gunmetal-700 text-white font-bold py-2 px-4 rounded">
+							Back to Dashboard
+						</a>
+						<a href="/owner/munitions/new" class="bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 px-4 rounded">
+							Add New Ammunition
+						</a>
+					</div>
 				</div>
-			</div>
 		`)
 		if err != nil {
 			return err
@@ -97,10 +102,10 @@ templ Index(data *data.OwnerData) {
 			return err
 		}
 
-		// If no ammo, show empty state
+		// Content section
 		if len(data.Ammo) == 0 {
 			_, err = io.WriteString(w, `
-			<div class="bg-white shadow-md rounded p-8 mb-4 text-center">
+			<div class="bg-white bg-opacity-90 shadow-md rounded p-8 mb-4 text-center">
 				<p class="text-lg text-gray-700 mb-4">You haven't added any ammunition yet.</p>
 				<a href="/owner/munitions/new" class="bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 px-4 rounded">
 					Add Your First Ammunition
@@ -113,8 +118,8 @@ templ Index(data *data.OwnerData) {
 		} else {
 			// Show ammo table
 			_, err = io.WriteString(w, `
-			<div class="overflow-x-auto bg-white shadow-md rounded">
-				<table class="min-w-full bg-white">
+			<div class="overflow-x-auto bg-white bg-opacity-90 shadow-md rounded">
+				<table class="min-w-full">
 					<thead class="bg-gunmetal-700 text-white">
 						<tr>
 							<th class="py-3 px-4 text-left">Name</th>
@@ -137,14 +142,16 @@ templ Index(data *data.OwnerData) {
 				acquiredDate := formatDate(ammo.Acquired)
 				paidAmount := formatPrice(ammo.Paid)
 				
-				// Alternate row background for better readability
-				bgClass := ""
+				// Alternate row background for better readability, but keep transparent
+				bgClass := "bg-opacity-70"
 				if i%2 == 0 {
-					bgClass = "bg-gray-50"
+					bgClass = "bg-gray-50 bg-opacity-70"
+				} else {
+					bgClass = "bg-white bg-opacity-70" 
 				}
 
 				_, err = io.WriteString(w, `
-						<tr class="`+bgClass+` hover:bg-gray-100">
+						<tr class="`+bgClass+` hover:bg-gray-100 hover:bg-opacity-80">
 							<td class="py-3 px-4">
 								<a href="/owner/munitions/`+ammoID+`" class="text-gunmetal-800 hover:text-gunmetal-600 font-medium hover:underline">`+ammo.Name+`</a>
 							</td>
@@ -200,7 +207,21 @@ templ Index(data *data.OwnerData) {
 			}
 		}
 
+		// Display note if present (subscription notice for free tier users)
+		if data.Note != "" {
+			_, err = io.WriteString(w, `
+			<div class="mt-2 p-3 bg-amber-50 text-amber-800 border border-amber-300 rounded-md">
+				<p class="text-center font-medium">`+data.Note+`</p>
+			</div>
+			`)
+			if err != nil {
+				return err
+			}
+		}
+
+		// Close container divs
 		_, err = io.WriteString(w, `
+			</div>
 		</div>
 		`)
 		if err != nil {

@@ -3357,6 +3357,21 @@ func (o *OwnerController) AmmoCreate(c *gin.Context) {
 		return
 	}
 
+	// Check if user is on free tier and already has 4 ammunition items
+	if dbUser.SubscriptionTier == "free" {
+		var count int64
+		db := o.db.GetDB()
+		db.Model(&models.Ammo{}).Where("owner_id = ?", dbUser.ID).Count(&count)
+
+		if count >= 4 {
+			if setFlash, exists := c.Get("setFlash"); exists {
+				setFlash.(func(string))("You must be subscribed to add more to your munitions depot")
+			}
+			c.Redirect(http.StatusSeeOther, "/pricing")
+			return
+		}
+	}
+
 	// Parse form values
 	err = c.Request.ParseForm()
 	if err != nil {
@@ -3666,12 +3681,32 @@ func (o *OwnerController) AmmoIndex(c *gin.Context) {
 		return
 	}
 
+	// Check if free tier limit applies (only for display, not actual limit)
+	var showingFreeLimit bool
+	var totalUserAmmo int
+	totalUserAmmo = len(ammoItems)
+	if dbUser.SubscriptionTier == "free" && len(ammoItems) > 4 {
+		showingFreeLimit = true
+
+		// Limit the ammunition items for free tier users to only 4 items
+		if len(ammoItems) > 4 {
+			ammoItems = ammoItems[:4]
+		}
+	}
+
 	// Create owner data for the view
 	ownerData := data.NewOwnerData().
 		WithTitle("My Ammunition").
 		WithAuthenticated(true).
 		WithUser(dbUser).
 		WithAmmo(ammoItems)
+
+	// If the user has more ammunition than shown, add a message
+	if showingFreeLimit {
+		ownerData.WithError(fmt.Sprintf("Free tier only allows 4 ammunition items. You have %d in your depot. Subscribe to see more.", totalUserAmmo))
+		// Add a note that will display below the table
+		ownerData.WithNote("To see your remaining ammunition please subscribe.")
+	}
 
 	// Set authentication data
 	if csrfToken, exists := c.Get("csrf_token"); exists {
