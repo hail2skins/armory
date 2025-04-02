@@ -4268,3 +4268,71 @@ func handleAmmoUpdateError(c *gin.Context, dbUser *database.User, errMsg string,
 	// Render the ammo edit view with error
 	munitions.Edit(ownerData).Render(c.Request.Context(), c.Writer)
 }
+
+// AmmoDelete handles the deletion of ammunition
+func (o *OwnerController) AmmoDelete(c *gin.Context) {
+	// Get the current user's authentication status and email
+	authController, exists := c.Get("authController")
+	if !exists {
+		c.Redirect(http.StatusSeeOther, "/login")
+		return
+	}
+
+	// Get current user information
+	authInterface := authController.(AuthControllerInterface)
+	userInfo, authenticated := authInterface.GetCurrentUser(c)
+	if !authenticated {
+		// Set flash message
+		if setFlash, exists := c.Get("setFlash"); exists {
+			setFlash.(func(string))("You must be logged in to access this page")
+		}
+		c.Redirect(http.StatusSeeOther, "/login")
+		return
+	}
+
+	// Get the user from the database
+	ctx := context.Background()
+	dbUser, err := o.db.GetUserByEmail(ctx, userInfo.GetUserName())
+	if err != nil {
+		c.Redirect(http.StatusSeeOther, "/login")
+		return
+	}
+
+	// Parse the ammunition ID from the URL
+	id := c.Param("id")
+	ammoID, err := strconv.ParseUint(id, 10, 64)
+	if err != nil {
+		session := sessions.Default(c)
+		session.AddFlash("Invalid ammunition ID")
+		session.Save()
+		c.Redirect(http.StatusSeeOther, "/owner/munitions")
+		return
+	}
+
+	// Find the ammunition to ensure it belongs to the current user
+	ammo := models.Ammo{}
+	if err := o.db.GetDB().Where("id = ? AND owner_id = ?", ammoID, dbUser.ID).First(&ammo).Error; err != nil {
+		session := sessions.Default(c)
+		session.AddFlash("Ammunition not found or you don't have permission to delete it")
+		session.Save()
+		c.Redirect(http.StatusSeeOther, "/owner/munitions")
+		return
+	}
+
+	// Soft delete the ammunition
+	if err := o.db.GetDB().Delete(&ammo).Error; err != nil {
+		session := sessions.Default(c)
+		session.AddFlash("Failed to delete ammunition: " + err.Error())
+		session.Save()
+		c.Redirect(http.StatusSeeOther, "/owner/munitions")
+		return
+	}
+
+	// Set a success flash message
+	session := sessions.Default(c)
+	session.AddFlash("Ammunition deleted successfully")
+	session.Save()
+
+	// Redirect to the munitions index page
+	c.Redirect(http.StatusFound, "/owner/munitions")
+}

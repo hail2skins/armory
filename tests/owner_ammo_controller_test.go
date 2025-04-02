@@ -483,3 +483,63 @@ func TestAmmoUpdate(t *testing.T) {
 	assert.Equal(t, newCaliber.ID, updatedAmmo.CaliberID, "Caliber should be updated")
 	assert.Equal(t, 100, updatedAmmo.Count, "Count should be updated")
 }
+
+// TestAmmoDelete tests the deletion of ammunition
+func TestAmmoDelete(t *testing.T) {
+	// Setup test environment
+	middleware.EnableTestMode()
+	defer middleware.DisableTestMode()
+
+	db := testutils.NewTestDB()
+	defer db.Close()
+	service := testutils.NewTestService(db.DB)
+	helper := testhelper.NewControllerTestHelper(db.DB, service)
+	defer helper.CleanupTest()
+
+	// Create a test user and test ammunition
+	testUser := helper.CreateTestUser(t)
+
+	// Create test data
+	caliber := models.Caliber{Caliber: "9mm", Popularity: 1}
+	err := service.CreateCaliber(&caliber)
+	require.NoError(t, err)
+
+	brand := models.Brand{Name: "Winchester", Popularity: 1}
+	err = service.CreateBrand(&brand)
+	require.NoError(t, err)
+
+	testAmmo := models.Ammo{
+		Name:      "Test Delete Ammo",
+		BrandID:   brand.ID,
+		CaliberID: caliber.ID,
+		Count:     50,
+		OwnerID:   testUser.ID,
+	}
+	err = db.DB.Create(&testAmmo).Error
+	require.NoError(t, err, "Failed to create test ammo")
+
+	// Setup the controller and router
+	controller := controller.NewOwnerController(service)
+	router := helper.GetAuthenticatedRouter(testUser.ID, testUser.Email)
+	router.POST("/owner/munitions/:id/delete", controller.AmmoDelete)
+
+	// Make the delete request
+	req, err := http.NewRequest("POST", fmt.Sprintf("/owner/munitions/%d/delete", testAmmo.ID), nil)
+	require.NoError(t, err, "Failed to create request")
+	req.Header.Set("X-CSRF-TEST-MODE", "1")
+	rr := httptest.NewRecorder()
+
+	router.ServeHTTP(rr, req)
+
+	// Verify we were redirected to the index page
+	assert.Equal(t, http.StatusFound, rr.Code, "Expected redirect status")
+	assert.Equal(t, "/owner/munitions", rr.Header().Get("Location"), "Expected redirect to ammo inventory page")
+
+	// Verify the ammo was soft deleted (should have DeletedAt set)
+	var deletedAmmo models.Ammo
+	err = db.DB.Unscoped().First(&deletedAmmo, testAmmo.ID).Error
+	require.NoError(t, err, "Failed to retrieve deleted ammo")
+
+	// Check if deleted_at is set (not nil), which indicates soft deletion
+	assert.NotNil(t, deletedAmmo.DeletedAt, "Ammo should be soft deleted")
+}
