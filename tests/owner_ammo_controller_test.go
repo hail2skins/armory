@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/hail2skins/armory/internal/controller"
+	"github.com/hail2skins/armory/internal/database"
 	"github.com/hail2skins/armory/internal/middleware"
 	"github.com/hail2skins/armory/internal/models"
 	"github.com/hail2skins/armory/internal/testutils"
@@ -53,10 +54,10 @@ func TestAmmoCreate(t *testing.T) {
 	// Create controller and setup the route
 	controller := controller.NewOwnerController(service)
 	router := helper.GetAuthenticatedRouter(testUser.ID, testUser.Email)
-	router.POST("/owner/munitions/ammunition", controller.AmmoCreate)
+	router.POST("/owner/munitions", controller.AmmoCreate)
 
 	// Make request with some error handling
-	req, err := http.NewRequest("POST", "/owner/munitions/ammunition", strings.NewReader(formData.Encode()))
+	req, err := http.NewRequest("POST", "/owner/munitions", strings.NewReader(formData.Encode()))
 	require.NoError(t, err, "Failed to create request")
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Set("X-CSRF-TEST-MODE", "1")
@@ -482,4 +483,216 @@ func TestAmmoUpdate(t *testing.T) {
 	assert.Equal(t, newBrand.ID, updatedAmmo.BrandID, "Brand should be updated")
 	assert.Equal(t, newCaliber.ID, updatedAmmo.CaliberID, "Caliber should be updated")
 	assert.Equal(t, 100, updatedAmmo.Count, "Count should be updated")
+}
+
+// TestAmmoDelete tests the deletion of ammunition
+func TestAmmoDelete(t *testing.T) {
+	// Setup test environment
+	middleware.EnableTestMode()
+	defer middleware.DisableTestMode()
+
+	db := testutils.NewTestDB()
+	defer db.Close()
+	service := testutils.NewTestService(db.DB)
+	helper := testhelper.NewControllerTestHelper(db.DB, service)
+	defer helper.CleanupTest()
+
+	// Create a test user and test ammunition
+	testUser := helper.CreateTestUser(t)
+
+	// Create test data
+	caliber := models.Caliber{Caliber: "9mm", Popularity: 1}
+	err := service.CreateCaliber(&caliber)
+	require.NoError(t, err)
+
+	brand := models.Brand{Name: "Winchester", Popularity: 1}
+	err = service.CreateBrand(&brand)
+	require.NoError(t, err)
+
+	testAmmo := models.Ammo{
+		Name:      "Test Delete Ammo",
+		BrandID:   brand.ID,
+		CaliberID: caliber.ID,
+		Count:     50,
+		OwnerID:   testUser.ID,
+	}
+	err = db.DB.Create(&testAmmo).Error
+	require.NoError(t, err, "Failed to create test ammo")
+
+	// Setup the controller and router
+	controller := controller.NewOwnerController(service)
+	router := helper.GetAuthenticatedRouter(testUser.ID, testUser.Email)
+	router.POST("/owner/munitions/:id/delete", controller.AmmoDelete)
+
+	// Make the delete request
+	req, err := http.NewRequest("POST", fmt.Sprintf("/owner/munitions/%d/delete", testAmmo.ID), nil)
+	require.NoError(t, err, "Failed to create request")
+	req.Header.Set("X-CSRF-TEST-MODE", "1")
+	rr := httptest.NewRecorder()
+
+	router.ServeHTTP(rr, req)
+
+	// Verify we were redirected to the index page
+	assert.Equal(t, http.StatusFound, rr.Code, "Expected redirect status")
+	assert.Equal(t, "/owner/munitions", rr.Header().Get("Location"), "Expected redirect to ammo inventory page")
+
+	// Verify the ammo was soft deleted (should have DeletedAt set)
+	var deletedAmmo models.Ammo
+	err = db.DB.Unscoped().First(&deletedAmmo, testAmmo.ID).Error
+	require.NoError(t, err, "Failed to retrieve deleted ammo")
+
+	// Check if deleted_at is set (not nil), which indicates soft deletion
+	assert.NotNil(t, deletedAmmo.DeletedAt, "Ammo should be soft deleted")
+}
+
+// TestAmmoCreateFreeTierLimit tests that a free tier user cannot add more than 4 ammunition items
+func TestAmmoCreateFreeTierLimit(t *testing.T) {
+	// Enable CSRF test mode
+	middleware.EnableTestMode()
+	defer middleware.DisableTestMode()
+
+	// Setup test database and service
+	db := testutils.NewTestDB()
+	defer db.Close()
+	service := testutils.NewTestService(db.DB)
+	helper := testhelper.NewControllerTestHelper(db.DB, service)
+	defer helper.CleanupTest()
+
+	// Create a test user with free tier
+	testUser := helper.CreateTestUser(t)
+	// Set user subscription tier to free explicitly in the database
+	err := db.DB.Model(&database.User{}).Where("id = ?", testUser.ID).
+		Update("subscription_tier", "free").Error
+	require.NoError(t, err, "Failed to update user subscription tier")
+
+	// Create some test data
+	caliber := models.Caliber{Caliber: "9mm", Popularity: 1}
+	err = service.CreateCaliber(&caliber)
+	require.NoError(t, err)
+
+	brand := models.Brand{Name: "Winchester", Popularity: 1}
+	err = service.CreateBrand(&brand)
+	require.NoError(t, err)
+
+	// Create 4 existing ammunition items (the maximum for free tier)
+	for i := 1; i <= 4; i++ {
+		ammo := models.Ammo{
+			Name:      fmt.Sprintf("Existing Test Ammo %d", i),
+			BrandID:   brand.ID,
+			CaliberID: caliber.ID,
+			Count:     50,
+			OwnerID:   testUser.ID,
+		}
+		err = db.DB.Create(&ammo).Error
+		require.NoError(t, err, "Failed to create existing test ammo")
+	}
+
+	// Define form data for the 5th ammunition item
+	formData := url.Values{}
+	formData.Set("name", "Fifth Test Ammo")
+	formData.Set("brand_id", fmt.Sprintf("%d", brand.ID))
+	formData.Set("caliber_id", fmt.Sprintf("%d", caliber.ID))
+	formData.Set("count", "50")
+	formData.Set("csrf_token", "test_token")
+
+	// Create controller and setup the route
+	controller := controller.NewOwnerController(service)
+	router := helper.GetAuthenticatedRouter(testUser.ID, testUser.Email)
+	router.POST("/owner/munitions", controller.AmmoCreate)
+
+	// Make request with some error handling
+	req, err := http.NewRequest("POST", "/owner/munitions", strings.NewReader(formData.Encode()))
+	require.NoError(t, err, "Failed to create request")
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("X-CSRF-TEST-MODE", "1")
+	rr := httptest.NewRecorder()
+
+	router.ServeHTTP(rr, req)
+
+	// Verify we were redirected to the pricing page
+	assert.Equal(t, http.StatusSeeOther, rr.Code, "Expected redirect status")
+	assert.Equal(t, "/pricing", rr.Header().Get("Location"), "Expected redirect to pricing page")
+
+	// Verify no 5th item was created
+	var count int64
+	err = db.DB.Model(&models.Ammo{}).Where("owner_id = ?", testUser.ID).Count(&count).Error
+	require.NoError(t, err, "Failed to count ammunition")
+	assert.Equal(t, int64(4), count, "Should still have only 4 ammunition items")
+}
+
+// TestAmmoIndexFreeTierLimit tests the display limit for free tier users in the ammunition index
+func TestAmmoIndexFreeTierLimit(t *testing.T) {
+	// Enable CSRF test mode
+	middleware.EnableTestMode()
+	defer middleware.DisableTestMode()
+
+	// Setup test database and service
+	db := testutils.NewTestDB()
+	defer db.Close()
+	service := testutils.NewTestService(db.DB)
+	helper := testhelper.NewControllerTestHelper(db.DB, service)
+	defer helper.CleanupTest()
+
+	// Create a test user with free tier
+	testUser := helper.CreateTestUser(t)
+	// Set user subscription tier to free explicitly in the database
+	err := db.DB.Model(&database.User{}).Where("id = ?", testUser.ID).
+		Update("subscription_tier", "free").Error
+	require.NoError(t, err, "Failed to update user subscription tier")
+
+	// Create some test data
+	caliber := models.Caliber{Caliber: "9mm", Popularity: 1}
+	err = service.CreateCaliber(&caliber)
+	require.NoError(t, err)
+
+	brand := models.Brand{Name: "Winchester", Popularity: 1}
+	err = service.CreateBrand(&brand)
+	require.NoError(t, err)
+
+	// Create 6 ammunition items (more than the free tier limit of 4)
+	for i := 1; i <= 6; i++ {
+		ammo := models.Ammo{
+			Name:      fmt.Sprintf("Test Ammo %d", i),
+			BrandID:   brand.ID,
+			CaliberID: caliber.ID,
+			Count:     50,
+			OwnerID:   testUser.ID,
+		}
+		err = db.DB.Create(&ammo).Error
+		require.NoError(t, err, fmt.Sprintf("Failed to create test ammo %d", i))
+	}
+
+	// Create controller and setup the route
+	controller := controller.NewOwnerController(service)
+	router := helper.GetAuthenticatedRouter(testUser.ID, testUser.Email)
+	router.GET("/owner/munitions", controller.AmmoIndex)
+
+	// Make the request
+	req, err := http.NewRequest("GET", "/owner/munitions", nil)
+	require.NoError(t, err, "Failed to create request")
+	req.Header.Set("X-CSRF-TEST-MODE", "1")
+	rr := httptest.NewRecorder()
+
+	router.ServeHTTP(rr, req)
+
+	// Verify response
+	assert.Equal(t, http.StatusOK, rr.Code, "Expected status OK")
+
+	// The response should contain the first 4 ammunition items
+	for i := 1; i <= 4; i++ {
+		assert.Contains(t, rr.Body.String(), fmt.Sprintf("Test Ammo %d", i),
+			"Response should contain ammo item %d", i)
+	}
+
+	// But not the 5th and 6th items
+	assert.NotContains(t, rr.Body.String(), "Test Ammo 5", "Response should not contain 5th ammo item")
+	assert.NotContains(t, rr.Body.String(), "Test Ammo 6", "Response should not contain 6th ammo item")
+
+	// Should contain a warning message about the tier limit
+	assert.Contains(t, rr.Body.String(), "Free tier only allows 4 ammunition items",
+		"Response should contain warning about free tier limit")
+
+	// Should contain advice to subscribe
+	assert.Contains(t, rr.Body.String(), "Subscribe to see more",
+		"Response should contain advice to subscribe")
 }
