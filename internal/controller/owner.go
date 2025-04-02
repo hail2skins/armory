@@ -439,6 +439,7 @@ func (o *OwnerController) Create(c *gin.Context) {
 	manufacturerIDStr := c.PostForm("manufacturer_id")
 	paidStr := c.PostForm("paid")
 	purpose := c.PostForm("purpose")
+	finish := c.PostForm("finish")
 
 	logger.Info("Form data received", map[string]interface{}{
 		"name":            name,
@@ -449,6 +450,7 @@ func (o *OwnerController) Create(c *gin.Context) {
 		"manufacturer_id": manufacturerIDStr,
 		"paid":            paidStr,
 		"purpose":         purpose,
+		"finish":          finish,
 	})
 
 	// Get current user - Using c.Get instead of c.MustGet for safety
@@ -602,6 +604,7 @@ func (o *OwnerController) Create(c *gin.Context) {
 		Name:           name,
 		SerialNumber:   serialNumber,
 		Purpose:        purpose,
+		Finish:         finish,
 		Acquired:       acquiredDate,
 		WeaponTypeID:   uint(weaponTypeID),
 		CaliberID:      uint(caliberID),
@@ -632,6 +635,10 @@ func (o *OwnerController) Create(c *gin.Context) {
 		switch err {
 		case models.ErrGunNameTooLong:
 			errors["name"] = "Name cannot exceed 100 characters"
+		case models.ErrGunPurposeTooLong:
+			errors["purpose"] = "Purpose cannot exceed 100 characters"
+		case models.ErrGunFinishTooLong:
+			errors["finish"] = "Finish cannot exceed 100 characters"
 		case models.ErrNegativePrice:
 			errors["paid"] = "Price cannot be negative"
 		case models.ErrFutureDate:
@@ -1184,6 +1191,7 @@ func (o *OwnerController) Update(c *gin.Context) {
 		manufacturerIDStr := c.PostForm("manufacturer_id")
 		paidStr := c.PostForm("paid")
 		purpose := c.PostForm("purpose")
+		finish := c.PostForm("finish")
 
 		// Initialize form errors map
 		formErrors := make(map[string]string)
@@ -1286,6 +1294,7 @@ func (o *OwnerController) Update(c *gin.Context) {
 			Name:           name,
 			SerialNumber:   serialNumber,
 			Purpose:        purpose,
+			Finish:         finish,
 			Acquired:       acquiredDate,
 			WeaponTypeID:   uint(weaponTypeID),
 			CaliberID:      uint(caliberID),
@@ -1302,6 +1311,10 @@ func (o *OwnerController) Update(c *gin.Context) {
 			switch err {
 			case models.ErrGunNameTooLong:
 				formErrors["name"] = "Name cannot exceed 100 characters"
+			case models.ErrGunPurposeTooLong:
+				formErrors["purpose"] = "Purpose cannot exceed 100 characters"
+			case models.ErrGunFinishTooLong:
+				formErrors["finish"] = "Finish cannot exceed 100 characters"
 			case models.ErrNegativePrice:
 				formErrors["paid"] = "Price cannot be negative"
 			case models.ErrFutureDate:
@@ -1442,6 +1455,7 @@ func (o *OwnerController) Update(c *gin.Context) {
 	manufacturerIDStr := c.PostForm("manufacturer_id")
 	paidStr := c.PostForm("paid")
 	purpose := c.PostForm("purpose")
+	finish := c.PostForm("finish")
 
 	// Initialize form errors map
 	formErrors := make(map[string]string)
@@ -1544,6 +1558,7 @@ func (o *OwnerController) Update(c *gin.Context) {
 		Name:           name,
 		SerialNumber:   serialNumber,
 		Purpose:        purpose,
+		Finish:         finish,
 		Acquired:       acquiredDate,
 		WeaponTypeID:   uint(weaponTypeID),
 		CaliberID:      uint(caliberID),
@@ -1560,6 +1575,10 @@ func (o *OwnerController) Update(c *gin.Context) {
 		switch err {
 		case models.ErrGunNameTooLong:
 			formErrors["name"] = "Name cannot exceed 100 characters"
+		case models.ErrGunPurposeTooLong:
+			formErrors["purpose"] = "Purpose cannot exceed 100 characters"
+		case models.ErrGunFinishTooLong:
+			formErrors["finish"] = "Finish cannot exceed 100 characters"
 		case models.ErrNegativePrice:
 			formErrors["paid"] = "Price cannot be negative"
 		case models.ErrFutureDate:

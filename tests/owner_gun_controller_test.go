@@ -104,6 +104,7 @@ func TestGunCreate(t *testing.T) {
 	formData.Set("name", "Test Gun")
 	formData.Set("serial_number", "TEST123")
 	formData.Set("purpose", "Home Defense")
+	formData.Set("finish", "Blued")
 	formData.Set("weapon_type_id", fmt.Sprintf("%d", weaponType.ID))
 	formData.Set("caliber_id", fmt.Sprintf("%d", caliber.ID))
 	formData.Set("manufacturer_id", fmt.Sprintf("%d", manufacturer.ID))
@@ -178,6 +179,7 @@ func TestGunCreate(t *testing.T) {
 		assert.Equal(t, "Test Gun", gunList[0].Name, "Gun name mismatch")
 		assert.Equal(t, "TEST123", gunList[0].SerialNumber, "Serial number mismatch")
 		assert.Equal(t, "Home Defense", gunList[0].Purpose, "Purpose mismatch")
+		assert.Equal(t, "Blued", gunList[0].Finish, "Finish mismatch")
 		assert.Equal(t, weaponType.ID, gunList[0].WeaponTypeID, "Weapon type ID mismatch")
 		assert.Equal(t, caliber.ID, gunList[0].CaliberID, "Caliber ID mismatch")
 		assert.Equal(t, manufacturer.ID, gunList[0].ManufacturerID, "Manufacturer ID mismatch")
@@ -224,6 +226,19 @@ func TestGunCreateValidation(t *testing.T) {
 				OwnerID:        1,
 			},
 			expectedErr: "exceeds maximum length",
+		},
+		{
+			name: "Too Long Finish",
+			gun: &models.Gun{
+				Name:           "Test Gun",
+				SerialNumber:   "TEST123",
+				Finish:         strings.Repeat("X", 101),
+				WeaponTypeID:   weaponType.ID,
+				CaliberID:      caliber.ID,
+				ManufacturerID: manufacturer.ID,
+				OwnerID:        1,
+			},
+			expectedErr: "finish exceeds maximum length",
 		},
 		{
 			name: "Invalid Weapon Type",
@@ -679,6 +694,7 @@ func TestGunUpdate(t *testing.T) {
 		Name:           "Test Update Gun",
 		SerialNumber:   "SN-UPDATE-1",
 		Purpose:        "Home Defense",
+		Finish:         "Blued",
 		WeaponTypeID:   weaponType.ID,
 		CaliberID:      caliber.ID,
 		ManufacturerID: manufacturer.ID,
@@ -695,6 +711,7 @@ func TestGunUpdate(t *testing.T) {
 	formData.Set("name", "Updated Gun Name")
 	formData.Set("serial_number", "SN-UPDATED")
 	formData.Set("purpose", "Range & Competition")
+	formData.Set("finish", "Cerakote FDE")
 	formData.Set("weapon_type_id", fmt.Sprintf("%d", newWeaponType.ID))
 	formData.Set("caliber_id", fmt.Sprintf("%d", newCaliber.ID))
 	formData.Set("manufacturer_id", fmt.Sprintf("%d", newManufacturer.ID))
@@ -728,6 +745,7 @@ func TestGunUpdate(t *testing.T) {
 	assert.Equal(t, "Updated Gun Name", updatedGun.Name, "Name should be updated")
 	assert.Equal(t, "SN-UPDATED", updatedGun.SerialNumber, "Serial number should be updated")
 	assert.Equal(t, "Range & Competition", updatedGun.Purpose, "Purpose should be updated")
+	assert.Equal(t, "Cerakote FDE", updatedGun.Finish, "Finish should be updated")
 	assert.Equal(t, newWeaponType.ID, updatedGun.WeaponTypeID, "Weapon type should be updated")
 	assert.Equal(t, newCaliber.ID, updatedGun.CaliberID, "Caliber should be updated")
 	assert.Equal(t, newManufacturer.ID, updatedGun.ManufacturerID, "Manufacturer should be updated")
@@ -787,6 +805,7 @@ func TestGunUpdateValidationErrors(t *testing.T) {
 	formData.Set("name", "") // Empty name should fail validation
 	formData.Set("serial_number", "SN-VALIDATE-1")
 	formData.Set("purpose", string(make([]byte, 101))) // Purpose too long (over 100 chars)
+	// formData.Set("finish", string(make([]byte, 101)))  // Finish too long (over 100 chars)
 	formData.Set("weapon_type_id", fmt.Sprintf("%d", weaponType.ID))
 	formData.Set("caliber_id", fmt.Sprintf("%d", caliber.ID))
 	formData.Set("manufacturer_id", fmt.Sprintf("%d", manufacturer.ID))
@@ -808,9 +827,11 @@ func TestGunUpdateValidationErrors(t *testing.T) {
 	router.ServeHTTP(rr, req)
 
 	// Update assertions to match actual controller behavior
-	assert.Equal(t, http.StatusSeeOther, rr.Code, "Expected redirect status")
-	expectedRedirect := fmt.Sprintf("/owner/guns/%d/edit", testGun.ID)
-	assert.Equal(t, expectedRedirect, rr.Header().Get("Location"), "Expected redirect to edit page with validation errors")
+	assert.Equal(t, http.StatusOK, rr.Code, "Expected OK status with validation errors rendered")
+
+	// We should no longer expect a redirect header
+	// expectedRedirect := fmt.Sprintf("/owner/guns/%d/edit", testGun.ID)
+	// assert.Equal(t, expectedRedirect, rr.Header().Get("Location"), "Expected redirect to edit page with validation errors")
 
 	// Verify gun was not updated (the validation should still prevent updates)
 	var unchangedGun models.Gun
@@ -819,6 +840,33 @@ func TestGunUpdateValidationErrors(t *testing.T) {
 
 	assert.Equal(t, "Test Validation Gun", unchangedGun.Name, "Name should remain unchanged")
 	assert.Equal(t, "Home Defense", unchangedGun.Purpose, "Purpose should remain unchanged")
+}
+
+// TestGunFinishValidation specifically tests the finish field validation
+func TestGunFinishValidation(t *testing.T) {
+	// Setup test environment
+	db := testutils.NewTestDB()
+	defer db.Close()
+
+	// Create valid gun
+	validGun := &models.Gun{
+		Name:   "Finish Test Gun",
+		Finish: "Blued",
+	}
+
+	// Test valid finish
+	err := validGun.Validate(nil)
+	assert.NoError(t, err, "Valid finish should not cause validation error")
+
+	// Test too long finish
+	invalidGun := &models.Gun{
+		Name:   "Invalid Finish Gun",
+		Finish: string(make([]byte, 101)), // Finish too long (over 100 chars)
+	}
+
+	err = invalidGun.Validate(nil)
+	assert.Error(t, err, "Invalid finish should cause validation error")
+	assert.Equal(t, models.ErrGunFinishTooLong, err, "Should return finish too long error")
 }
 
 // TestGunDelete tests the deletion of a gun

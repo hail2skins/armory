@@ -14,6 +14,9 @@ var (
 	// ErrGunPurposeTooLong is returned when a gun purpose exceeds the maximum allowed length
 	ErrGunPurposeTooLong = errors.New("gun purpose exceeds maximum length of 100 characters")
 
+	// ErrGunFinishTooLong is returned when a gun finish exceeds the maximum allowed length
+	ErrGunFinishTooLong = errors.New("gun finish exceeds maximum length of 100 characters")
+
 	// ErrNegativePrice is returned when a gun's paid value is negative
 	ErrNegativePrice = errors.New("gun price cannot be negative")
 
@@ -40,6 +43,11 @@ func (g *Gun) Validate(db *gorm.DB) error {
 	// Validate purpose length (max 100 characters)
 	if len(g.Purpose) > 100 {
 		return ErrGunPurposeTooLong
+	}
+
+	// Validate finish length (max 100 characters)
+	if len(g.Finish) > 100 {
+		return ErrGunFinishTooLong
 	}
 
 	// Validate paid (can't be negative)
@@ -125,6 +133,7 @@ func UpdateGunWithValidation(db *gorm.DB, gun *Gun) error {
 		"name":            gun.Name,
 		"serial_number":   gun.SerialNumber,
 		"purpose":         gun.Purpose,
+		"finish":          gun.Finish,
 		"acquired":        gun.Acquired,
 		"weapon_type_id":  gun.WeaponTypeID,
 		"caliber_id":      gun.CaliberID,

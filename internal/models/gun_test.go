@@ -345,3 +345,63 @@ func TestGunWithPaidField(t *testing.T) {
 	// Clean up test data
 	db.Delete(&gun)
 }
+
+// TestGunWithFinishField tests that a gun can be created and updated with a Finish field
+func TestGunWithFinishField(t *testing.T) {
+	// Get a shared database instance for testing
+	db := GetTestDB()
+
+	// Get test data from seeded data
+	var weaponType WeaponType
+	err := db.Where("type = ?", "Test Rifle").First(&weaponType).Error
+	assert.NoError(t, err)
+
+	var caliber Caliber
+	err = db.Where("caliber = ?", "Test 5.56").First(&caliber).Error
+	assert.NoError(t, err)
+
+	var manufacturer Manufacturer
+	err = db.Where("name = ?", "Test Glock").First(&manufacturer).Error
+	assert.NoError(t, err)
+
+	// Test creating a gun with the Finish field
+	acquired := time.Now()
+	gun := &Gun{
+		Name:           "Test Finish Gun",
+		SerialNumber:   "FINISH-123456",
+		Finish:         "Cerakote Tungsten",
+		Acquired:       &acquired,
+		WeaponTypeID:   weaponType.ID,
+		CaliberID:      caliber.ID,
+		ManufacturerID: manufacturer.ID,
+		OwnerID:        1, // Test owner ID
+	}
+
+	// Call the function being tested
+	err = CreateGun(db, gun)
+	assert.NoError(t, err)
+
+	// Verify the gun was created
+	var createdGun Gun
+	err = db.First(&createdGun, gun.ID).Error
+	assert.NoError(t, err)
+
+	// Verify the gun data
+	assert.Equal(t, "Test Finish Gun", createdGun.Name)
+	assert.Equal(t, "FINISH-123456", createdGun.SerialNumber)
+	assert.Equal(t, "Cerakote Tungsten", createdGun.Finish)
+
+	// Test updating the Finish field
+	createdGun.Finish = "Stainless Steel"
+	err = UpdateGun(db, &createdGun)
+	assert.NoError(t, err)
+
+	// Verify the update
+	var updatedGun Gun
+	err = db.First(&updatedGun, gun.ID).Error
+	assert.NoError(t, err)
+	assert.Equal(t, "Stainless Steel", updatedGun.Finish)
+
+	// Clean up test data
+	db.Delete(&gun)
+}
