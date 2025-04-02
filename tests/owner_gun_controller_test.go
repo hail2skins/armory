@@ -820,3 +820,69 @@ func TestGunUpdateValidationErrors(t *testing.T) {
 	assert.Equal(t, "Test Validation Gun", unchangedGun.Name, "Name should remain unchanged")
 	assert.Equal(t, "Home Defense", unchangedGun.Purpose, "Purpose should remain unchanged")
 }
+
+// TestGunDelete tests the deletion of a gun
+func TestGunDelete(t *testing.T) {
+	// Setup test environment
+	middleware.EnableTestMode()
+	defer middleware.DisableTestMode()
+
+	db := testutils.NewTestDB()
+	defer db.Close()
+	service := testutils.NewTestService(db.DB)
+	helper := testhelper.NewControllerTestHelper(db.DB, service)
+	defer helper.CleanupTest()
+
+	// Create a test user and test gun
+	testUser := helper.CreateTestUser(t)
+
+	// Create test data
+	weaponType := models.WeaponType{Type: "Pistol for Deletion", Popularity: 1}
+	err := service.CreateWeaponType(&weaponType)
+	require.NoError(t, err)
+
+	caliber := models.Caliber{Caliber: "9mm for Deletion", Popularity: 1}
+	err = service.CreateCaliber(&caliber)
+	require.NoError(t, err)
+
+	manufacturer := models.Manufacturer{Name: "Glock for Deletion", Country: "Austria", Popularity: 1}
+	err = service.CreateManufacturer(&manufacturer)
+	require.NoError(t, err)
+
+	testGun := models.Gun{
+		Name:           "Test Delete Gun",
+		SerialNumber:   "SN-DELETE-1",
+		Purpose:        "Testing Deletion",
+		WeaponTypeID:   weaponType.ID,
+		CaliberID:      caliber.ID,
+		ManufacturerID: manufacturer.ID,
+		OwnerID:        testUser.ID,
+	}
+	err = db.DB.Create(&testGun).Error
+	require.NoError(t, err, "Failed to create test gun")
+
+	// Setup the controller and router
+	controller := controller.NewOwnerController(service)
+	router := helper.GetAuthenticatedRouter(testUser.ID, testUser.Email)
+	router.POST("/owner/guns/:id/delete", controller.Delete)
+
+	// Make the delete request
+	req, err := http.NewRequest("POST", fmt.Sprintf("/owner/guns/%d/delete", testGun.ID), nil)
+	require.NoError(t, err, "Failed to create request")
+	req.Header.Set("X-CSRF-TEST-MODE", "1")
+	rr := httptest.NewRecorder()
+
+	router.ServeHTTP(rr, req)
+
+	// Verify we were redirected to the owner dashboard
+	assert.Equal(t, http.StatusSeeOther, rr.Code, "Expected redirect status")
+	assert.Equal(t, "/owner", rr.Header().Get("Location"), "Expected redirect to owner dashboard")
+
+	// Verify the gun was soft deleted (should have DeletedAt set)
+	var deletedGun models.Gun
+	err = db.DB.Unscoped().First(&deletedGun, testGun.ID).Error
+	require.NoError(t, err, "Failed to retrieve deleted gun")
+
+	// Check if deleted_at is set (not nil), which indicates soft deletion
+	assert.NotNil(t, deletedGun.DeletedAt, "Gun should be soft deleted")
+}
