@@ -188,6 +188,49 @@ func TestGunPurposeValidation(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestGunFinishValidation(t *testing.T) {
+	// Test valid finish (under max length)
+	validFinishGun := &Gun{
+		Name:   "Valid Gun",
+		Finish: "Bluing",
+	}
+	err := validFinishGun.Validate(nil)
+	assert.NoError(t, err)
+
+	// Test finish at exactly max length (100 chars)
+	exactLengthFinish := string(make([]byte, 100))
+	for i := range exactLengthFinish {
+		exactLengthFinish = exactLengthFinish[:i] + "a" + exactLengthFinish[i+1:]
+	}
+	exactLengthFinishGun := &Gun{
+		Name:   "Valid Gun",
+		Finish: exactLengthFinish,
+	}
+	err = exactLengthFinishGun.Validate(nil)
+	assert.NoError(t, err)
+
+	// Test finish exceeding max length
+	tooLongFinish := string(make([]byte, 101))
+	for i := range tooLongFinish {
+		tooLongFinish = tooLongFinish[:i] + "a" + tooLongFinish[i+1:]
+	}
+	tooLongFinishGun := &Gun{
+		Name:   "Valid Gun", // Valid name so we only test finish length
+		Finish: tooLongFinish,
+	}
+	err = tooLongFinishGun.Validate(nil)
+	assert.Error(t, err)
+	assert.Equal(t, ErrGunFinishTooLong, err)
+
+	// Test nil/empty finish (should be valid since it's optional)
+	nilFinishGun := &Gun{
+		Name:   "Valid Gun",
+		Finish: "",
+	}
+	err = nilFinishGun.Validate(nil)
+	assert.NoError(t, err)
+}
+
 func TestGunForeignKeyValidation(t *testing.T) {
 	// Setup a test database
 	db := setupGunTestDB(t)

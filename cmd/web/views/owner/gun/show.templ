@@ -56,6 +56,28 @@ templ Show(data *data.OwnerData) {
 		_, err = io.WriteString(w, `
 								</div>
 								<div>
+									<span class="font-medium text-gunmetal-600">Finish:</span>
+									`)
+		if err != nil {
+			return err
+		}
+
+		if data.Gun.Finish != "" {
+			_, err = io.WriteString(w, `
+									<span class="ml-2 text-gunmetal-800">`+data.Gun.Finish+`</span>
+									`)
+		} else {
+			_, err = io.WriteString(w, `
+									<span class="ml-2 text-gunmetal-500">Not specified</span>
+									`)
+		}
+		if err != nil {
+			return err
+		}
+
+		_, err = io.WriteString(w, `
+								</div>
+								<div>
 									<span class="font-medium text-gunmetal-600">Acquired:</span>
 									`)
 		if err != nil {

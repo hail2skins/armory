@@ -17,6 +17,12 @@ var (
 
 	// ErrPasswordNoSpecialChar is returned when a password has no special characters
 	ErrPasswordNoSpecialChar = errors.New("password must contain at least one special character")
+
+	// ErrPasswordNoLowercase is returned when a password has no lowercase letters
+	ErrPasswordNoLowercase = errors.New("password must contain at least one lowercase letter")
+
+	// ErrPasswordNoDigit is returned when a password has no digits
+	ErrPasswordNoDigit = errors.New("password must contain at least one digit")
 )
 
 // EmailValidator validates email addresses
@@ -34,6 +40,8 @@ func ValidateEmail(email string) error {
 // - At least 8 characters
 // - At least one uppercase letter
 // - At least one special character
+// - At least one lowercase letter
+// - At least one digit
 func ValidatePassword(password string) error {
 	// Check length
 	if len(password) < 8 {
@@ -46,8 +54,20 @@ func ValidatePassword(password string) error {
 		return ErrPasswordNoUppercase
 	}
 
+	// Check for lowercase
+	lowercaseRegex := regexp.MustCompile(`[a-z]`)
+	if !lowercaseRegex.MatchString(password) {
+		return ErrPasswordNoLowercase
+	}
+
+	// Check for digit
+	digitRegex := regexp.MustCompile(`[0-9]`)
+	if !digitRegex.MatchString(password) {
+		return ErrPasswordNoDigit
+	}
+
 	// Check for special character
-	specialCharRegex := regexp.MustCompile(`[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]`)
+	specialCharRegex := regexp.MustCompile(`[!@#$%^&*()_+=[\]{};':"\\|,.<>/?~-]`) // Moved hyphen to end
 	if !specialCharRegex.MatchString(password) {
 		return ErrPasswordNoSpecialChar
 	}

@@ -14,6 +14,7 @@ type Gun struct {
 	Name           string
 	SerialNumber   string
 	Purpose        string // Purpose of the gun (e.g., "Carry", "Plinking", "Home Defense")
+	Finish         string // Finish of the gun (e.g., "Bluing", "Cerakote", "Stainless", "Nickel Plating")
 	Acquired       *time.Time
 	WeaponTypeID   uint
 	WeaponType     WeaponType `gorm:"foreignKey:WeaponTypeID"`
@@ -77,6 +78,7 @@ func UpdateGun(db *gorm.DB, gun *Gun) error {
 		"name":            gun.Name,
 		"serial_number":   gun.SerialNumber,
 		"purpose":         gun.Purpose,
+		"finish":          gun.Finish,
 		"acquired":        gun.Acquired,
 		"weapon_type_id":  gun.WeaponTypeID,
 		"caliber_id":      gun.CaliberID,
