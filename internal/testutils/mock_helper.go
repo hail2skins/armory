@@ -4,6 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/hail2skins/armory/internal/controller"
 	"github.com/hail2skins/armory/internal/database"
+	"github.com/hail2skins/armory/internal/models"
 	"github.com/hail2skins/armory/internal/testutils/mocks"
 	"github.com/stretchr/testify/mock"
 )
@@ -72,6 +73,42 @@ func SetupMockUser(mockDB *mocks.MockDB, mockAuth *MockAuthController, user *dat
 	mockUserInfo.SetID("1") // Default ID
 	mockAuth.On("GetCurrentUser", mock.Anything).Return(mockUserInfo, true)
 	mockAuth.On("IsAuthenticated", mock.Anything).Return(true)
+}
+
+// CreateMockDB creates a mock database for testing
+func CreateMockDB() *mocks.MockDB {
+	mockDB := new(mocks.MockDB)
+
+	// Mock auth methods
+	mockDB.On("AuthenticateUser", mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return(true, nil)
+	mockDB.On("GetUserByEmail", mock.AnythingOfType("string")).Return(&database.User{
+		Email: "test@example.com",
+	}, nil)
+
+	// Mock gun-related methods
+	mockDB.On("FindGunByID", mock.AnythingOfType("uint"), mock.AnythingOfType("uint")).Return(&models.Gun{}, nil)
+	mockDB.On("FindGunsByOwner", mock.AnythingOfType("uint")).Return([]models.Gun{}, nil)
+
+	// Mock GetUserByID
+	mockDB.On("GetUserByID", mock.AnythingOfType("uint")).Return(&database.User{
+		Email: "test@example.com",
+	}, nil)
+
+	// Mock FindUserByUsername
+	mockDB.On("FindUserByUsername", mock.AnythingOfType("string")).Return(&database.User{
+		Email: "test@example.com",
+	}, nil)
+
+	// Mock feature flag methods
+	mockDB.On("IsFeatureEnabled", mock.AnythingOfType("string")).Return(true, nil)
+	mockDB.On("CanUserAccessFeature", mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return(true, nil)
+
+	// Mock ammunition-related methods
+	mockDB.On("CountAmmoByUser", mock.AnythingOfType("uint")).Return(int64(0), nil)
+	mockDB.On("FindAllAmmo").Return([]models.Ammo{}, nil)
+	mockDB.On("FindAmmoByID", mock.AnythingOfType("uint")).Return((*models.Ammo)(nil), nil)
+
+	return mockDB
 }
 
 // CreateMockControllers creates controllers with the mock database

@@ -510,3 +510,22 @@ func (m *MockDB) CheckExpiredPromotionSubscription(user *database.User) (bool, e
 	args := m.Called(user)
 	return args.Bool(0), args.Error(1)
 }
+
+// Mock ammunition-related methods
+func (m *MockDB) CountAmmoByUser(userID uint) (int64, error) {
+	args := m.Called(userID)
+	return args.Get(0).(int64), args.Error(1)
+}
+
+func (m *MockDB) FindAllAmmo() ([]models.Ammo, error) {
+	args := m.Called()
+	return args.Get(0).([]models.Ammo), args.Error(1)
+}
+
+func (m *MockDB) FindAmmoByID(id uint) (*models.Ammo, error) {
+	args := m.Called(id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*models.Ammo), args.Error(1)
+}

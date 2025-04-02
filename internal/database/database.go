@@ -74,6 +74,11 @@ type Service interface {
 	FindAllCalibersByIDs(ids []uint) ([]models.Caliber, error)
 	FindAllWeaponTypesByIDs(ids []uint) ([]models.WeaponType, error)
 
+	// Ammo-related methods
+	FindAllAmmo() ([]models.Ammo, error)
+	FindAmmoByID(id uint) (*models.Ammo, error)
+	CountAmmoByUser(userID uint) (int64, error)
+
 	// Casing-related methods
 	FindAllCasings() ([]models.Casing, error)
 	CreateCasing(casing *models.Casing) error
@@ -700,4 +705,32 @@ func (s *service) UpdateBrand(brand *models.Brand) error {
 // DeleteBrand deletes a brand from the database
 func (s *service) DeleteBrand(id uint) error {
 	return s.db.Delete(&models.Brand{}, id).Error
+}
+
+// Ammo-related methods implementation
+// FindAllAmmo retrieves all ammo from the database
+func (s *service) FindAllAmmo() ([]models.Ammo, error) {
+	var ammo []models.Ammo
+	if err := s.db.Find(&ammo).Error; err != nil {
+		return nil, err
+	}
+	return ammo, nil
+}
+
+// FindAmmoByID retrieves ammo by its ID
+func (s *service) FindAmmoByID(id uint) (*models.Ammo, error) {
+	var ammo models.Ammo
+	if err := s.db.First(&ammo, id).Error; err != nil {
+		return nil, err
+	}
+	return &ammo, nil
+}
+
+// CountAmmoByUser retrieves the count of ammo for a specific user
+func (s *service) CountAmmoByUser(userID uint) (int64, error) {
+	var count int64
+	if err := s.db.Model(&models.Ammo{}).Where("owner_id = ?", userID).Count(&count).Error; err != nil {
+		return 0, err
+	}
+	return count, nil
 }

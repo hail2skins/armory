@@ -1074,3 +1074,30 @@ func (s *TestService) CheckExpiredPromotionSubscription(user *database.User) (bo
 
 	return false, nil
 }
+
+// CountAmmoByUser counts ammunition by user ID
+func (s *TestService) CountAmmoByUser(userID uint) (int64, error) {
+	var count int64
+	if err := s.db.Model(&models.Ammo{}).Where("owner_id = ?", userID).Count(&count).Error; err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
+// FindAllAmmo retrieves all ammunition records
+func (s *TestService) FindAllAmmo() ([]models.Ammo, error) {
+	var ammo []models.Ammo
+	if err := s.db.Find(&ammo).Error; err != nil {
+		return nil, err
+	}
+	return ammo, nil
+}
+
+// FindAmmoByID finds ammunition by ID
+func (s *TestService) FindAmmoByID(id uint) (*models.Ammo, error) {
+	var ammo models.Ammo
+	if err := s.db.First(&ammo, id).Error; err != nil {
+		return nil, err
+	}
+	return &ammo, nil
+}

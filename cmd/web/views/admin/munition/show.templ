@@ -1,0 +1,194 @@
+package munition
+
+import (
+	"context"
+	"fmt"
+	"io"
+	"time"
+
+	"github.com/hail2skins/armory/cmd/web/views/data"
+	"github.com/hail2skins/armory/cmd/web/views/partials"
+	"github.com/hail2skins/armory/internal/database"
+	"github.com/hail2skins/armory/internal/models"
+)
+
+// MunitionShowData is the data for the ammunition show page
+type MunitionShowData struct {
+	*data.AdminData
+	Ammo *models.Ammo
+	User *database.User
+}
+
+// MunitionShow renders the ammunition show page
+templ MunitionShow(data *MunitionShowData) {
+	@partials.Base(data.AuthData, templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+		_, err := io.WriteString(w, `
+		<div class="bg-white shadow-md rounded-lg p-6">
+			<div class="flex justify-between items-center mb-6">
+				<h1 class="text-2xl font-bold text-gunmetal-800">Ammunition Details</h1>
+				<div class="flex items-center">
+					<a href="/admin/munitions" class="text-brass-600 hover:text-brass-700 flex items-center">
+						<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+							<path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+						</svg>
+						Back to Ammunition List
+					</a>
+				</div>
+			</div>
+		`)
+		if err != nil {
+			return err
+		}
+
+		if data.Success != "" {
+			_, err = io.WriteString(w, `
+			<div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4" role="alert">
+				<span class="block sm:inline">`+data.Success+`</span>
+			</div>
+			`)
+			if err != nil {
+				return err
+			}
+		}
+
+		if data.Error != "" {
+			_, err = io.WriteString(w, `
+			<div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+				<span class="block sm:inline">`+data.Error+`</span>
+			</div>
+			`)
+			if err != nil {
+				return err
+			}
+		}
+
+		// Format the acquired date
+		acquiredDate := "Not specified"
+		if data.Ammo.Acquired != nil {
+			acquiredDate = data.Ammo.Acquired.Format("January 2, 2006")
+		}
+
+		// Format the price
+		priceText := "Not specified"
+		if data.Ammo.Paid != nil {
+			priceText = fmt.Sprintf("$%.2f", *data.Ammo.Paid)
+		}
+
+		// Calculate cost per round
+		costPerRound := "N/A"
+		if data.Ammo.Paid != nil && data.Ammo.Count > 0 {
+			cpr := *data.Ammo.Paid / float64(data.Ammo.Count)
+			costPerRound = fmt.Sprintf("$%.2f", cpr)
+		}
+
+		// Calculate time owned
+		timeOwned := "Unknown"
+		if data.Ammo.Acquired != nil {
+			daysOwned := int(time.Since(*data.Ammo.Acquired).Hours() / 24)
+			if daysOwned < 1 {
+				timeOwned = "Less than a day"
+			} else if daysOwned == 1 {
+				timeOwned = "1 day"
+			} else if daysOwned < 30 {
+				timeOwned = fmt.Sprintf("%d days", daysOwned)
+			} else if daysOwned < 365 {
+				months := daysOwned / 30
+				timeOwned = fmt.Sprintf("%d month", months)
+				if months > 1 {
+					timeOwned += "s"
+				}
+			} else {
+				years := daysOwned / 365
+				months := (daysOwned % 365) / 30
+				timeOwned = fmt.Sprintf("%d year", years)
+				if years > 1 {
+					timeOwned += "s"
+				}
+				if months > 0 {
+					timeOwned += fmt.Sprintf(", %d month", months)
+					if months > 1 {
+						timeOwned += "s"
+					}
+				}
+			}
+		}
+
+		// Render the ammunition details
+		_, err = io.WriteString(w, `
+			<div class="bg-white shadow overflow-hidden sm:rounded-lg mb-6">
+				<div class="px-4 py-5 sm:px-6 bg-gunmetal-100">
+					<h3 class="text-lg leading-6 font-medium text-gunmetal-900">`+data.Ammo.Name+`</h3>
+					<p class="mt-1 max-w-2xl text-sm text-gunmetal-500">Owned by `+data.User.Email+`</p>
+				</div>
+				<div class="border-t border-gray-200">
+					<dl>
+						<div class="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+							<dt class="text-sm font-medium text-gunmetal-500">Brand</dt>
+							<dd class="mt-1 text-sm text-gunmetal-900 sm:mt-0 sm:col-span-2">`+data.Ammo.Brand.Name+`</dd>
+						</div>
+						<div class="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+							<dt class="text-sm font-medium text-gunmetal-500">Caliber</dt>
+							<dd class="mt-1 text-sm text-gunmetal-900 sm:mt-0 sm:col-span-2">`+data.Ammo.Caliber.Caliber+`</dd>
+						</div>
+						<div class="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+							<dt class="text-sm font-medium text-gunmetal-500">Bullet Style</dt>
+							<dd class="mt-1 text-sm text-gunmetal-900 sm:mt-0 sm:col-span-2">`+getBulletStyle(data.Ammo)+`</dd>
+						</div>
+						<div class="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+							<dt class="text-sm font-medium text-gunmetal-500">Grain</dt>
+							<dd class="mt-1 text-sm text-gunmetal-900 sm:mt-0 sm:col-span-2">`+getGrain(data.Ammo)+`</dd>
+						</div>
+						<div class="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+							<dt class="text-sm font-medium text-gunmetal-500">Casing</dt>
+							<dd class="mt-1 text-sm text-gunmetal-900 sm:mt-0 sm:col-span-2">`+getCasing(data.Ammo)+`</dd>
+						</div>
+						<div class="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+							<dt class="text-sm font-medium text-gunmetal-500">Count</dt>
+							<dd class="mt-1 text-sm text-gunmetal-900 sm:mt-0 sm:col-span-2">`+fmt.Sprintf("%d rounds", data.Ammo.Count)+`</dd>
+						</div>
+						<div class="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+							<dt class="text-sm font-medium text-gunmetal-500">Acquired</dt>
+							<dd class="mt-1 text-sm text-gunmetal-900 sm:mt-0 sm:col-span-2">`+acquiredDate+`</dd>
+						</div>
+						<div class="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+							<dt class="text-sm font-medium text-gunmetal-500">Owned For</dt>
+							<dd class="mt-1 text-sm text-gunmetal-900 sm:mt-0 sm:col-span-2">`+timeOwned+`</dd>
+						</div>
+						<div class="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+							<dt class="text-sm font-medium text-gunmetal-500">Price Paid</dt>
+							<dd class="mt-1 text-sm text-gunmetal-900 sm:mt-0 sm:col-span-2">`+priceText+`</dd>
+						</div>
+						<div class="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+							<dt class="text-sm font-medium text-gunmetal-500">Cost Per Round</dt>
+							<dd class="mt-1 text-sm text-gunmetal-900 sm:mt-0 sm:col-span-2">`+costPerRound+`</dd>
+						</div>
+					</dl>
+				</div>
+			</div>
+		`)
+		
+		return err
+	}))
+}
+
+// Helper functions to get related model details
+func getBulletStyle(ammo *models.Ammo) string {
+	if ammo.BulletStyleID == 0 {
+		return "Not specified"
+	}
+	return ammo.BulletStyle.Type
+}
+
+func getGrain(ammo *models.Ammo) string {
+	if ammo.GrainID == 0 {
+		return "Not specified"
+	}
+	return fmt.Sprintf("%d gr", ammo.Grain.Weight)
+}
+
+func getCasing(ammo *models.Ammo) string {
+	if ammo.CasingID == 0 {
+		return "Not specified"
+	}
+	return ammo.Casing.Type
+} 

@@ -28,6 +28,7 @@ func (s *Server) RegisterAdminRoutes(r *gin.Engine, authController *controller.A
 	adminBulletStyleController := controller.NewAdminBulletStyleController(s.db)
 	adminGrainController := controller.NewAdminGrainController(s.db)
 	adminBrandController := controller.NewAdminBrandController(s.db)
+	adminMunitionsController := controller.NewAdminMunitionsController(s.db)
 
 	// Create Stripe security controller
 	stripeSecurityController := controller.NewStripeSecurityController(s.ipFilterService)
@@ -153,6 +154,22 @@ func (s *Server) RegisterAdminRoutes(r *gin.Engine, authController *controller.A
 			adminGroup.GET("/dashboard", adminDashboardController.Dashboard)
 			adminGroup.GET("/detailed-health", webhookStatsMiddleware, adminDashboardController.DetailedHealth)
 			adminGroup.GET("/error-metrics", adminDashboardController.ErrorMetrics)
+		}
+
+		// ===== Guns Management Routes =====
+		if casbinAuth != nil {
+			adminGroup.GET("/guns", casbinAuth.FlexibleAuthorize("guns", "read"), adminGunsController.Index)
+		} else {
+			adminGroup.GET("/guns", adminGunsController.Index)
+		}
+
+		// ===== Ammunition Management Routes =====
+		if casbinAuth != nil {
+			adminGroup.GET("/munitions", casbinAuth.FlexibleAuthorize("munitions", "read"), adminMunitionsController.Index)
+			adminGroup.GET("/munitions/:id", casbinAuth.FlexibleAuthorize("munitions", "read"), adminMunitionsController.Show)
+		} else {
+			adminGroup.GET("/munitions", adminMunitionsController.Index)
+			adminGroup.GET("/munitions/:id", adminMunitionsController.Show)
 		}
 
 		// Stripe security routes
@@ -456,13 +473,6 @@ func (s *Server) RegisterAdminRoutes(r *gin.Engine, authController *controller.A
 			adminGroup.GET("/payments-history", casbinAuth.FlexibleAuthorize("payments", "read"), adminPaymentController.ShowPaymentsHistory)
 		} else {
 			adminGroup.GET("/payments-history", adminPaymentController.ShowPaymentsHistory)
-		}
-
-		// ===== Guns Management Routes =====
-		if casbinAuth != nil {
-			adminGroup.GET("/guns", casbinAuth.FlexibleAuthorize("guns", "read"), adminGunsController.Index)
-		} else {
-			adminGroup.GET("/guns", adminGunsController.Index)
 		}
 
 		// ===== Dashboard Routes =====
