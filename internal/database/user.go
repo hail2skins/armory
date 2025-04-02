@@ -123,15 +123,6 @@ func (u *User) IsRecoveryExpired() bool {
 	return time.Now().After(u.RecoveryTokenExpiry)
 }
 
-// IsLockedOut returns whether the user is locked out due to too many login attempts
-func (u *User) IsLockedOut() bool {
-	if u.LoginAttempts >= 5 {
-		// Check if the lockout period (15 minutes) has passed
-		return time.Since(u.LastLoginAttempt) < 15*time.Minute
-	}
-	return false
-}
-
 // GenerateVerificationToken generates a verification token and sets expiry
 func (u *User) GenerateVerificationToken() string {
 	token := make([]byte, 32)
