@@ -163,7 +163,11 @@ func (c *AdminMunitionsController) Index(ctx *gin.Context) {
 	})
 
 	for _, u := range users {
-		count, _ := c.db.CountAmmoByUser(u.ID)
+		count, err := c.db.CountAmmoByUser(u.ID)
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to count ammo for user " + u.Email})
+			return
+		}
 		userMap[u.ID] = struct {
 			Email     string
 			AmmoCount int64

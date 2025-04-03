@@ -305,14 +305,30 @@ templ MunitionsIndex(data *MunitionsIndexData) {
 						
 						// Check if the two rows should switch
 						if (dir == "asc") {
-							if (x.innerHTML.toLowerCase() > y.innerHTML.toLowerCase()) {
-								shouldSwitch = true;
-								break;
+							// Use numeric comparison for the count column (index 7)
+							if (colIndex === 7) {
+								if (parseInt(x.innerHTML.trim()) > parseInt(y.innerHTML.trim())) {
+									shouldSwitch = true;
+									break;
+								}
+							} else {
+								if (x.innerHTML.toLowerCase() > y.innerHTML.toLowerCase()) {
+									shouldSwitch = true;
+									break;
+								}
 							}
 						} else if (dir == "desc") {
-							if (x.innerHTML.toLowerCase() < y.innerHTML.toLowerCase()) {
-								shouldSwitch = true;
-								break;
+							// Use numeric comparison for the count column (index 7)
+							if (colIndex === 7) {
+								if (parseInt(x.innerHTML.trim()) < parseInt(y.innerHTML.trim())) {
+									shouldSwitch = true;
+									break;
+								}
+							} else {
+								if (x.innerHTML.toLowerCase() < y.innerHTML.toLowerCase()) {
+									shouldSwitch = true;
+									break;
+								}
 							}
 						}
 					}
