@@ -71,10 +71,6 @@ func (s *OwnerGunIntegrationTest) TestOwnerPageWithNoFirearms() {
 	s.Contains(body, "Total Firearms:</strong> 0")
 	s.Contains(body, "Total Paid:</strong> $0.00")
 
-	// Verify the "Under Construction" link with href="#"
-	s.Contains(body, "Under Construction")
-	s.Contains(body, "href=\"#\"")
-
 	// Verify the buttons for viewing and adding firearms
 	s.Contains(body, "View Arsenal")
 	s.Contains(body, "href=\"/owner/guns/arsenal\"")

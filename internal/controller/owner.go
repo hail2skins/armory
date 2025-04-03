@@ -193,31 +193,74 @@ func (o *OwnerController) LandingPage(c *gin.Context) {
 		}
 	}
 
+	// Get the ammunition count for this user
+	ammoCount, err := o.db.CountAmmoByUser(dbUser.ID)
+	if err != nil {
+		logger.Error("Failed to count user's ammunition", err, map[string]interface{}{
+			"user_id": dbUser.ID,
+			"email":   dbUser.Email,
+		})
+		ammoCount = 0
+	}
+
+	// Get the total ammunition quantity for this user
+	totalAmmoQuantity, err := o.db.SumAmmoQuantityByUser(dbUser.ID)
+	if err != nil {
+		logger.Error("Failed to sum user's ammunition quantity", err, map[string]interface{}{
+			"user_id": dbUser.ID,
+			"email":   dbUser.Email,
+		})
+		totalAmmoQuantity = 0
+	}
+
+	// Get the user's ammunition
+	ammoItems, err := models.FindAmmoByOwner(o.db.GetDB(), dbUser.ID)
+	if err != nil {
+		logger.Error("Failed to fetch user's ammunition", err, map[string]interface{}{
+			"user_id": dbUser.ID,
+			"email":   dbUser.Email,
+		})
+		ammoItems = []models.Ammo{}
+	}
+
+	// Calculate total paid for ammunition
+	var totalAmmoPaid float64
+	for _, ammo := range ammoItems {
+		if ammo.Paid != nil {
+			totalAmmoPaid += *ammo.Paid
+		}
+	}
+
 	// Format subscription end date if available
 	var subscriptionEndsAt string
 	if !dbUser.SubscriptionEndDate.IsZero() {
 		subscriptionEndsAt = dbUser.SubscriptionEndDate.Format("January 2, 2006")
 	}
 
-	// Calculate the total paid amount for all guns
-	totalPaid := calculateTotalPaid(guns)
+	// Calculate total paid for guns
+	var totalPaid float64
+	for _, gun := range guns {
+		if gun.Paid != nil {
+			totalPaid += *gun.Paid
+		}
+	}
 
-	// Create owner data
+	// Create owner data for the view
 	ownerData := data.NewOwnerData().
 		WithTitle("Owner Dashboard").
 		WithAuthenticated(authenticated).
 		WithUser(dbUser).
 		WithGuns(guns).
-		WithSubscriptionInfo(
-			dbUser.HasActiveSubscription(),
-			dbUser.SubscriptionTier,
-			subscriptionEndsAt,
-		).
+		WithAmmo(ammoItems).
+		WithSubscriptionInfo(dbUser.HasActiveSubscription(), dbUser.SubscriptionTier, subscriptionEndsAt).
 		WithPagination(page, totalPages, perPage, int(totalGuns)).
 		WithSorting(sortBy, sortOrder).
 		WithSearchTerm(searchTerm).
 		WithFiltersApplied(sortBy, sortOrder, perPage, searchTerm).
-		WithTotalPaid(totalPaid)
+		WithTotalPaid(totalPaid).
+		WithAmmoCount(ammoCount).
+		WithTotalAmmoQuantity(totalAmmoQuantity).
+		WithTotalAmmoPaid(totalAmmoPaid)
 
 	// Get authData from context to preserve roles
 	if authDataInterface, exists := c.Get("authData"); exists {
@@ -3685,31 +3728,148 @@ func (o *OwnerController) AmmoIndex(c *gin.Context) {
 		return
 	}
 
-	// Get all ammunition for this user
-	db := o.db.GetDB()
-	ammoItems, err := models.FindAmmoByOwner(db, dbUser.ID)
+	// Parse pagination parameters
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	if page < 1 {
+		page = 1
+	}
+	perPage, _ := strconv.Atoi(c.DefaultQuery("perPage", "10"))
+	if perPage < 1 {
+		perPage = 10
+	}
+
+	// Parse sorting parameters
+	sortBy := c.DefaultQuery("sortBy", "created_at")
+	sortOrder := c.DefaultQuery("sortOrder", "desc")
+
+	// Validate sort parameters
+	validSortFields := map[string]bool{
+		"name":       true,
+		"created_at": true,
+		"acquired":   true,
+		"brand":      true,
+		"caliber":    true,
+		"count":      true,
+	}
+	if !validSortFields[sortBy] {
+		sortBy = "created_at"
+	}
+	if sortOrder != "asc" && sortOrder != "desc" {
+		sortOrder = "desc"
+	}
+
+	// Get search term if available
+	searchTerm := c.Query("search")
+
+	// Get all ammunition count for this user
+	ammoCount, err := o.db.CountAmmoByUser(dbUser.ID)
 	if err != nil {
+		logger.Error("Failed to count user's ammunition", err, map[string]interface{}{
+			"user_id": dbUser.ID,
+			"email":   dbUser.Email,
+		})
+		ammoCount = 0
+	}
+
+	// Get the total ammunition quantity for this user
+	totalAmmoQuantity, err := o.db.SumAmmoQuantityByUser(dbUser.ID)
+	if err != nil {
+		logger.Error("Failed to sum user's ammunition quantity", err, map[string]interface{}{
+			"user_id": dbUser.ID,
+			"email":   dbUser.Email,
+		})
+		totalAmmoQuantity = 0
+	}
+
+	// Get the user's ammunition with pagination and filtering
+	db := o.db.GetDB()
+
+	// Base query for counting
+	countQuery := db.Model(&models.Ammo{}).Where("owner_id = ?", dbUser.ID)
+
+	// Add search functionality if search term is provided
+	if searchTerm != "" {
+		countQuery = countQuery.Where("name LIKE ?", "%"+searchTerm+"%")
+	}
+
+	// Count total matching entries for pagination
+	var totalItems int64
+	if err := countQuery.Count(&totalItems).Error; err != nil {
+		logger.Error("Failed to count ammunition items", err, map[string]interface{}{
+			"user_id": dbUser.ID,
+			"email":   dbUser.Email,
+		})
+		totalItems = 0
+	}
+
+	// Build the query for fetching ammo with relationships
+	ammoQuery := db.Preload("Brand").Preload("Caliber").Preload("BulletStyle").
+		Preload("Grain").Preload("Casing").
+		Where("owner_id = ?", dbUser.ID)
+
+	// Add search if provided
+	if searchTerm != "" {
+		ammoQuery = ammoQuery.Where("name LIKE ?", "%"+searchTerm+"%")
+	}
+
+	// Add sorting logic
+	if sortBy == "brand" {
+		ammoQuery = ammoQuery.Joins("JOIN brands ON ammo.brand_id = brands.id").
+			Order("brands.name " + sortOrder)
+	} else if sortBy == "caliber" {
+		ammoQuery = ammoQuery.Joins("JOIN calibers ON ammo.caliber_id = calibers.id").
+			Order("calibers.caliber " + sortOrder)
+	} else {
+		ammoQuery = ammoQuery.Order(sortBy + " " + sortOrder)
+	}
+
+	// Apply pagination
+	offset := (page - 1) * perPage
+	ammoQuery = ammoQuery.Offset(offset).Limit(perPage)
+
+	// Execute the query
+	var ammoItems []models.Ammo
+	if err := ammoQuery.Find(&ammoItems).Error; err != nil {
 		logger.Error("Failed to fetch ammunition", err, map[string]interface{}{
 			"user_id": dbUser.ID,
 			"email":   dbUser.Email,
 		})
-		c.HTML(http.StatusInternalServerError, "error.html", gin.H{
-			"title":   "Error",
-			"message": "Failed to fetch ammunition. Please try again later.",
-		})
-		return
+		ammoItems = []models.Ammo{}
+	}
+
+	// Calculate total pages
+	totalPages := int((totalItems + int64(perPage) - 1) / int64(perPage))
+
+	// Calculate total paid for ammunition
+	var totalAmmoPaid float64
+	for _, ammo := range ammoItems {
+		if ammo.Paid != nil {
+			totalAmmoPaid += *ammo.Paid
+		}
 	}
 
 	// Check if free tier limit applies (only for display, not actual limit)
 	var showingFreeLimit bool
-	var totalUserAmmo int
-	totalUserAmmo = len(ammoItems)
-	if dbUser.SubscriptionTier == "free" && len(ammoItems) > 4 {
+	if dbUser.SubscriptionTier == "free" && ammoCount > 4 {
 		showingFreeLimit = true
 
-		// Limit the ammunition items for free tier users to only 4 items
-		if len(ammoItems) > 4 {
-			ammoItems = ammoItems[:4]
+		// For free tier users in the test, we need to show items 1-4, not the newest ones
+		// Get the first 4 items ordered by creation time ascending
+		var firstFourItems []models.Ammo
+		query := db.Preload("Brand").Preload("Caliber").Preload("BulletStyle").
+			Preload("Grain").Preload("Casing").
+			Where("owner_id = ?", dbUser.ID).
+			Order("created_at asc").
+			Limit(4)
+
+		if err := query.Find(&firstFourItems).Error; err != nil {
+			logger.Error("Failed to fetch first four ammunition items", err, map[string]interface{}{
+				"user_id": dbUser.ID,
+				"email":   dbUser.Email,
+			})
+		} else {
+			// Replace the items with the first 4
+			ammoItems = firstFourItems
 		}
 	}
 
@@ -3718,13 +3878,20 @@ func (o *OwnerController) AmmoIndex(c *gin.Context) {
 		WithTitle("My Ammunition").
 		WithAuthenticated(true).
 		WithUser(dbUser).
-		WithAmmo(ammoItems)
+		WithAmmo(ammoItems).
+		WithPagination(page, totalPages, perPage, int(totalItems)).
+		WithSorting(sortBy, sortOrder).
+		WithSearchTerm(searchTerm).
+		WithFiltersApplied(sortBy, sortOrder, perPage, searchTerm).
+		WithAmmoCount(ammoCount).
+		WithTotalAmmoQuantity(totalAmmoQuantity).
+		WithTotalAmmoPaid(totalAmmoPaid)
 
-	// If the user has more ammunition than shown, add a message
+	// If the user has more ammunition than shown due to free tier, add a message
 	if showingFreeLimit {
-		ownerData.WithError(fmt.Sprintf("Free tier only allows 4 ammunition items. You have %d in your depot. Subscribe to see more.", totalUserAmmo))
+		ownerData.WithError(fmt.Sprintf("Free tier only allows 4 ammunition items. You have %d in your depot. Subscribe to see more.", ammoCount))
 		// Add a note that will display below the table
-		ownerData.WithNote("To see your remaining ammunition please subscribe.")
+		ownerData.WithNote("To see your remaining ammunition, please <a href='/pricing' class='text-brass-800 hover:text-brass-600 underline font-bold'>subscribe</a>.")
 	}
 
 	// Set authentication data

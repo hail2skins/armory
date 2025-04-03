@@ -980,3 +980,27 @@ func (m *MockDBWithContext) CheckExpiredPromotionSubscription(user *database.Use
 	args := m.Called(user)
 	return args.Bool(0), args.Error(1)
 }
+
+// Ammunition-related methods for MockDBWithContext
+func (m *MockDBWithContext) CountAmmoByUser(userID uint) (int64, error) {
+	args := m.Called(userID)
+	return args.Get(0).(int64), args.Error(1)
+}
+
+func (m *MockDBWithContext) FindAllAmmo() ([]models.Ammo, error) {
+	args := m.Called()
+	return args.Get(0).([]models.Ammo), args.Error(1)
+}
+
+func (m *MockDBWithContext) FindAmmoByID(id uint) (*models.Ammo, error) {
+	args := m.Called(id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*models.Ammo), args.Error(1)
+}
+
+func (m *MockDBWithContext) SumAmmoQuantityByUser(userID uint) (int64, error) {
+	args := m.Called(userID)
+	return args.Get(0).(int64), args.Error(1)
+}

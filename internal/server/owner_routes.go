@@ -1,15 +1,9 @@
 package server
 
 import (
-	"fmt"
-	"net/http"
-
-	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"github.com/hail2skins/armory/internal/controller"
 	"github.com/hail2skins/armory/internal/database"
-	"github.com/hail2skins/armory/internal/logger"
-	"github.com/hail2skins/armory/internal/middleware"
 	"github.com/hail2skins/armory/internal/services/email"
 )
 
@@ -95,136 +89,9 @@ func RegisterOwnerRoutes(router *gin.Engine, db database.Service, authController
 			gunGroup.POST("/:id/delete", ownerController.Delete)
 		}
 
-		// Ammunition routes - protected by permission middleware
-		// This will ensure only users with appropriate permissions can access the ammo features
+		// Ammunition routes - no longer protected by permission middleware
+		// Making ammunition features available to all authenticated users
 		ammoGroup := ownerGroup.Group("/munitions")
-		// Add middleware to check for permissions
-		ammoGroup.Use(func(c *gin.Context) {
-			// Get the auth controller from the context
-			authControllerInterface, exists := c.Get("authController")
-			if !exists {
-				logger.Error("Auth controller not in context", nil, map[string]interface{}{
-					"path": c.Request.URL.Path,
-				})
-				c.Redirect(http.StatusSeeOther, "/")
-				c.Abort()
-				return
-			}
-
-			authController, ok := authControllerInterface.(*controller.AuthController)
-			if !ok {
-				logger.Error("Auth controller not correct type", nil, map[string]interface{}{
-					"path": c.Request.URL.Path,
-					"type": fmt.Sprintf("%T", authControllerInterface),
-				})
-				c.Redirect(http.StatusSeeOther, "/")
-				c.Abort()
-				return
-			}
-
-			// Get current user
-			userInfo, authenticated := authController.GetCurrentUser(c)
-			if !authenticated {
-				logger.Error("User not authenticated", nil, map[string]interface{}{
-					"path": c.Request.URL.Path,
-				})
-				c.Redirect(http.StatusSeeOther, "/login")
-				c.Abort()
-				return
-			}
-
-			// Get the casbin auth from the context (set up in server.go)
-			casbinAuth, exists := c.Get("casbinAuth")
-			if !exists {
-				logger.Error("CasbinAuth not in context", nil, map[string]interface{}{
-					"path": c.Request.URL.Path,
-				})
-				c.Redirect(http.StatusSeeOther, "/")
-				c.Abort()
-				return
-			}
-
-			// Check permission using casbin
-			if casbinAuthInstance, ok := casbinAuth.(*middleware.CasbinAuth); ok {
-				// Reload policy from database to ensure we have the latest permissions
-				if err := casbinAuthInstance.ReloadPolicy(); err != nil {
-					logger.Error("Failed to reload policy", err, map[string]interface{}{
-						"path": c.Request.URL.Path,
-					})
-					c.Redirect(http.StatusSeeOther, "/")
-					c.Abort()
-					return
-				}
-
-				// Get username to check permissions
-				username := userInfo.GetUserName()
-				logger.Info("Checking ammunition permissions", map[string]interface{}{
-					"username": username,
-					"path":     c.Request.URL.Path,
-				})
-
-				// Check user roles
-				roles := casbinAuthInstance.GetUserRoles(username)
-				logger.Info("User roles for ammunition access", map[string]interface{}{
-					"username": username,
-					"roles":    roles,
-				})
-
-				// Check for admin role first
-				isAdmin := false
-				for _, role := range roles {
-					if role == "admin" {
-						isAdmin = true
-						break
-					}
-				}
-
-				if isAdmin {
-					logger.Info("Access granted (admin)", map[string]interface{}{
-						"username": username,
-					})
-					c.Next()
-					return
-				}
-
-				// Check for any role - this is what's actually working in production
-				hasAnyRole := len(roles) > 0
-
-				logger.Info("Role check results", map[string]interface{}{
-					"username":   username,
-					"hasAnyRole": hasAnyRole,
-					"roles":      roles,
-				})
-
-				if !hasAnyRole {
-					logger.Info("Access denied (no roles)", map[string]interface{}{
-						"username": username,
-					})
-					session := sessions.Default(c)
-					session.AddFlash("You don't have permission to access ammunition management")
-					session.Save()
-
-					c.Redirect(http.StatusSeeOther, "/")
-					c.Abort()
-					return
-				}
-
-				// User has a role, continue to next middleware
-				logger.Info("Access granted (role found)", map[string]interface{}{
-					"username": username,
-					"roles":    roles,
-				})
-				c.Next()
-			} else {
-				logger.Error("CasbinAuth not correct type", nil, map[string]interface{}{
-					"path": c.Request.URL.Path,
-					"type": fmt.Sprintf("%T", casbinAuth),
-				})
-				c.Redirect(http.StatusSeeOther, "/")
-				c.Abort()
-				return
-			}
-		})
 		{
 			// Index and Create ammunition
 			ammoGroup.GET("", ownerController.AmmoIndex)

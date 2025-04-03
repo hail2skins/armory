@@ -74,28 +74,144 @@ templ Index(data *data.OwnerData) {
 			}
 		}
 
+		// Ammunition Statistics
+		_, err = io.WriteString(w, `
+		<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+			<div class="bg-gunmetal-100 bg-opacity-80 p-4 rounded-lg shadow">
+				<h3 class="font-semibold text-lg text-gunmetal-800 mb-2">Ammunition Overview</h3>
+				<p class="text-gunmetal-800"><strong>Total Entries:</strong> `+strconv.FormatInt(data.AmmoCount, 10)+`</p>
+				<p class="text-gunmetal-800"><strong>Total Rounds:</strong> `+strconv.FormatInt(data.TotalAmmoQuantity, 10)+`</p>
+				<p class="text-sm text-gunmetal-600 mt-2">Showing `+strconv.Itoa(data.ShowingFrom)+`-`+strconv.Itoa(data.ShowingTo)+` of `+strconv.Itoa(data.TotalItems)+`</p>
+			</div>
+			<div class="bg-gunmetal-100 bg-opacity-80 p-4 rounded-lg shadow">
+				<h3 class="font-semibold text-lg text-gunmetal-800 mb-2">Cost Summary</h3>
+				<p class="text-gunmetal-800"><strong>Total Paid:</strong> $`+strconv.FormatFloat(data.TotalAmmoPaid, 'f', 2, 64)+`</p>
+				<p class="text-gunmetal-800"><strong>Price Per Round:</strong> $`+func() string {
+					if data.TotalAmmoQuantity > 0 {
+						pricePerRound := data.TotalAmmoPaid / float64(data.TotalAmmoQuantity)
+						return strconv.FormatFloat(pricePerRound, 'f', 3, 64)
+					}
+					return "0.000"
+				}()+`</p>
+				<p class="text-sm text-gunmetal-600 mt-2">Track your ammunition spending</p>
+			</div>
+			<div class="bg-gunmetal-100 bg-opacity-80 p-4 rounded-lg shadow">
+				<h3 class="font-semibold text-lg text-gunmetal-800 mb-2">Quick Links</h3>
+				<div class="flex flex-col space-y-2">
+					<a href="/owner/munitions/new" class="text-brass-700 hover:text-brass-500 underline">Add New Ammunition</a>
+					<a href="/owner" class="text-brass-700 hover:text-brass-500 underline">Back to Dashboard</a>
+					<a href="/owner/guns/arsenal" class="text-brass-700 hover:text-brass-500 underline">View Arsenal</a>
+				</div>
+			</div>
+		</div>
+		`)
+		if err != nil {
+			return err
+		}
+
 		// Search and filter controls
 		_, err = io.WriteString(w, `
-		<div class="flex flex-col md:flex-row gap-4 mb-6">
-			<input type="text" placeholder="Search ammunition..." class="border border-gray-300 rounded-md px-4 py-2 flex-grow focus:outline-none focus:ring-2 focus:ring-gunmetal-500">
-			
-			<div class="flex gap-2">
-				<select class="border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-gunmetal-500">
-					<option value="name">Sort by Name</option>
-					<option value="brand">Sort by Brand</option>
-					<option value="caliber">Sort by Caliber</option>
-					<option value="count">Sort by Quantity</option>
-					<option value="acquired">Sort by Date</option>
-				</select>
-				
-				<select class="border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-gunmetal-500">
-					<option value="asc">Ascending</option>
-					<option value="desc">Descending</option>
-				</select>
-				
-				<button class="bg-gunmetal-600 hover:bg-gunmetal-700 text-white font-bold py-2 px-4 rounded">Apply</button>
-				<button class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded">Reset</button>
-			</div>
+		<div class="mb-6">
+			<form action="/owner/munitions" method="GET" class="flex flex-col md:flex-row gap-2">
+				<div class="flex-grow">
+					<input 
+						type="text" 
+						name="search" 
+						value="`+data.SearchTerm+`"
+						placeholder="Search ammunition..." 
+						class="w-full px-4 py-2 text-gunmetal-800 border border-gunmetal-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brass-400"
+					>
+				</div>
+				<div class="md:w-48">
+					<select name="sortBy" class="w-full px-4 py-2 text-gunmetal-800 border border-gunmetal-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brass-400">
+						<option value="name" `+func() string {
+							if data.SortBy == "name" {
+								return "selected"
+							}
+							return ""
+						}()+`>Sort by Name</option>
+						<option value="created_at" `+func() string {
+							if data.SortBy == "created_at" {
+								return "selected"
+							}
+							return ""
+						}()+`>Sort by Date Added</option>
+						<option value="acquired" `+func() string {
+							if data.SortBy == "acquired" {
+								return "selected"
+							}
+							return ""
+						}()+`>Sort by Date Acquired</option>
+						<option value="brand" `+func() string {
+							if data.SortBy == "brand" {
+								return "selected"
+							}
+							return ""
+						}()+`>Sort by Brand</option>
+						<option value="caliber" `+func() string {
+							if data.SortBy == "caliber" {
+								return "selected"
+							}
+							return ""
+						}()+`>Sort by Caliber</option>
+						<option value="count" `+func() string {
+							if data.SortBy == "count" {
+								return "selected"
+							}
+							return ""
+						}()+`>Sort by Quantity</option>
+					</select>
+				</div>
+				<div class="md:w-40">
+					<select name="sortOrder" class="w-full px-4 py-2 text-gunmetal-800 border border-gunmetal-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brass-400">
+						<option value="asc" `+func() string {
+							if data.SortOrder == "asc" {
+								return "selected"
+							}
+							return ""
+						}()+`>Ascending</option>
+						<option value="desc" `+func() string {
+							if data.SortOrder == "desc" {
+								return "selected"
+							}
+							return ""
+						}()+`>Descending</option>
+					</select>
+				</div>
+				<div class="md:w-36">
+					<select name="perPage" class="w-full px-4 py-2 text-gunmetal-800 border border-gunmetal-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brass-400">
+						<option value="10" `+func() string {
+							if data.PerPage == 10 {
+								return "selected"
+							}
+							return ""
+						}()+`>10 per page</option>
+						<option value="25" `+func() string {
+							if data.PerPage == 25 {
+								return "selected"
+							}
+							return ""
+						}()+`>25 per page</option>
+						<option value="50" `+func() string {
+							if data.PerPage == 50 {
+								return "selected"
+							}
+							return ""
+						}()+`>50 per page</option>
+					</select>
+				</div>
+				<button type="submit" class="px-4 py-2 bg-brass-400 hover:bg-brass-300 text-white font-medium rounded">
+					Apply
+				</button>
+				`+func() string {
+					if data.HasFiltersApplied {
+						return `<a href="/owner/munitions" class="px-4 py-2 bg-gunmetal-400 hover:bg-gunmetal-300 text-white font-medium rounded">
+							Reset
+						</a>`
+					}
+					return ""
+				}()+`
+			</form>
 		</div>
 		`)
 		if err != nil {
@@ -205,12 +321,100 @@ templ Index(data *data.OwnerData) {
 			if err != nil {
 				return err
 			}
+
+			// Add pagination controls
+			if data.TotalPages > 1 {
+				_, err = io.WriteString(w, `
+				<div class="mt-6 flex justify-between items-center">
+					<div class="text-sm text-gray-700">
+						Showing <span class="font-medium">`+strconv.Itoa(data.ShowingFrom)+`</span> to <span class="font-medium">`+strconv.Itoa(data.ShowingTo)+`</span> of <span class="font-medium">`+strconv.Itoa(data.TotalItems)+`</span> results
+					</div>
+					<div class="flex space-x-1">
+				`)
+				if err != nil {
+					return err
+				}
+
+				// Previous page button
+				if data.HasPreviousPage {
+					prevPage := strconv.Itoa(data.CurrentPage - 1)
+					_, err = io.WriteString(w, `
+						<a href="/owner/munitions?page=`+prevPage+`&perPage=`+strconv.Itoa(data.PerPage)+`&sortBy=`+data.SortBy+`&sortOrder=`+data.SortOrder+`&search=`+data.SearchTerm+`" class="px-4 py-2 bg-white border border-gray-300 rounded-md text-gunmetal-700 hover:bg-gray-50">
+							Previous
+						</a>
+					`)
+					if err != nil {
+						return err
+					}
+				} else {
+					_, err = io.WriteString(w, `
+						<span class="px-4 py-2 bg-gray-100 border border-gray-300 rounded-md text-gray-400 cursor-not-allowed">
+							Previous
+						</span>
+					`)
+					if err != nil {
+						return err
+					}
+				}
+
+				// Page number buttons
+				for i := data.StartPage; i <= data.EndPage; i++ {
+					pageNum := strconv.Itoa(i)
+					if i == data.CurrentPage {
+						_, err = io.WriteString(w, `
+							<span class="px-4 py-2 bg-brass-600 border border-brass-600 rounded-md text-white">
+								`+pageNum+`
+							</span>
+						`)
+					} else {
+						_, err = io.WriteString(w, `
+							<a href="/owner/munitions?page=`+pageNum+`&perPage=`+strconv.Itoa(data.PerPage)+`&sortBy=`+data.SortBy+`&sortOrder=`+data.SortOrder+`&search=`+data.SearchTerm+`" class="px-4 py-2 bg-white border border-gray-300 rounded-md text-gunmetal-700 hover:bg-gray-50">
+								`+pageNum+`
+							</a>
+						`)
+					}
+					if err != nil {
+						return err
+					}
+				}
+
+				// Next page button
+				if data.HasNextPage {
+					nextPage := strconv.Itoa(data.CurrentPage + 1)
+					_, err = io.WriteString(w, `
+						<a href="/owner/munitions?page=`+nextPage+`&perPage=`+strconv.Itoa(data.PerPage)+`&sortBy=`+data.SortBy+`&sortOrder=`+data.SortOrder+`&search=`+data.SearchTerm+`" class="px-4 py-2 bg-white border border-gray-300 rounded-md text-gunmetal-700 hover:bg-gray-50">
+							Next
+						</a>
+					`)
+					if err != nil {
+						return err
+					}
+				} else {
+					_, err = io.WriteString(w, `
+						<span class="px-4 py-2 bg-gray-100 border border-gray-300 rounded-md text-gray-400 cursor-not-allowed">
+							Next
+						</span>
+					`)
+					if err != nil {
+						return err
+					}
+				}
+
+				// Close pagination container
+				_, err = io.WriteString(w, `
+					</div>
+				</div>
+				`)
+				if err != nil {
+					return err
+				}
+			}
 		}
 
 		// Display note if present (subscription notice for free tier users)
 		if data.Note != "" {
 			_, err = io.WriteString(w, `
-			<div class="mt-2 p-3 bg-amber-50 text-amber-800 border border-amber-300 rounded-md">
+			<div class="mt-6 p-3 bg-amber-50 text-amber-800 border border-amber-300 rounded-md">
 				<p class="text-center font-medium">`+data.Note+`</p>
 			</div>
 			`)
