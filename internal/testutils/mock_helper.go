@@ -107,6 +107,7 @@ func CreateMockDB() *mocks.MockDB {
 	mockDB.On("CountAmmoByUser", mock.AnythingOfType("uint")).Return(int64(0), nil)
 	mockDB.On("FindAllAmmo").Return([]models.Ammo{}, nil)
 	mockDB.On("FindAmmoByID", mock.AnythingOfType("uint")).Return((*models.Ammo)(nil), nil)
+	mockDB.On("SumAmmoQuantityByUser", mock.AnythingOfType("uint")).Return(int64(0), nil)
 
 	return mockDB
 }
