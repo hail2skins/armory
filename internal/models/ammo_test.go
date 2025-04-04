@@ -488,7 +488,7 @@ func TestCreateAmmoWithExpended(t *testing.T) {
 		Count:         50,
 		Expended:      0,
 	}
-	err = CreateAmmo(db, ammo1)
+	err = CreateAmmoWithValidation(db, ammo1)
 	assert.NoError(t, err)
 
 	// Test case 2: Create ammo with valid Expended value (equal to Count)
@@ -505,7 +505,7 @@ func TestCreateAmmoWithExpended(t *testing.T) {
 		Count:         50,
 		Expended:      50,
 	}
-	err = CreateAmmo(db, ammo2)
+	err = CreateAmmoWithValidation(db, ammo2)
 	assert.NoError(t, err)
 
 	// Test case 3: Create ammo with valid Expended value (less than Count)
@@ -522,7 +522,7 @@ func TestCreateAmmoWithExpended(t *testing.T) {
 		Count:         50,
 		Expended:      25,
 	}
-	err = CreateAmmo(db, ammo3)
+	err = CreateAmmoWithValidation(db, ammo3)
 	assert.NoError(t, err)
 
 	// Test case 4: Try to create ammo with negative Expended value
@@ -539,7 +539,7 @@ func TestCreateAmmoWithExpended(t *testing.T) {
 		Count:         50,
 		Expended:      -5,
 	}
-	err = CreateAmmo(db, ammo4)
+	err = CreateAmmoWithValidation(db, ammo4)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "expended count cannot be negative")
 
@@ -557,7 +557,7 @@ func TestCreateAmmoWithExpended(t *testing.T) {
 		Count:         50,
 		Expended:      75,
 	}
-	err = CreateAmmo(db, ammo5)
+	err = CreateAmmoWithValidation(db, ammo5)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "expended count cannot be greater than total count")
 
@@ -640,7 +640,7 @@ func TestUpdateAmmoWithExpended(t *testing.T) {
 
 	// Test case 1: Update with valid Expended value
 	ammo.Expended = 25
-	err = UpdateAmmo(db, ammo)
+	err = UpdateAmmoWithValidation(db, ammo)
 	assert.NoError(t, err)
 
 	// Verify update
@@ -651,7 +651,7 @@ func TestUpdateAmmoWithExpended(t *testing.T) {
 
 	// Test case 2: Update with Expended = Count
 	ammo.Expended = 50
-	err = UpdateAmmo(db, ammo)
+	err = UpdateAmmoWithValidation(db, ammo)
 	assert.NoError(t, err)
 
 	// Verify update
@@ -661,13 +661,13 @@ func TestUpdateAmmoWithExpended(t *testing.T) {
 
 	// Test case 3: Try to update with negative Expended
 	ammo.Expended = -10
-	err = UpdateAmmo(db, ammo)
+	err = UpdateAmmoWithValidation(db, ammo)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "expended count cannot be negative")
 
 	// Test case 4: Try to update with Expended > Count
 	ammo.Expended = 60
-	err = UpdateAmmo(db, ammo)
+	err = UpdateAmmoWithValidation(db, ammo)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "expended count cannot be greater than total count")
 
