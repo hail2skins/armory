@@ -62,19 +62,13 @@ func FindAmmoByID(db *gorm.DB, id uint, ownerID uint) (*Ammo, error) {
 }
 
 // CreateAmmo creates a new ammo record in the database
+// Note: This function does not perform validation. Use CreateAmmoWithValidation from ammo_validation.go instead
 func CreateAmmo(db *gorm.DB, ammo *Ammo) error {
-	// Validate expended count
-	if ammo.Expended < 0 {
-		return errors.New("expended count cannot be negative")
-	}
-	if ammo.Expended > ammo.Count {
-		return errors.New("expended count cannot be greater than total count")
-	}
-
 	return db.Create(ammo).Error
 }
 
 // UpdateAmmo updates an existing ammo record in the database
+// Note: This function does not perform validation. Use UpdateAmmoWithValidation from ammo_validation.go instead
 func UpdateAmmo(db *gorm.DB, ammo *Ammo) error {
 	// Set the updated_at time
 	ammo.UpdatedAt = time.Now()
@@ -83,14 +77,6 @@ func UpdateAmmo(db *gorm.DB, ammo *Ammo) error {
 	var existingAmmo Ammo
 	if err := db.First(&existingAmmo, ammo.ID).Error; err != nil {
 		return err
-	}
-
-	// Validate expended count
-	if ammo.Expended < 0 {
-		return errors.New("expended count cannot be negative")
-	}
-	if ammo.Expended > ammo.Count {
-		return errors.New("expended count cannot be greater than total count")
 	}
 
 	// Update the ammo with all fields
