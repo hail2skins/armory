@@ -387,7 +387,7 @@ templ Owner(data *data.OwnerData) {
 					
 					<div class="bg-gunmetal-100 bg-opacity-80 p-4 rounded-lg shadow mb-6">
 						<h3 class="font-semibold text-lg text-gunmetal-800 mb-2">Ammunition Overview</h3>
-						<p class="text-gunmetal-800"><strong>Total Rounds:</strong> ` + strconv.FormatInt(data.TotalAmmoQuantity, 10) + `</p>
+						<p class="text-gunmetal-800"><strong>Remaining Rounds:</strong> ` + strconv.FormatInt(data.TotalAmmoQuantity - data.TotalAmmoExpended, 10) + `</p>
 						<p class="text-gunmetal-800"><strong>Total Paid:</strong> $` + strconv.FormatFloat(data.TotalAmmoPaid, 'f', 2, 64) + `</p>
 						<p class="text-gunmetal-800"><strong>Price Per Round:</strong> $` + func() string {
 							if data.TotalAmmoQuantity > 0 {
@@ -425,7 +425,7 @@ templ Owner(data *data.OwnerData) {
 											<th class="py-2 px-4 text-left text-gunmetal-800">Name</th>
 											<th class="py-2 px-4 text-left text-gunmetal-800">Brand</th>
 											<th class="py-2 px-4 text-left text-gunmetal-800">Caliber</th>
-											<th class="py-2 px-4 text-left text-gunmetal-800">Count</th>
+											<th class="py-2 px-4 text-left text-gunmetal-800">Remaining</th>
 											<th class="py-2 px-4 text-left text-gunmetal-800">Actions</th>
 										</tr>
 									</thead>
@@ -444,7 +444,7 @@ templ Owner(data *data.OwnerData) {
 									</td>
 									<td class="py-2 px-4 text-gunmetal-800">` + ammo.Brand.Name + `</td>
 									<td class="py-2 px-4 text-gunmetal-800">` + ammo.Caliber.Caliber + `</td>
-									<td class="py-2 px-4 text-gunmetal-800">` + strconv.Itoa(ammo.Count) + `</td>
+									<td class="py-2 px-4 text-gunmetal-800">` + strconv.Itoa(ammo.Count - ammo.Expended) + `</td>
 									<td class="py-2 px-4">
 										<div class="flex justify-center space-x-2">
 											<a href="/owner/munitions/` + strconv.FormatUint(uint64(ammo.ID), 10) + `" class="text-brass-700 hover:text-brass-500">

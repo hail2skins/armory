@@ -1093,6 +1093,15 @@ func (s *TestService) SumAmmoQuantityByUser(userID uint) (int64, error) {
 	return totalCount, nil
 }
 
+// SumAmmoExpendedByUser calculates the total number of expended ammunition rounds for a user
+func (s *TestService) SumAmmoExpendedByUser(userID uint) (int64, error) {
+	var totalCount int64
+	if err := s.db.Model(&models.Ammo{}).Select("COALESCE(SUM(expended), 0)").Where("owner_id = ?", userID).Scan(&totalCount).Error; err != nil {
+		return 0, err
+	}
+	return totalCount, nil
+}
+
 // FindAllAmmo returns all ammunition
 func (s *TestService) FindAllAmmo() ([]models.Ammo, error) {
 	var ammo []models.Ammo

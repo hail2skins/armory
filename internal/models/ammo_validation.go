@@ -60,6 +60,14 @@ func (a *Ammo) Validate(db *gorm.DB) error {
 		return ErrAmmoNegativeCount
 	}
 
+	// Validate expended (can't be negative or greater than count)
+	if a.Expended < 0 {
+		return errors.New("expended count cannot be negative")
+	}
+	if a.Expended > a.Count {
+		return errors.New("expended count cannot be greater than total count")
+	}
+
 	// Validate acquired date (can't be in the future)
 	if a.Acquired != nil && a.Acquired.After(time.Now()) {
 		return ErrAmmoFutureDate
@@ -157,6 +165,7 @@ func UpdateAmmoWithValidation(db *gorm.DB, ammo *Ammo) error {
 		"updated_at":      ammo.UpdatedAt,
 		"paid":            ammo.Paid,
 		"count":           ammo.Count,
+		"expended":        ammo.Expended,
 	})
 
 	if result.Error != nil {

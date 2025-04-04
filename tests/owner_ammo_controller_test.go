@@ -49,6 +49,7 @@ func TestAmmoCreate(t *testing.T) {
 	formData.Set("brand_id", fmt.Sprintf("%d", brand.ID))
 	formData.Set("caliber_id", fmt.Sprintf("%d", caliber.ID))
 	formData.Set("count", "50")
+	formData.Set("expended", "10")
 	formData.Set("csrf_token", "test_token")
 
 	// Create controller and setup the route
@@ -85,6 +86,7 @@ func TestAmmoCreate(t *testing.T) {
 		assert.Equal(t, brand.ID, ammoList[0].BrandID, "Brand ID mismatch")
 		assert.Equal(t, caliber.ID, ammoList[0].CaliberID, "Caliber ID mismatch")
 		assert.Equal(t, 50, ammoList[0].Count, "Count mismatch")
+		assert.Equal(t, 10, ammoList[0].Expended, "Expended mismatch")
 	}
 }
 
@@ -454,6 +456,7 @@ func TestAmmoUpdate(t *testing.T) {
 	formData.Set("brand_id", fmt.Sprintf("%d", newBrand.ID))
 	formData.Set("caliber_id", fmt.Sprintf("%d", newCaliber.ID))
 	formData.Set("count", "100")
+	formData.Set("expended", "25")
 	formData.Set("csrf_token", "test_token")
 
 	// Setup the controller and router
@@ -483,6 +486,7 @@ func TestAmmoUpdate(t *testing.T) {
 	assert.Equal(t, newBrand.ID, updatedAmmo.BrandID, "Brand should be updated")
 	assert.Equal(t, newCaliber.ID, updatedAmmo.CaliberID, "Caliber should be updated")
 	assert.Equal(t, 100, updatedAmmo.Count, "Count should be updated")
+	assert.Equal(t, 25, updatedAmmo.Expended, "Expended should be updated")
 }
 
 // TestAmmoDelete tests the deletion of ammunition

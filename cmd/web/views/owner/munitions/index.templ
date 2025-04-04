@@ -80,7 +80,7 @@ templ Index(data *data.OwnerData) {
 			<div class="bg-gunmetal-100 bg-opacity-80 p-4 rounded-lg shadow">
 				<h3 class="font-semibold text-lg text-gunmetal-800 mb-2">Ammunition Overview</h3>
 				<p class="text-gunmetal-800"><strong>Total Entries:</strong> `+strconv.FormatInt(data.AmmoCount, 10)+`</p>
-				<p class="text-gunmetal-800"><strong>Total Rounds:</strong> `+strconv.FormatInt(data.TotalAmmoQuantity, 10)+`</p>
+				<p class="text-gunmetal-800"><strong>Remaining Rounds:</strong> `+strconv.FormatInt(data.TotalAmmoQuantity-data.TotalAmmoExpended, 10)+`</p>
 				<p class="text-sm text-gunmetal-600 mt-2">Showing `+strconv.Itoa(data.ShowingFrom)+`-`+strconv.Itoa(data.ShowingTo)+` of `+strconv.Itoa(data.TotalItems)+`</p>
 			</div>
 			<div class="bg-gunmetal-100 bg-opacity-80 p-4 rounded-lg shadow">
@@ -240,7 +240,7 @@ templ Index(data *data.OwnerData) {
 						<tr>
 							<th class="py-3 px-4 text-left">Name</th>
 							<th class="py-3 px-4 text-left">Brand & Caliber</th>
-							<th class="py-3 px-4 text-left">Quantity</th>
+							<th class="py-3 px-4 text-left">Remaining Rounds</th>
 							<th class="py-3 px-4 text-left">Acquired</th>
 							<th class="py-3 px-4 text-left">Paid</th>
 							<th class="py-3 px-4 text-left">Actions</th>
@@ -257,6 +257,7 @@ templ Index(data *data.OwnerData) {
 				ammoID := strconv.FormatUint(uint64(ammo.ID), 10)
 				acquiredDate := formatDate(ammo.Acquired)
 				paidAmount := formatPrice(ammo.Paid)
+				remainingRounds := ammo.Count - ammo.Expended
 				
 				// Alternate row background for better readability, but keep transparent
 				bgClass := "bg-opacity-70"
@@ -275,7 +276,7 @@ templ Index(data *data.OwnerData) {
 								`+ammo.Brand.Name+` `+ammo.Caliber.Caliber+`
 							</td>
 							<td class="py-3 px-4">
-								`+strconv.Itoa(ammo.Count)+` rounds
+								`+strconv.Itoa(remainingRounds)+` rounds
 							</td>
 							<td class="py-3 px-4">
 								`+acquiredDate+`

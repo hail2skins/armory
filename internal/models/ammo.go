@@ -26,6 +26,7 @@ type Ammo struct {
 	Owner         interface{} `gorm:"-"` // This will be populated by the application, not stored in DB
 	Paid          *float64    // Optional field for the price paid (in USD)
 	Count         int         // Number of ammunition rounds
+	Expended      int         // Number of rounds that have been used
 	HasMoreAmmo   bool        `gorm:"-"` // Indicates if there are more ammo not being shown (not stored in DB)
 	TotalAmmo     int         `gorm:"-"` // Total number of ammo the user has (not stored in DB)
 }
@@ -61,11 +62,13 @@ func FindAmmoByID(db *gorm.DB, id uint, ownerID uint) (*Ammo, error) {
 }
 
 // CreateAmmo creates a new ammo record in the database
+// Note: This function does not perform validation. Use CreateAmmoWithValidation from ammo_validation.go instead
 func CreateAmmo(db *gorm.DB, ammo *Ammo) error {
 	return db.Create(ammo).Error
 }
 
 // UpdateAmmo updates an existing ammo record in the database
+// Note: This function does not perform validation. Use UpdateAmmoWithValidation from ammo_validation.go instead
 func UpdateAmmo(db *gorm.DB, ammo *Ammo) error {
 	// Set the updated_at time
 	ammo.UpdatedAt = time.Now()
@@ -88,6 +91,7 @@ func UpdateAmmo(db *gorm.DB, ammo *Ammo) error {
 		"updated_at":      ammo.UpdatedAt,
 		"paid":            ammo.Paid,
 		"count":           ammo.Count,
+		"expended":        ammo.Expended,
 	})
 
 	if result.Error != nil {

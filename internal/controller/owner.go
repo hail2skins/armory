@@ -213,6 +213,16 @@ func (o *OwnerController) LandingPage(c *gin.Context) {
 		totalAmmoQuantity = 0
 	}
 
+	// Get the total expended ammunition for this user
+	totalAmmoExpended, err := o.db.SumAmmoExpendedByUser(dbUser.ID)
+	if err != nil {
+		logger.Error("Failed to sum user's expended ammunition", err, map[string]interface{}{
+			"user_id": dbUser.ID,
+			"email":   dbUser.Email,
+		})
+		totalAmmoExpended = 0
+	}
+
 	// Get the user's ammunition
 	ammoItems, err := models.FindAmmoByOwner(o.db.GetDB(), dbUser.ID)
 	if err != nil {
@@ -260,7 +270,8 @@ func (o *OwnerController) LandingPage(c *gin.Context) {
 		WithTotalPaid(totalPaid).
 		WithAmmoCount(ammoCount).
 		WithTotalAmmoQuantity(totalAmmoQuantity).
-		WithTotalAmmoPaid(totalAmmoPaid)
+		WithTotalAmmoPaid(totalAmmoPaid).
+		WithTotalAmmoExpended(totalAmmoExpended)
 
 	// Get authData from context to preserve roles
 	if authDataInterface, exists := c.Get("authData"); exists {
@@ -3452,6 +3463,7 @@ func (o *OwnerController) AmmoCreate(c *gin.Context) {
 	casingIDStr := c.Request.PostForm.Get("casing_id")
 	acquiredDateStr := c.Request.PostForm.Get("acquired_date")
 	paidStr := c.Request.PostForm.Get("paid")
+	expendedStr := c.Request.PostForm.Get("expended")
 
 	// Prepare form errors map
 	formErrors := make(map[string]string)
@@ -3520,17 +3532,6 @@ func (o *OwnerController) AmmoCreate(c *gin.Context) {
 		if err == nil {
 			ammo.BulletStyleID = uint(bulletStyleID)
 		}
-	} else {
-		// Find bullet style with Type="Other" and use it as default
-		var defaultBulletStyle models.BulletStyle
-		if err := db.Where("type = ?", "Other").First(&defaultBulletStyle).Error; err == nil {
-			ammo.BulletStyleID = defaultBulletStyle.ID
-			logger.Info("Using default BulletStyle 'Other'", map[string]interface{}{
-				"id": defaultBulletStyle.ID,
-			})
-		} else {
-			logger.Error("Failed to find default BulletStyle 'Other'", err, nil)
-		}
 	}
 
 	// Parse grain ID (optional)
@@ -3539,17 +3540,6 @@ func (o *OwnerController) AmmoCreate(c *gin.Context) {
 		if err == nil {
 			ammo.GrainID = uint(grainID)
 		}
-	} else {
-		// Find grain with Weight=0 and use it as default
-		var defaultGrain models.Grain
-		if err := db.Where("weight = ?", 0).First(&defaultGrain).Error; err == nil {
-			ammo.GrainID = defaultGrain.ID
-			logger.Info("Using default Grain weight '0'", map[string]interface{}{
-				"id": defaultGrain.ID,
-			})
-		} else {
-			logger.Error("Failed to find default Grain weight '0'", err, nil)
-		}
 	}
 
 	// Parse casing ID (optional)
@@ -3557,17 +3547,6 @@ func (o *OwnerController) AmmoCreate(c *gin.Context) {
 		casingID, err := strconv.ParseUint(casingIDStr, 10, 64)
 		if err == nil {
 			ammo.CasingID = uint(casingID)
-		}
-	} else {
-		// Find casing with Type="Other" and use it as default
-		var defaultCasing models.Casing
-		if err := db.Where("type = ?", "Other").First(&defaultCasing).Error; err == nil {
-			ammo.CasingID = defaultCasing.ID
-			logger.Info("Using default Casing 'Other'", map[string]interface{}{
-				"id": defaultCasing.ID,
-			})
-		} else {
-			logger.Error("Failed to find default Casing 'Other'", err, nil)
 		}
 	}
 
@@ -3584,6 +3563,14 @@ func (o *OwnerController) AmmoCreate(c *gin.Context) {
 		paid, err := strconv.ParseFloat(paidStr, 64)
 		if err == nil && paid >= 0 {
 			ammo.Paid = &paid
+		}
+	}
+
+	// Parse expended amount (optional, defaulting to 0)
+	if expendedStr != "" {
+		expended, err := strconv.Atoi(expendedStr)
+		if err == nil && expended >= 0 {
+			ammo.Expended = expended
 		}
 	}
 
@@ -3781,6 +3768,16 @@ func (o *OwnerController) AmmoIndex(c *gin.Context) {
 		totalAmmoQuantity = 0
 	}
 
+	// Get the total expended ammunition for this user
+	totalAmmoExpended, err := o.db.SumAmmoExpendedByUser(dbUser.ID)
+	if err != nil {
+		logger.Error("Failed to sum user's expended ammunition", err, map[string]interface{}{
+			"user_id": dbUser.ID,
+			"email":   dbUser.Email,
+		})
+		totalAmmoExpended = 0
+	}
+
 	// Get the user's ammunition with pagination and filtering
 	db := o.db.GetDB()
 
@@ -3885,7 +3882,8 @@ func (o *OwnerController) AmmoIndex(c *gin.Context) {
 		WithFiltersApplied(sortBy, sortOrder, perPage, searchTerm).
 		WithAmmoCount(ammoCount).
 		WithTotalAmmoQuantity(totalAmmoQuantity).
-		WithTotalAmmoPaid(totalAmmoPaid)
+		WithTotalAmmoPaid(totalAmmoPaid).
+		WithTotalAmmoExpended(totalAmmoExpended)
 
 	// If the user has more ammunition than shown due to free tier, add a message
 	if showingFreeLimit {
@@ -4274,6 +4272,7 @@ func (o *OwnerController) AmmoUpdate(c *gin.Context) {
 	casingIDStr := c.Request.PostForm.Get("casing_id")
 	acquiredDateStr := c.Request.PostForm.Get("acquired_date")
 	paidStr := c.Request.PostForm.Get("paid")
+	expendedStr := c.Request.PostForm.Get("expended")
 
 	// Prepare form errors map
 	formErrors := make(map[string]string)
@@ -4380,6 +4379,16 @@ func (o *OwnerController) AmmoUpdate(c *gin.Context) {
 		}
 	} else {
 		ammo.Paid = nil // Clear the amount if none provided
+	}
+
+	// Parse expended amount (optional, defaulting to 0)
+	if expendedStr != "" {
+		expended, err := strconv.Atoi(expendedStr)
+		if err == nil && expended >= 0 {
+			ammo.Expended = expended
+		}
+	} else {
+		ammo.Expended = 0 // Reset to 0 if none provided
 	}
 
 	// Validate the ammo model

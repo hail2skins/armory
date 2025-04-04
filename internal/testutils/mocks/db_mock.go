@@ -535,3 +535,9 @@ func (m *MockDB) SumAmmoQuantityByUser(userID uint) (int64, error) {
 	args := m.Called(userID)
 	return args.Get(0).(int64), args.Error(1)
 }
+
+// SumAmmoExpendedByUser mocks the SumAmmoExpendedByUser method
+func (m *MockDB) SumAmmoExpendedByUser(userID uint) (int64, error) {
+	args := m.Called(userID)
+	return args.Get(0).(int64), args.Error(1)
+}
