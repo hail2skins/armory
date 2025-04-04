@@ -435,3 +435,247 @@ func TestDeleteAmmo(t *testing.T) {
 	assert.Error(t, err)
 	assert.True(t, err.Error() == "record not found")
 }
+
+// TestCreateAmmoWithExpended tests creating ammo with valid and invalid Expended values
+func TestCreateAmmoWithExpended(t *testing.T) {
+	// Get a shared database instance for testing
+	db := GetTestDB()
+
+	// Get test data from seeded data
+	var brand Brand
+	err := db.Where("name = ?", "Test Federal").First(&brand).Error
+	assert.NoError(t, err)
+
+	var caliber Caliber
+	err = db.Where("caliber = ?", "Test 9mm").First(&caliber).Error
+	assert.NoError(t, err)
+
+	// We'll need a bullet style, grain, and casing
+	var bulletStyle BulletStyle
+	err = db.Where("type = ?", "FMJ").First(&bulletStyle).Error
+	if err != nil {
+		bulletStyle = BulletStyle{Type: "FMJ", Nickname: "Full Metal Jacket", Popularity: 100}
+		db.Create(&bulletStyle)
+	}
+
+	var grain Grain
+	err = db.Where("weight = ?", 115).First(&grain).Error
+	if err != nil {
+		grain = Grain{Weight: 115, Popularity: 85}
+		db.Create(&grain)
+	}
+
+	var casing Casing
+	err = db.Where("type = ?", "Brass").First(&casing).Error
+	if err != nil {
+		casing = Casing{Type: "Brass", Popularity: 100}
+		db.Create(&casing)
+	}
+
+	// Test case 1: Create ammo with valid Expended value (0)
+	acquired := time.Now()
+	paid := 24.99
+	ammo1 := &Ammo{
+		Name:          "Test Ammo With Expended Zero",
+		Acquired:      &acquired,
+		BrandID:       brand.ID,
+		BulletStyleID: bulletStyle.ID,
+		GrainID:       grain.ID,
+		CaliberID:     caliber.ID,
+		CasingID:      casing.ID,
+		OwnerID:       1,
+		Paid:          &paid,
+		Count:         50,
+		Expended:      0,
+	}
+	err = CreateAmmo(db, ammo1)
+	assert.NoError(t, err)
+
+	// Test case 2: Create ammo with valid Expended value (equal to Count)
+	ammo2 := &Ammo{
+		Name:          "Test Ammo With Expended Equal",
+		Acquired:      &acquired,
+		BrandID:       brand.ID,
+		BulletStyleID: bulletStyle.ID,
+		GrainID:       grain.ID,
+		CaliberID:     caliber.ID,
+		CasingID:      casing.ID,
+		OwnerID:       1,
+		Paid:          &paid,
+		Count:         50,
+		Expended:      50,
+	}
+	err = CreateAmmo(db, ammo2)
+	assert.NoError(t, err)
+
+	// Test case 3: Create ammo with valid Expended value (less than Count)
+	ammo3 := &Ammo{
+		Name:          "Test Ammo With Expended Less",
+		Acquired:      &acquired,
+		BrandID:       brand.ID,
+		BulletStyleID: bulletStyle.ID,
+		GrainID:       grain.ID,
+		CaliberID:     caliber.ID,
+		CasingID:      casing.ID,
+		OwnerID:       1,
+		Paid:          &paid,
+		Count:         50,
+		Expended:      25,
+	}
+	err = CreateAmmo(db, ammo3)
+	assert.NoError(t, err)
+
+	// Test case 4: Try to create ammo with negative Expended value
+	ammo4 := &Ammo{
+		Name:          "Test Ammo With Negative Expended",
+		Acquired:      &acquired,
+		BrandID:       brand.ID,
+		BulletStyleID: bulletStyle.ID,
+		GrainID:       grain.ID,
+		CaliberID:     caliber.ID,
+		CasingID:      casing.ID,
+		OwnerID:       1,
+		Paid:          &paid,
+		Count:         50,
+		Expended:      -5,
+	}
+	err = CreateAmmo(db, ammo4)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "expended count cannot be negative")
+
+	// Test case 5: Try to create ammo with Expended > Count
+	ammo5 := &Ammo{
+		Name:          "Test Ammo With Expended Greater",
+		Acquired:      &acquired,
+		BrandID:       brand.ID,
+		BulletStyleID: bulletStyle.ID,
+		GrainID:       grain.ID,
+		CaliberID:     caliber.ID,
+		CasingID:      casing.ID,
+		OwnerID:       1,
+		Paid:          &paid,
+		Count:         50,
+		Expended:      75,
+	}
+	err = CreateAmmo(db, ammo5)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "expended count cannot be greater than total count")
+
+	// Verify the created ammo have the correct Expended values
+	var foundAmmo1 Ammo
+	err = db.First(&foundAmmo1, ammo1.ID).Error
+	assert.NoError(t, err)
+	assert.Equal(t, 0, foundAmmo1.Expended)
+
+	var foundAmmo2 Ammo
+	err = db.First(&foundAmmo2, ammo2.ID).Error
+	assert.NoError(t, err)
+	assert.Equal(t, 50, foundAmmo2.Expended)
+
+	var foundAmmo3 Ammo
+	err = db.First(&foundAmmo3, ammo3.ID).Error
+	assert.NoError(t, err)
+	assert.Equal(t, 25, foundAmmo3.Expended)
+
+	// Clean up
+	db.Delete(&ammo1)
+	db.Delete(&ammo2)
+	db.Delete(&ammo3)
+}
+
+// TestUpdateAmmoWithExpended tests updating ammo with valid and invalid Expended values
+func TestUpdateAmmoWithExpended(t *testing.T) {
+	// Get a shared database instance for testing
+	db := GetTestDB()
+
+	// Get test data from seeded data
+	var brand Brand
+	err := db.Where("name = ?", "Test Federal").First(&brand).Error
+	assert.NoError(t, err)
+
+	var caliber Caliber
+	err = db.Where("caliber = ?", "Test 9mm").First(&caliber).Error
+	assert.NoError(t, err)
+
+	// We'll need a bullet style, grain, and casing
+	var bulletStyle BulletStyle
+	err = db.Where("type = ?", "FMJ").First(&bulletStyle).Error
+	if err != nil {
+		bulletStyle = BulletStyle{Type: "FMJ", Nickname: "Full Metal Jacket", Popularity: 100}
+		db.Create(&bulletStyle)
+	}
+
+	var grain Grain
+	err = db.Where("weight = ?", 115).First(&grain).Error
+	if err != nil {
+		grain = Grain{Weight: 115, Popularity: 85}
+		db.Create(&grain)
+	}
+
+	var casing Casing
+	err = db.Where("type = ?", "Brass").First(&casing).Error
+	if err != nil {
+		casing = Casing{Type: "Brass", Popularity: 100}
+		db.Create(&casing)
+	}
+
+	// Create a test ammo with 0 expended
+	acquired := time.Now()
+	paid := 24.99
+	ammo := &Ammo{
+		Name:          "Test Update Ammo Expended",
+		Acquired:      &acquired,
+		BrandID:       brand.ID,
+		BulletStyleID: bulletStyle.ID,
+		GrainID:       grain.ID,
+		CaliberID:     caliber.ID,
+		CasingID:      casing.ID,
+		OwnerID:       1,
+		Paid:          &paid,
+		Count:         50,
+		Expended:      0,
+	}
+	err = db.Create(ammo).Error
+	assert.NoError(t, err)
+
+	// Test case 1: Update with valid Expended value
+	ammo.Expended = 25
+	err = UpdateAmmo(db, ammo)
+	assert.NoError(t, err)
+
+	// Verify update
+	var updatedAmmo Ammo
+	err = db.First(&updatedAmmo, ammo.ID).Error
+	assert.NoError(t, err)
+	assert.Equal(t, 25, updatedAmmo.Expended)
+
+	// Test case 2: Update with Expended = Count
+	ammo.Expended = 50
+	err = UpdateAmmo(db, ammo)
+	assert.NoError(t, err)
+
+	// Verify update
+	err = db.First(&updatedAmmo, ammo.ID).Error
+	assert.NoError(t, err)
+	assert.Equal(t, 50, updatedAmmo.Expended)
+
+	// Test case 3: Try to update with negative Expended
+	ammo.Expended = -10
+	err = UpdateAmmo(db, ammo)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "expended count cannot be negative")
+
+	// Test case 4: Try to update with Expended > Count
+	ammo.Expended = 60
+	err = UpdateAmmo(db, ammo)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "expended count cannot be greater than total count")
+
+	// Verify ammo still has previous valid value
+	err = db.First(&updatedAmmo, ammo.ID).Error
+	assert.NoError(t, err)
+	assert.Equal(t, 50, updatedAmmo.Expended)
+
+	// Clean up
+	db.Delete(&ammo)
+}

@@ -26,6 +26,7 @@ type Ammo struct {
 	Owner         interface{} `gorm:"-"` // This will be populated by the application, not stored in DB
 	Paid          *float64    // Optional field for the price paid (in USD)
 	Count         int         // Number of ammunition rounds
+	Expended      int         // Number of rounds that have been used
 	HasMoreAmmo   bool        `gorm:"-"` // Indicates if there are more ammo not being shown (not stored in DB)
 	TotalAmmo     int         `gorm:"-"` // Total number of ammo the user has (not stored in DB)
 }
@@ -62,6 +63,14 @@ func FindAmmoByID(db *gorm.DB, id uint, ownerID uint) (*Ammo, error) {
 
 // CreateAmmo creates a new ammo record in the database
 func CreateAmmo(db *gorm.DB, ammo *Ammo) error {
+	// Validate expended count
+	if ammo.Expended < 0 {
+		return errors.New("expended count cannot be negative")
+	}
+	if ammo.Expended > ammo.Count {
+		return errors.New("expended count cannot be greater than total count")
+	}
+
 	return db.Create(ammo).Error
 }
 
@@ -76,6 +85,14 @@ func UpdateAmmo(db *gorm.DB, ammo *Ammo) error {
 		return err
 	}
 
+	// Validate expended count
+	if ammo.Expended < 0 {
+		return errors.New("expended count cannot be negative")
+	}
+	if ammo.Expended > ammo.Count {
+		return errors.New("expended count cannot be greater than total count")
+	}
+
 	// Update the ammo with all fields
 	result := db.Model(&existingAmmo).Updates(map[string]interface{}{
 		"name":            ammo.Name,
@@ -88,6 +105,7 @@ func UpdateAmmo(db *gorm.DB, ammo *Ammo) error {
 		"updated_at":      ammo.UpdatedAt,
 		"paid":            ammo.Paid,
 		"count":           ammo.Count,
+		"expended":        ammo.Expended,
 	})
 
 	if result.Error != nil {
