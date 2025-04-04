@@ -108,6 +108,10 @@ func (c *AdminPermissionsController) NewRole(ctx *gin.Context) {
 		"guns",
 		"permissions",
 		"ammo",
+		"casings",
+		"bullet_styles",
+		"grains",
+		"brands",
 		"*", // Wildcard for all resources
 	}
 
@@ -142,7 +146,10 @@ func (c *AdminPermissionsController) CreateRole(ctx *gin.Context) {
 	// Create form data
 	formData := &data.CreateRoleViewData{
 		Resources: []string{
-			"manufacturers", "calibers", "weapon_types", "promotions", "permissions", "ammo",
+			"dashboard", "stripe_security", "manufacturers", "calibers",
+			"weapon_types", "promotions", "permissions", "ammo",
+			"users", "payments", "guns", "feature_flags", "munitions",
+			"casings", "bullet_styles", "grains", "brands",
 		},
 		Actions: []string{
 			"read", "create", "update", "delete", "manage",
@@ -169,7 +176,10 @@ func (c *AdminPermissionsController) StoreRole(ctx *gin.Context) {
 		viewData.ErrorMsg = "Role name is required"
 		formData := &data.CreateRoleViewData{
 			Resources: []string{
-				"manufacturers", "calibers", "weapon_types", "promotions", "permissions", "ammo",
+				"dashboard", "stripe_security", "manufacturers", "calibers",
+				"weapon_types", "promotions", "permissions", "ammo",
+				"users", "payments", "guns", "feature_flags", "munitions",
+				"casings", "bullet_styles", "grains", "brands",
 			},
 			Actions: []string{
 				"read", "create", "update", "delete", "manage",
@@ -197,7 +207,10 @@ func (c *AdminPermissionsController) StoreRole(ctx *gin.Context) {
 		viewData.ErrorMsg = "Role already exists"
 		formData := &data.CreateRoleViewData{
 			Resources: []string{
-				"manufacturers", "calibers", "weapon_types", "promotions", "permissions", "ammo",
+				"dashboard", "stripe_security", "manufacturers", "calibers",
+				"weapon_types", "promotions", "permissions", "ammo",
+				"users", "payments", "guns", "feature_flags", "munitions",
+				"casings", "bullet_styles", "grains", "brands",
 			},
 			Actions: []string{
 				"read", "create", "update", "delete", "manage",
@@ -269,7 +282,10 @@ func (c *AdminPermissionsController) EditRole(ctx *gin.Context) {
 	formData := &data.EditRoleViewData{
 		Role: roleName,
 		Resources: []string{
-			"manufacturers", "calibers", "weapon_types", "promotions", "permissions", "ammo",
+			"dashboard", "stripe_security", "manufacturers", "calibers",
+			"weapon_types", "promotions", "permissions", "ammo",
+			"users", "payments", "guns", "feature_flags", "munitions",
+			"casings", "bullet_styles", "grains", "brands",
 		},
 		Actions: []string{
 			"read", "create", "update", "delete", "manage",

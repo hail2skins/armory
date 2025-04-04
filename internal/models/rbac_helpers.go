@@ -183,6 +183,19 @@ func ImportDefaultPolicies(enforcer *casbin.Enforcer) error {
 		// Feature flags permissions for editors
 		{"editor", "feature_flags", "read"},
 		{"editor", "feature_flags", "update"},
+		// Ammunition component permissions for editors
+		{"editor", "casings", "read"},
+		{"editor", "casings", "create"},
+		{"editor", "casings", "update"},
+		{"editor", "bullet_styles", "read"},
+		{"editor", "bullet_styles", "create"},
+		{"editor", "bullet_styles", "update"},
+		{"editor", "grains", "read"},
+		{"editor", "grains", "create"},
+		{"editor", "grains", "update"},
+		{"editor", "brands", "read"},
+		{"editor", "brands", "create"},
+		{"editor", "brands", "update"},
 
 		// Viewer role has read-only permissions
 		{"viewer", "manufacturers", "read"},
@@ -190,6 +203,11 @@ func ImportDefaultPolicies(enforcer *casbin.Enforcer) error {
 		{"viewer", "weapon_types", "read"},
 		// Feature flags read-only permissions for viewers
 		{"viewer", "feature_flags", "read"},
+		// Ammunition component read-only permissions for viewers
+		{"viewer", "casings", "read"},
+		{"viewer", "bullet_styles", "read"},
+		{"viewer", "grains", "read"},
+		{"viewer", "brands", "read"},
 	}
 
 	// Add the policies
