@@ -79,6 +79,7 @@ type Service interface {
 	FindAmmoByID(id uint) (*models.Ammo, error)
 	CountAmmoByUser(userID uint) (int64, error)
 	SumAmmoQuantityByUser(userID uint) (int64, error)
+	SumAmmoExpendedByUser(userID uint) (int64, error)
 
 	// Casing-related methods
 	FindAllCasings() ([]models.Casing, error)
@@ -740,6 +741,15 @@ func (s *service) CountAmmoByUser(userID uint) (int64, error) {
 func (s *service) SumAmmoQuantityByUser(userID uint) (int64, error) {
 	var totalCount int64
 	if err := s.db.Model(&models.Ammo{}).Select("COALESCE(SUM(count), 0)").Where("owner_id = ?", userID).Scan(&totalCount).Error; err != nil {
+		return 0, err
+	}
+	return totalCount, nil
+}
+
+// SumAmmoExpendedByUser calculates the total number of expended ammunition rounds for a user
+func (s *service) SumAmmoExpendedByUser(userID uint) (int64, error) {
+	var totalCount int64
+	if err := s.db.Model(&models.Ammo{}).Select("COALESCE(SUM(expended), 0)").Where("owner_id = ?", userID).Scan(&totalCount).Error; err != nil {
 		return 0, err
 	}
 	return totalCount, nil

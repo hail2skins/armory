@@ -213,6 +213,16 @@ func (o *OwnerController) LandingPage(c *gin.Context) {
 		totalAmmoQuantity = 0
 	}
 
+	// Get the total expended ammunition for this user
+	totalAmmoExpended, err := o.db.SumAmmoExpendedByUser(dbUser.ID)
+	if err != nil {
+		logger.Error("Failed to sum user's expended ammunition", err, map[string]interface{}{
+			"user_id": dbUser.ID,
+			"email":   dbUser.Email,
+		})
+		totalAmmoExpended = 0
+	}
+
 	// Get the user's ammunition
 	ammoItems, err := models.FindAmmoByOwner(o.db.GetDB(), dbUser.ID)
 	if err != nil {
@@ -260,7 +270,8 @@ func (o *OwnerController) LandingPage(c *gin.Context) {
 		WithTotalPaid(totalPaid).
 		WithAmmoCount(ammoCount).
 		WithTotalAmmoQuantity(totalAmmoQuantity).
-		WithTotalAmmoPaid(totalAmmoPaid)
+		WithTotalAmmoPaid(totalAmmoPaid).
+		WithTotalAmmoExpended(totalAmmoExpended)
 
 	// Get authData from context to preserve roles
 	if authDataInterface, exists := c.Get("authData"); exists {
@@ -3757,6 +3768,16 @@ func (o *OwnerController) AmmoIndex(c *gin.Context) {
 		totalAmmoQuantity = 0
 	}
 
+	// Get the total expended ammunition for this user
+	totalAmmoExpended, err := o.db.SumAmmoExpendedByUser(dbUser.ID)
+	if err != nil {
+		logger.Error("Failed to sum user's expended ammunition", err, map[string]interface{}{
+			"user_id": dbUser.ID,
+			"email":   dbUser.Email,
+		})
+		totalAmmoExpended = 0
+	}
+
 	// Get the user's ammunition with pagination and filtering
 	db := o.db.GetDB()
 
@@ -3861,7 +3882,8 @@ func (o *OwnerController) AmmoIndex(c *gin.Context) {
 		WithFiltersApplied(sortBy, sortOrder, perPage, searchTerm).
 		WithAmmoCount(ammoCount).
 		WithTotalAmmoQuantity(totalAmmoQuantity).
-		WithTotalAmmoPaid(totalAmmoPaid)
+		WithTotalAmmoPaid(totalAmmoPaid).
+		WithTotalAmmoExpended(totalAmmoExpended)
 
 	// If the user has more ammunition than shown due to free tier, add a message
 	if showingFreeLimit {

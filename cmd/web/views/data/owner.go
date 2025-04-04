@@ -33,6 +33,7 @@ type OwnerData struct {
 	AmmoCount         int64
 	TotalAmmoQuantity int64
 	TotalAmmoPaid     float64
+	TotalAmmoExpended int64
 
 	// For gun form
 	WeaponTypes   []models.WeaponType
@@ -296,6 +297,12 @@ func (o *OwnerData) WithTotalAmmoQuantity(quantity int64) *OwnerData {
 // WithTotalAmmoPaid returns a copy of the OwnerData with total paid for ammunition
 func (o *OwnerData) WithTotalAmmoPaid(totalPaid float64) *OwnerData {
 	o.TotalAmmoPaid = totalPaid
+	return o
+}
+
+// WithTotalAmmoExpended returns a copy of the OwnerData with total expended rounds
+func (o *OwnerData) WithTotalAmmoExpended(expended int64) *OwnerData {
+	o.TotalAmmoExpended = expended
 	return o
 }
 
