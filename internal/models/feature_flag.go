@@ -9,12 +9,13 @@ import (
 
 // FeatureFlag represents a feature flag in the system
 type FeatureFlag struct {
-	ID          uint      `gorm:"primaryKey;autoIncrement"`
-	Name        string    `gorm:"size:255;uniqueIndex;not null"`
-	Enabled     bool      `gorm:"default:false"`
-	Description string    `gorm:"type:text"`
-	CreatedAt   time.Time `gorm:"autoCreateTime"`
-	UpdatedAt   time.Time `gorm:"autoUpdateTime"`
+	ID           uint      `gorm:"primaryKey;autoIncrement"`
+	Name         string    `gorm:"size:255;uniqueIndex;not null"`
+	Enabled      bool      `gorm:"default:false"`
+	PublicAccess bool      `gorm:"default:false"`
+	Description  string    `gorm:"type:text"`
+	CreatedAt    time.Time `gorm:"autoCreateTime"`
+	UpdatedAt    time.Time `gorm:"autoUpdateTime"`
 	// Allow optional roles to be associated with this feature flag
 	Roles []FeatureFlagRole `gorm:"foreignKey:FeatureFlagID"`
 }
@@ -171,6 +172,11 @@ func CanAccessFeature(db *gorm.DB, username, featureName string) (bool, error) {
 	// If the feature isn't enabled, no one can access it
 	if !flag.Enabled {
 		return false, nil
+	}
+
+	// If public access is enabled, everyone can access it
+	if flag.PublicAccess {
+		return true, nil
 	}
 
 	// Check if the feature has any role restrictions

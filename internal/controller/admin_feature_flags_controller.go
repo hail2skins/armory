@@ -119,13 +119,15 @@ func (c *AdminFeatureFlagsController) Store(ctx *gin.Context) {
 	name := ctx.PostForm("name")
 	description := ctx.PostForm("description")
 	enabledStr := ctx.PostForm("enabled")
+	publicAccessStr := ctx.PostForm("public_access")
 	roles := ctx.PostFormArray("roles")
 
 	// Create the feature flag
 	flag := &models.FeatureFlag{
-		Name:        name,
-		Description: description,
-		Enabled:     enabledStr == "true" || enabledStr == "on" || enabledStr == "1",
+		Name:         name,
+		Description:  description,
+		Enabled:      enabledStr == "true" || enabledStr == "on" || enabledStr == "1",
+		PublicAccess: publicAccessStr == "true" || publicAccessStr == "on" || publicAccessStr == "1",
 	}
 
 	// Save to database
@@ -246,6 +248,8 @@ func (c *AdminFeatureFlagsController) Update(ctx *gin.Context) {
 	flag.Description = ctx.PostForm("description")
 	enabledStr := ctx.PostForm("enabled")
 	flag.Enabled = enabledStr == "true" || enabledStr == "on" || enabledStr == "1"
+	publicAccessStr := ctx.PostForm("public_access")
+	flag.PublicAccess = publicAccessStr == "true" || publicAccessStr == "on" || publicAccessStr == "1"
 
 	// Save to database
 	if err := c.db.UpdateFeatureFlag(flag); err != nil {

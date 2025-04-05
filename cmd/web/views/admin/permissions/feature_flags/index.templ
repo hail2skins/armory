@@ -99,9 +99,14 @@ templ Index(viewData data.ViewData) {
 				flagID := strconv.FormatUint(uint64(flag.ID), 10)
 				statusBadge := ""
 				if flag.Enabled {
-					statusBadge = `<span class="inline-block bg-green-200 rounded px-2 py-1 text-xs font-semibold text-green-700">Enabled</span>`
+					statusBadge = `<span class="inline-block bg-green-200 rounded px-2 py-1 text-xs font-semibold text-green-700 mr-1">Enabled</span>`
 				} else {
-					statusBadge = `<span class="inline-block bg-red-200 rounded px-2 py-1 text-xs font-semibold text-red-700">Disabled</span>`
+					statusBadge = `<span class="inline-block bg-red-200 rounded px-2 py-1 text-xs font-semibold text-red-700 mr-1">Disabled</span>`
+				}
+
+				// Add public access badge
+				if flag.PublicAccess {
+					statusBadge += `<span class="inline-block bg-blue-200 rounded px-2 py-1 text-xs font-semibold text-blue-700 ml-1">Public Access</span>`
 				}
 
 				rolesList := ""

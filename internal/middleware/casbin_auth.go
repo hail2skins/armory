@@ -227,11 +227,23 @@ func (ca *CasbinAuth) ReloadPolicy() error {
 }
 
 // FlexibleAuthorize checks multiple permission paths:
-// 1. First checks if user has specific resource:action permission
-// 2. If not, checks if user has admin role (which grants all permissions)
-// 3. Finally, checks if user has a role with the same name as the object
+// 1. First checks if feature has public access (bypass all permission checks)
+// 2. If not, checks if user has specific resource:action permission
+// 3. If not, checks if user has admin role (which grants all permissions)
+// 4. Finally, checks if user has a role with the same name as the object
 func (ca *CasbinAuth) FlexibleAuthorize(obj string, act ...string) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// First check if this resource/feature has public access enabled
+		if ca.isFeaturePublic(obj) {
+			// Feature has public access, allow without checking permissions
+			logger.Info("Authorization granted via public access feature flag", map[string]interface{}{
+				"object": obj,
+				"path":   c.Request.URL.Path,
+			})
+			c.Next()
+			return
+		}
+
 		// Get the current user from the context (set by authentication middleware)
 		authInfo, exists := c.Get("auth_info")
 		if !exists {
@@ -371,4 +383,22 @@ func (ca *CasbinAuth) FlexibleAuthorize(obj string, act ...string) gin.HandlerFu
 // GetEnforcer returns the internal casbin enforcer for direct access (debugging purposes only)
 func (ca *CasbinAuth) GetEnforcer() *casbin.Enforcer {
 	return ca.enforcer
+}
+
+// isFeaturePublic checks if a feature/resource has public access enabled
+func (ca *CasbinAuth) isFeaturePublic(resource string) bool {
+	// If the resource name represents a potential feature, check if it has public access
+	db := ca.enforcer.GetAdapter().(*models.CasbinDBAdapter).GetDB()
+	if db == nil {
+		return false
+	}
+
+	// Check if there's a feature flag with this name and public access
+	var flag models.FeatureFlag
+	err := db.Where("name = ? AND enabled = ? AND public_access = ?", resource, true, true).First(&flag).Error
+	if err != nil {
+		return false
+	}
+
+	return true
 }

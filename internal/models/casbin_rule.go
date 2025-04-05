@@ -32,6 +32,11 @@ type CasbinDBAdapter struct {
 	db *gorm.DB
 }
 
+// GetDB returns the underlying database
+func (a *CasbinDBAdapter) GetDB() *gorm.DB {
+	return a.db
+}
+
 // NewCasbinDBAdapter creates a new adapter for Casbin using GORM
 func NewCasbinDBAdapter(db *gorm.DB) *CasbinDBAdapter {
 	// Ensure the CasbinRule table exists
