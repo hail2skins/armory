@@ -159,7 +159,10 @@ func ClearPolicies(enforcer *casbin.Enforcer) error {
 	return nil
 }
 
-// ImportDefaultPolicies imports the default set of policies
+// ImportDefaultPolicies clears all existing policies from the provided Casbin enforcer and loads a predefined set of default policy rules.
+// It assigns full access to the admin role, grants read, create, and update permissions to the editor role for content-related resources,
+// feature flags, and ammunition components (casings, bullet_styles, grains, and brands), and provides read-only access to the viewer role
+// for these resources. If any policy cannot be added, the function returns the encountered error.
 func ImportDefaultPolicies(enforcer *casbin.Enforcer) error {
 	// Clear existing policies
 	enforcer.ClearPolicy()
