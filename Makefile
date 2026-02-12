@@ -55,10 +55,21 @@ test:
 
 # CI/Railway-style build (non-interactive)
 build-railway:
-	@echo "Generating templ files (non-interactive)..."
+	@echo "Generating templ files (pinned, non-interactive)..."
 	@go run github.com/a-h/templ/cmd/templ@v0.3.977 generate ./...
+	@echo "Installing tailwindcss binary (platform-aware, pinned)..."
+	@OS=$$(uname -s | tr '[:upper:]' '[:lower:]'); \
+	ARCH=$$(uname -m); \
+	if [ "$$OS" = "darwin" ] && [ "$$ARCH" = "arm64" ]; then BIN="tailwindcss-macos-arm64"; \
+	elif [ "$$OS" = "darwin" ] && [ "$$ARCH" = "x86_64" ]; then BIN="tailwindcss-macos-x64"; \
+	elif [ "$$OS" = "linux" ] && [ "$$ARCH" = "x86_64" ]; then BIN="tailwindcss-linux-x64"; \
+	elif [ "$$OS" = "linux" ] && [ "$$ARCH" = "aarch64" ]; then BIN="tailwindcss-linux-arm64"; \
+	else echo "Unsupported platform: $$OS/$$ARCH"; exit 1; fi; \
+	curl -sL "https://github.com/tailwindlabs/tailwindcss/releases/download/v3.4.10/$$BIN" -o tailwindcss && chmod +x tailwindcss
+	@echo "Building CSS assets..."
+	@./tailwindcss -i cmd/web/styles/input.css -o cmd/web/assets/css/output.css
 	@echo "Building API with vendored modules..."
-	@go build -mod=vendor -tags netgo -ldflags '-s -w' -o out cmd/api/main.go
+	@go build -mod=vendor -tags netgo -ldflags '-s -w' -o app cmd/api/main.go
 
 # Integrations Tests for the application
 itest:
