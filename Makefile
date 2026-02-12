@@ -52,6 +52,14 @@ docker-down:
 test:
 	@echo "Testing..."
 	@go test ./... -v
+
+# CI/Railway-style build (non-interactive)
+build-railway:
+	@echo "Generating templ files (non-interactive)..."
+	@go run github.com/a-h/templ/cmd/templ@v0.3.977 generate ./...
+	@echo "Building API with vendored modules..."
+	@go build -mod=vendor -tags netgo -ldflags '-s -w' -o out cmd/api/main.go
+
 # Integrations Tests for the application
 itest:
 	@echo "Running integration tests..."
@@ -79,4 +87,4 @@ watch:
             fi; \
         fi
 
-.PHONY: all build run test clean watch tailwind-install docker-run docker-down itest templ-install
+.PHONY: all build run test build-railway clean watch tailwind-install docker-run docker-down itest templ-install
