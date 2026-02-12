@@ -7,10 +7,8 @@ package mailjet
 import (
 	"bytes"
 	"context"
-	"fmt"
-
 	"encoding/json"
-
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -123,7 +121,7 @@ func SetDebugOutput(w io.Writer) {
 // Sort applies the Sort filter to the request.
 func Sort(value string, order SortOrder) RequestOptions {
 	if order == SortDesc {
-		value = value + "+DESC"
+		value += "+DESC"
 	}
 	return Filter("Sort", value)
 }
@@ -196,9 +194,9 @@ func (c *Client) Put(fmr *FullRequest, onlyFields []string, options ...RequestOp
 }
 
 // Delete is used to delete a resource.
-func (c *Client) Delete(mr *Request) (err error) {
+func (c *Client) Delete(mr *Request, options ...RequestOptions) (err error) {
 	url := buildURL(c.apiBase, mr)
-	req, err := createRequest("DELETE", url, nil, nil)
+	req, err := createRequest("DELETE", url, nil, nil, options...)
 	if err != nil {
 		return err
 	}
