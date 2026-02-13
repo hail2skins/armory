@@ -30,7 +30,7 @@ These instructions will help you set up a local development environment for The 
 
 ### Prerequisites
 
-- Go 1.20 or later
+- Go 1.26 or later
 - Docker (for PostgreSQL container)
 - Node.js (for Tailwind CSS)
 
