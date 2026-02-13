@@ -161,26 +161,11 @@ func (a *AuthController) LoginHandler(c *gin.Context) {
 			return
 		}
 
-		// Authenticate user
+		// Authenticate user - this call validates credentials AND updates login attempts/last login
 		user, err := a.db.AuthenticateUser(c.Request.Context(), email, password)
-		if err != nil {
+		if err != nil || user == nil {
 			// Authentication failed, log the error
 			logger.Warn("Authentication failed", map[string]interface{}{
-				"email": email,
-			})
-
-			// Set error message
-			authData = authData.WithError("Invalid email or password")
-
-			// Render the login page with error
-			a.RenderLogin(c, authData)
-			return
-		}
-
-		// User not found or password incorrect
-		if user == nil {
-			// Authentication failed, log the error
-			logger.Warn("Authentication failed - user not found or password incorrect", map[string]interface{}{
 				"email": email,
 			})
 

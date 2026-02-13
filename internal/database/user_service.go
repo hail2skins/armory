@@ -415,8 +415,12 @@ func (s *service) CheckExpiredPromotionSubscription(user *User) (bool, error) {
 		user.SubscriptionTier = "free"
 		user.SubscriptionEndDate = time.Time{} // zero time
 
-		// Save the updated user
-		err := s.db.Save(user).Error
+		// Save the updated user - use Updates to only update changed fields
+		err := s.db.Model(user).Updates(map[string]interface{}{
+			"subscription_status":   user.SubscriptionStatus,
+			"subscription_tier":     user.SubscriptionTier,
+			"subscription_end_date": user.SubscriptionEndDate,
+		}).Error
 		if err != nil {
 			return false, err
 		}
