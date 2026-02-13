@@ -154,12 +154,27 @@ func New() Service {
 			host, username, password, database, port, searchPath)
 	}
 
+	// Check for GORM_LOG_LEVEL env var
+	logLevel := logger.Info
+	switch os.Getenv("GORM_LOG_LEVEL") {
+	case "silent":
+		logLevel = logger.Silent
+	case "error":
+		logLevel = logger.Error
+	case "warn":
+		logLevel = logger.Warn
+	case "info":
+		logLevel = logger.Info
+	default:
+		logLevel = logger.Info
+	}
+
 	// Configure GORM logger
 	gormLogger := logger.New(
 		log.New(os.Stdout, "\r\n", log.LstdFlags), // io writer
 		logger.Config{
 			SlowThreshold:             time.Second, // Slow SQL threshold
-			LogLevel:                  logger.Info, // Log level
+			LogLevel:                  logLevel,    // Log level
 			IgnoreRecordNotFoundError: true,        // Ignore ErrRecordNotFound error for logger
 			Colorful:                  true,        // Enable color
 		},
