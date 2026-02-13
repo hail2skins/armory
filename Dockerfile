@@ -4,6 +4,7 @@ FROM golang:1.26-alpine AS builder
 RUN apk add --no-cache make curl
 WORKDIR /app
 COPY . .
+RUN go run github.com/a-h/templ/cmd/templ@v0.3.977 generate ./...
 RUN make build-railway
 
 FROM alpine:3.22

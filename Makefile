@@ -55,6 +55,8 @@ test:
 
 # CI/Railway-style build (non-interactive)
 build-railway:
+	@echo "Removing previously generated templ files to avoid stale artifacts..."
+	@find . -type f -name '*_templ.go' -delete
 	@echo "Generating templ files (pinned, non-interactive)..."
 	@go run github.com/a-h/templ/cmd/templ@v0.3.977 generate ./...
 	@echo "Installing tailwindcss binary (platform-aware, pinned)..."
