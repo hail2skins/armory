@@ -399,8 +399,8 @@ func (p *PaymentController) ShowCancelConfirmation(c *gin.Context) {
 		return
 	}
 
-	// Check if the user has an active subscription
-	if !dbUser.HasActiveSubscription() {
+	// Check if the user can cancel an active Stripe subscription
+	if !dbUser.CanCancelStripeSubscription() {
 		c.Redirect(http.StatusSeeOther, "/pricing")
 		return
 	}
@@ -463,8 +463,8 @@ func (p *PaymentController) CancelSubscription(c *gin.Context) {
 		return
 	}
 
-	// Check if the user has an active subscription
-	if !dbUser.HasActiveSubscription() {
+	// Check if the user can cancel an active Stripe subscription
+	if !dbUser.CanCancelStripeSubscription() {
 		c.Redirect(http.StatusSeeOther, "/pricing")
 		return
 	}

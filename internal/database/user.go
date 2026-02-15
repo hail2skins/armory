@@ -212,6 +212,28 @@ func (u *User) HasActiveSubscription() bool {
 	return false
 }
 
+// HasStripeManagedSubscription returns true when a user is on a Stripe-backed recurring plan.
+func (u *User) HasStripeManagedSubscription() bool {
+	if u.StripeSubscriptionID == "" {
+		return false
+	}
+
+	if u.SubscriptionTier == "free" || u.SubscriptionTier == "lifetime" || u.SubscriptionTier == "premium_lifetime" {
+		return false
+	}
+
+	if u.SubscriptionStatus != "active" && u.SubscriptionStatus != "pending_cancellation" {
+		return false
+	}
+
+	return u.SubscriptionEndDate.IsZero() || time.Now().Before(u.SubscriptionEndDate)
+}
+
+// CanCancelStripeSubscription returns true when a user can request Stripe cancellation now.
+func (u *User) CanCancelStripeSubscription() bool {
+	return u.HasStripeManagedSubscription() && u.SubscriptionStatus == "active"
+}
+
 // CanSubscribeToTier checks if a user can subscribe to a specific tier based on their current subscription
 func (u *User) CanSubscribeToTier(tier string) bool {
 	// Users can always upgrade to a higher tier

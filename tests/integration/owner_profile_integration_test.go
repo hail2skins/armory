@@ -1,11 +1,13 @@
 package integration
 
 import (
+	"context"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"testing"
+	"time"
 
 	"github.com/hail2skins/armory/internal/database"
 	"github.com/hail2skins/armory/internal/middleware"
@@ -158,6 +160,44 @@ func (s *OwnerProfileIntegrationTest) TestSubscriptionPage() {
 
 	// Verify empty payment history message
 	s.Contains(subscriptionBody, "No payment history available")
+}
+
+func (s *OwnerProfileIntegrationTest) TestSubscriptionPage_HidesCancelButtonWithoutActiveStripeSubscription() {
+	user, err := s.Service.GetUserByEmail(context.Background(), s.testUser.Email)
+	s.Require().NoError(err)
+	user.SubscriptionTier = "monthly"
+	user.SubscriptionStatus = "active"
+	user.SubscriptionEndDate = time.Now().AddDate(0, 1, 0)
+	user.StripeSubscriptionID = ""
+	s.Require().NoError(s.Service.UpdateUser(context.Background(), user))
+
+	cookies := s.LoginUser(s.testUser.Email, "Password123!")
+	subscriptionResp := s.MakeAuthenticatedRequest("GET", "/owner/profile/subscription", cookies)
+	s.Equal(http.StatusOK, subscriptionResp.Code)
+
+	subscriptionBody := subscriptionResp.Body.String()
+	s.Contains(subscriptionBody, "Change Plan")
+	s.NotContains(subscriptionBody, "Cancel Subscription")
+	s.NotContains(subscriptionBody, "action=\"/subscription/cancel\"")
+}
+
+func (s *OwnerProfileIntegrationTest) TestSubscriptionPage_ShowsCancelButtonWithActiveStripeSubscription() {
+	user, err := s.Service.GetUserByEmail(context.Background(), s.testUser.Email)
+	s.Require().NoError(err)
+	user.SubscriptionTier = "monthly"
+	user.SubscriptionStatus = "active"
+	user.SubscriptionEndDate = time.Now().AddDate(0, 1, 0)
+	user.StripeSubscriptionID = "sub_test_active_123"
+	s.Require().NoError(s.Service.UpdateUser(context.Background(), user))
+
+	cookies := s.LoginUser(s.testUser.Email, "Password123!")
+	subscriptionResp := s.MakeAuthenticatedRequest("GET", "/owner/profile/subscription", cookies)
+	s.Equal(http.StatusOK, subscriptionResp.Code)
+
+	subscriptionBody := subscriptionResp.Body.String()
+	s.Contains(subscriptionBody, "Change Plan")
+	s.Contains(subscriptionBody, "Cancel Subscription")
+	s.Contains(subscriptionBody, "action=\"/subscription/cancel\"")
 }
 
 // TestDeleteAccountFlow tests the account deletion confirmation page and the actual deletion process
