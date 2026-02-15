@@ -145,7 +145,7 @@ templ Subscription(data *data.OwnerData) {
 								</a>
 								
 								` + func() string {
-									if data.User.SubscriptionStatus != "canceled" {
+									if data.HasStripeManagedSubscription && data.User.SubscriptionStatus != "canceled" {
 										return `<form method="POST" action="/subscription/cancel" onsubmit="return confirmCancel(event)" data-expires="` + data.SubscriptionEndsAt + `">
 											<input type="hidden" name="csrf_token" value="` + data.Auth.CSRFToken + `">
 											` + func() string {

@@ -383,6 +383,121 @@ func TestHasActiveSubscription(t *testing.T) {
 	}
 }
 
+func TestHasStripeManagedSubscription(t *testing.T) {
+	now := time.Now()
+	futureDate := now.Add(24 * time.Hour)
+	pastDate := now.Add(-24 * time.Hour)
+
+	tests := []struct {
+		name           string
+		user           User
+		expectedResult bool
+	}{
+		{
+			name: "Active monthly Stripe subscription",
+			user: User{
+				SubscriptionTier:     "monthly",
+				SubscriptionStatus:   "active",
+				SubscriptionEndDate:  futureDate,
+				StripeSubscriptionID: "sub_123",
+			},
+			expectedResult: true,
+		},
+		{
+			name: "Pending cancellation Stripe subscription",
+			user: User{
+				SubscriptionTier:     "yearly",
+				SubscriptionStatus:   "pending_cancellation",
+				SubscriptionEndDate:  futureDate,
+				StripeSubscriptionID: "sub_123",
+			},
+			expectedResult: true,
+		},
+		{
+			name: "No Stripe subscription ID",
+			user: User{
+				SubscriptionTier:    "monthly",
+				SubscriptionStatus:  "active",
+				SubscriptionEndDate: futureDate,
+			},
+			expectedResult: false,
+		},
+		{
+			name: "Promotion subscription should not be Stripe managed",
+			user: User{
+				SubscriptionTier:     "promotion",
+				SubscriptionStatus:   "active",
+				SubscriptionEndDate:  futureDate,
+				StripeSubscriptionID: "",
+			},
+			expectedResult: false,
+		},
+		{
+			name: "Expired subscription",
+			user: User{
+				SubscriptionTier:     "monthly",
+				SubscriptionStatus:   "active",
+				SubscriptionEndDate:  pastDate,
+				StripeSubscriptionID: "sub_123",
+			},
+			expectedResult: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expectedResult, tt.user.HasStripeManagedSubscription())
+		})
+	}
+}
+
+func TestCanCancelStripeSubscription(t *testing.T) {
+	now := time.Now()
+	futureDate := now.Add(24 * time.Hour)
+
+	tests := []struct {
+		name           string
+		user           User
+		expectedResult bool
+	}{
+		{
+			name: "Can cancel active Stripe subscription",
+			user: User{
+				SubscriptionTier:     "monthly",
+				SubscriptionStatus:   "active",
+				SubscriptionEndDate:  futureDate,
+				StripeSubscriptionID: "sub_123",
+			},
+			expectedResult: true,
+		},
+		{
+			name: "Cannot cancel when pending cancellation",
+			user: User{
+				SubscriptionTier:     "monthly",
+				SubscriptionStatus:   "pending_cancellation",
+				SubscriptionEndDate:  futureDate,
+				StripeSubscriptionID: "sub_123",
+			},
+			expectedResult: false,
+		},
+		{
+			name: "Cannot cancel without Stripe subscription",
+			user: User{
+				SubscriptionTier:    "monthly",
+				SubscriptionStatus:  "active",
+				SubscriptionEndDate: futureDate,
+			},
+			expectedResult: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expectedResult, tt.user.CanCancelStripeSubscription())
+		})
+	}
+}
+
 func TestCanSubscribeToTier(t *testing.T) {
 	tests := []struct {
 		name         string

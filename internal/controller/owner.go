@@ -2945,6 +2945,7 @@ func (o *OwnerController) Subscription(c *gin.Context) {
 				dbUser.SubscriptionTier,
 				subscriptionEndsAt,
 			).
+			WithStripeSubscriptionInfo(dbUser.HasStripeManagedSubscription()).
 			WithPayments(payments)
 
 		// Get authData from context to preserve roles
@@ -3025,6 +3026,7 @@ func (o *OwnerController) Subscription(c *gin.Context) {
 			dbUser.SubscriptionTier,
 			subscriptionEndsAt,
 		).
+		WithStripeSubscriptionInfo(dbUser.HasStripeManagedSubscription()).
 		WithPayments(payments)
 
 	// Get authData from context to preserve roles

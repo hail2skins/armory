@@ -16,6 +16,7 @@ import (
 	"github.com/hail2skins/armory/internal/models"
 	"github.com/hail2skins/armory/internal/testutils"
 	"github.com/hail2skins/armory/internal/testutils/mocks"
+	"github.com/shaj13/go-guardian/v2/auth"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stripe/stripe-go/v72"
@@ -189,6 +190,14 @@ func (m *MockAuthInfo) GetUserName() string {
 
 func (m *MockAuthInfo) GetID() string {
 	return "1"
+}
+
+func (m *MockAuthInfo) GetGroups() []string {
+	return nil
+}
+
+func (m *MockAuthInfo) GetExtensions() auth.Extensions {
+	return nil
 }
 
 // MockAuthController is a mock implementation of the AuthController
@@ -523,6 +532,44 @@ func (m *MockStripeService) GetSubscriptionDetails(subscriptionID string) (*stri
 func (m *MockStripeService) CancelSubscription(subscriptionID string) error {
 	args := m.Called(subscriptionID)
 	return args.Error(0)
+}
+
+func TestCancelSubscriptionRedirectsWhenNoActiveStripeSubscription(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	mockDB := &MockDB{}
+
+	user := &database.User{
+		Model:                gorm.Model{ID: 1},
+		Email:                "test@example.com",
+		SubscriptionTier:     "monthly",
+		SubscriptionStatus:   "active",
+		StripeSubscriptionID: "",
+	}
+
+	mockDB.On("GetUserByEmail", mock.Anything, "test@example.com").Return(user, nil)
+
+	r := gin.New()
+	store := cookie.NewStore([]byte("test-secret-key"))
+	r.Use(sessions.Sessions("armory-session", store))
+
+	authController := controller.NewAuthController(mockDB)
+	paymentController := controller.NewPaymentController(mockDB)
+
+	r.Use(func(c *gin.Context) {
+		c.Set("authController", authController)
+		c.Set("auth_info", auth.NewDefaultUser("test@example.com", "1", nil, nil))
+		c.Next()
+	})
+
+	r.POST("/subscription/cancel", paymentController.CancelSubscription)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodPost, "/subscription/cancel", nil)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusSeeOther, w.Code)
+	assert.Equal(t, "/pricing", w.Header().Get("Location"))
+	mockDB.AssertExpectations(t)
 }
 
 // TestGuestSubscriptionRedirectToLogin tests that guests who try to subscribe are redirected to login with a flash message

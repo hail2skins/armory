@@ -48,9 +48,10 @@ type OwnerData struct {
 	Casings      []models.Casing
 
 	// For subscription information
-	HasActiveSubscription bool
-	SubscriptionTier      string
-	SubscriptionEndsAt    string
+	HasActiveSubscription        bool
+	HasStripeManagedSubscription bool
+	SubscriptionTier             string
+	SubscriptionEndsAt           string
 
 	// For payment history
 	Payments []models.Payment
@@ -173,6 +174,12 @@ func (o *OwnerData) WithSubscriptionInfo(hasActiveSubscription bool, tier string
 	o.HasActiveSubscription = hasActiveSubscription
 	o.SubscriptionTier = tier
 	o.SubscriptionEndsAt = endsAt
+	return o
+}
+
+// WithStripeSubscriptionInfo returns a copy of OwnerData with Stripe-subscription state.
+func (o *OwnerData) WithStripeSubscriptionInfo(hasStripeManagedSubscription bool) *OwnerData {
+	o.HasStripeManagedSubscription = hasStripeManagedSubscription
 	return o
 }
 
