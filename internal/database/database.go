@@ -222,6 +222,8 @@ func (s *service) AutoMigrate() error {
 		&models.Grain{},
 		&models.Brand{},
 		&models.Ammo{},
+		&models.Range{},
+		&models.RangeDay{},
 	)
 }
 
