@@ -56,6 +56,7 @@ func TestCreateGun(t *testing.T) {
 	assert.Equal(t, manufacturer.ID, createdGun.ManufacturerID)
 	assert.Equal(t, manufacturer.Name, createdGun.Manufacturer.Name)
 	assert.Equal(t, uint(1), createdGun.OwnerID)
+	assert.Equal(t, false, createdGun.Rental) // Default: not a rental
 
 	// Clean up test data
 	db.Delete(&gun)
@@ -326,6 +327,7 @@ func TestGunWithPaidField(t *testing.T) {
 	assert.Equal(t, caliber.ID, createdGun.CaliberID)
 	assert.Equal(t, manufacturer.ID, createdGun.ManufacturerID)
 	assert.Equal(t, uint(1), createdGun.OwnerID)
+	assert.Equal(t, false, createdGun.Rental) // Default: not a rental
 	assert.NotNil(t, createdGun.Paid)
 	assert.Equal(t, 1500.50, *createdGun.Paid)
 

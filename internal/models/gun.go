@@ -27,6 +27,7 @@ type Gun struct {
 	HasMoreGuns    bool        `gorm:"-"` // Indicates if there are more guns not being shown (not stored in DB)
 	TotalGuns      int         `gorm:"-"` // Total number of guns the user has (not stored in DB)
 	Paid           *float64    // Optional field for the price paid (in USD)
+	Rental bool `gorm:"default:false;not null"` // Whether this gun is a rental
 }
 
 // TableName specifies the table name for the Gun model
