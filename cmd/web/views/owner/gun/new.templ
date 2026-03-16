@@ -345,7 +345,19 @@ templ New(data *data.OwnerData) {
 					/>
 					<p class="text-sm text-gunmetal-500 mt-1">Please enter in USD</p>
 				</div>
-				<div class="flex items-center justify-between">
+				<div class="mb-4">
+			<label class="flex items-center text-gunmetal-700 font-medium" for="rental">
+				<input 
+					type="checkbox" 
+					id="rental" 
+					name="rental"
+					class="h-4 w-4 text-gunmetal-600 border-gray-300 rounded focus:ring-gunmetal-500"
+				>
+				<span class="ml-2">Rental / Borrowed Firearm</span>
+			</label>
+			<p class="text-gunmetal-500 text-xs mt-1">Mark this if the firearm was rented or borrowed so it can be tagged appropriately.</p>
+		</div>
+		<div class="flex items-center justify-between">
 					<button class="bg-gunmetal-800 hover:bg-gunmetal-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline" 
 						type="submit">
 						Add Firearm

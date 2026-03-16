@@ -44,6 +44,16 @@ func NewOwnerController(db database.Service) *OwnerController {
 	}
 }
 
+func parseCheckboxBool(value string) bool {
+	normalized := strings.ToLower(strings.TrimSpace(value))
+	switch normalized {
+	case "on", "true", "1", "yes":
+		return true
+	default:
+		return false
+	}
+}
+
 // LandingPage handles the owner landing page route
 func (o *OwnerController) LandingPage(c *gin.Context) {
 	// Get the current user's authentication status and email
@@ -494,6 +504,7 @@ func (o *OwnerController) Create(c *gin.Context) {
 	paidStr := c.PostForm("paid")
 	purpose := c.PostForm("purpose")
 	finish := c.PostForm("finish")
+	rental := parseCheckboxBool(c.PostForm("rental"))
 
 	logger.Info("Form data received", map[string]interface{}{
 		"name":            name,
@@ -505,6 +516,7 @@ func (o *OwnerController) Create(c *gin.Context) {
 		"paid":            paidStr,
 		"purpose":         purpose,
 		"finish":          finish,
+		"rental":          rental,
 	})
 
 	// Get current user - Using c.Get instead of c.MustGet for safety
@@ -664,6 +676,7 @@ func (o *OwnerController) Create(c *gin.Context) {
 		CaliberID:      uint(caliberID),
 		ManufacturerID: uint(manufacturerID),
 		OwnerID:        dbUser.ID,
+		Rental:         rental,
 		Paid:           paidAmount,
 	}
 
@@ -1246,6 +1259,7 @@ func (o *OwnerController) Update(c *gin.Context) {
 		paidStr := c.PostForm("paid")
 		purpose := c.PostForm("purpose")
 		finish := c.PostForm("finish")
+		rental := parseCheckboxBool(c.PostForm("rental"))
 
 		// Initialize form errors map
 		formErrors := make(map[string]string)
@@ -1354,6 +1368,7 @@ func (o *OwnerController) Update(c *gin.Context) {
 			CaliberID:      uint(caliberID),
 			ManufacturerID: uint(manufacturerID),
 			OwnerID:        user.ID,
+			Rental:         rental,
 			Paid:           paidAmount,
 		}
 		updatedGun.ID = gun.ID
@@ -1510,6 +1525,7 @@ func (o *OwnerController) Update(c *gin.Context) {
 	paidStr := c.PostForm("paid")
 	purpose := c.PostForm("purpose")
 	finish := c.PostForm("finish")
+	rental := parseCheckboxBool(c.PostForm("rental"))
 
 	// Initialize form errors map
 	formErrors := make(map[string]string)
@@ -1618,6 +1634,7 @@ func (o *OwnerController) Update(c *gin.Context) {
 		CaliberID:      uint(caliberID),
 		ManufacturerID: uint(manufacturerID),
 		OwnerID:        user.ID,
+		Rental:         rental,
 		Paid:           paidAmount,
 	}
 	updatedGun.ID = gun.ID

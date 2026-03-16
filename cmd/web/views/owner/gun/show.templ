@@ -141,6 +141,15 @@ templ Show(data *data.OwnerData) {
 								</div>
 							</div>
 						</div>
+					<div>
+						<span class="font-medium text-gunmetal-600">Rental:</span>
+						<span class="ml-2 text-gunmetal-800">`+ func() string {
+							if data.Gun.Rental {
+								return "Yes"
+							}
+							return "No"
+						}() + `</span>
+					</div>
 					</div>
 					
 					<div class="mt-8 flex flex-wrap gap-3">

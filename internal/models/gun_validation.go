@@ -140,6 +140,7 @@ func UpdateGunWithValidation(db *gorm.DB, gun *Gun) error {
 		"manufacturer_id": gun.ManufacturerID,
 		"updated_at":      gun.UpdatedAt,
 		"paid":            gun.Paid,
+		"rental":          gun.Rental,
 	})
 
 	if result.Error != nil {
