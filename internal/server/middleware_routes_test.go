@@ -156,3 +156,14 @@ func TestRateLimitingIntegration(t *testing.T) {
 		assert.Equal(t, http.StatusTooManyRequests, w.Code, "Request should be rate limited")
 	})
 }
+
+func TestGetCorsOriginsNormalizesRailwayURLValues(t *testing.T) {
+	t.Setenv("CORS_ORIGINS", "@url:`http://localhost:3000`, @url:`https://armory-dev-dev.up.railway.app`")
+
+	origins := getCorsOrigins()
+
+	assert.Equal(t, []string{
+		"http://localhost:3000",
+		"https://armory-dev-dev.up.railway.app",
+	}, origins)
+}

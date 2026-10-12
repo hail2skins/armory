@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -18,6 +19,102 @@ import (
 	"github.com/newrelic/go-agent/v3/internal/sysinfo"
 	"github.com/newrelic/go-agent/v3/internal/utilization"
 )
+
+// The type of profiling data to measure and report out, as an internal type.
+// These may be combined via | operators, or the constant ProfilingTypeAll may be
+// used to indicate that all supported types are to be harvested.
+type ProfilingType uint32
+
+const (
+	ProfilingTypeBlock ProfilingType = 1 << iota
+	ProfilingTypeCPU
+	ProfilingTypeGoroutine
+	ProfilingTypeHeap
+	ProfilingTypeMutex
+	ProfilingTypeThreadCreate
+	ProfilingTypeAll = 0xffff
+)
+
+// FromStrings yields a ProfilingType value from a slice of string names for types
+// (including "all" to mean all supported types).
+//
+// This sets the value of the type it's called on as a method and returns an error value
+// if the name was not recognized.
+//
+// If additive is true, the named profiling types are added to the existing value
+// of the receiver, preserving any existing type(s) it represents. Otherwise, any
+// previous value is cleared and the receiver will only represent the profiling type(s)
+// indicated by the strings passed.
+func (p *ProfilingType) FromStrings(types []string, additive bool) error {
+	if p == nil {
+		return fmt.Errorf("nil ProfilingType pointer")
+	}
+
+	if !additive {
+		*p = 0
+	}
+
+	for _, t := range types {
+		switch t {
+		case "all":
+			*p = ProfilingTypeAll
+		case "block":
+			*p |= ProfilingTypeBlock
+		case "cpu":
+			*p |= ProfilingTypeCPU
+		case "goroutine":
+			*p |= ProfilingTypeGoroutine
+		case "heap":
+			*p |= ProfilingTypeHeap
+		case "mutex":
+			*p |= ProfilingTypeMutex
+		case "threadcreate":
+			*p |= ProfilingTypeThreadCreate
+		default:
+			return fmt.Errorf("unknown ProfilingType \"%s\"", t)
+		}
+	}
+	return nil
+}
+
+// Strings returns the set of profiling type(s) represented by the receiver as a slice
+// of strings.
+func (p ProfilingType) Strings() []string {
+	var typeSet []string
+
+	if ProfilingTypeBlock&p != 0 {
+		typeSet = append(typeSet, "block")
+	}
+	if ProfilingTypeCPU&p != 0 {
+		typeSet = append(typeSet, "cpu")
+	}
+	if ProfilingTypeGoroutine&p != 0 {
+		typeSet = append(typeSet, "goroutine")
+	}
+	if ProfilingTypeHeap&p != 0 {
+		typeSet = append(typeSet, "heap")
+	}
+	if ProfilingTypeMutex&p != 0 {
+		typeSet = append(typeSet, "mutex")
+	}
+	if ProfilingTypeThreadCreate&p != 0 {
+		typeSet = append(typeSet, "threadcreate")
+	}
+	return typeSet
+}
+
+func (p ProfilingType) MarshalJSON() ([]byte, error) {
+	return json.Marshal(p.Strings())
+}
+
+func (p *ProfilingType) UnmarshalJSON(data []byte) error {
+	var t []string
+
+	if err := json.Unmarshal(data, &t); err != nil {
+		return err
+	}
+	return p.FromStrings(t, false)
+}
 
 // Config contains Application and Transaction behavior settings.
 type Config struct {
@@ -93,6 +190,15 @@ type Config struct {
 		MaxSamplesStored int
 	}
 
+	// CloudAWS allows the setting of the AccountID and the enabling/disabling
+	// of AccountID decoding using the AWS access key
+	CloudAWS struct {
+		AccountID       string
+		AccountDecoding struct {
+			Enabled bool
+		}
+	}
+
 	// ErrorCollector controls the capture of errors.
 	ErrorCollector struct {
 		// Enabled controls whether errors are captured.  This setting
@@ -113,6 +219,8 @@ type Config struct {
 		ExpectStatusCodes []int
 		// Attributes controls the attributes included with errors.
 		Attributes AttributeDestinationConfig
+		// Reservoir limit for error events. Defaults to 100
+		MaxSamplesStored int
 		// RecordPanics controls whether or not a deferred
 		// Transaction.End will attempt to recover panics, record them
 		// as errors, and then re-panic them.  By default, this is
@@ -279,6 +387,23 @@ type Config struct {
 		// ReservoirLimit sets the desired maximum span event reservoir limit
 		// for collecting span event data. The collector MAY override this value.
 		ReservoirLimit int
+		// Sampler controls the sampling behavior for Inbound Requests for distributed traces
+		// If a valid traceparent exists, the following configuration options will allow
+		// users to choose which sampling strategy to apply.
+		//
+		//	`RemoteParentSampled` (when the traceparent sampled = 1)
+		//	* `always_on`: the agent will sample spans
+		//	* `always_off`: the agent will NOT sample spans
+		//	* `default`: the agent will use the existing NR sampling (default)
+
+		//	`RemoteParentNotSampled` (when the traceparent sampled = 0)
+		//	* `always_on`: the agent will sample spans
+		//	* `always_off`: the agent will NOT sample spans
+		//	* `default`: the agent will use the existing NR sampling (default)
+		Sampler struct {
+			RemoteParentSampled    string
+			RemoteParentNotSampled string
+		}
 	}
 
 	// SpanEvents controls behavior relating to Span Events.  Span Events
@@ -287,6 +412,9 @@ type Config struct {
 		Enabled bool
 		// Attributes controls the attributes included on Spans.
 		Attributes AttributeDestinationConfig
+		// MaxSamplesStored allows you to limit the number of Span
+		// Events stored/reported in a given 60-second period
+		MaxSamplesStored int
 	}
 
 	// InfiniteTracing controls behavior related to Infinite Tracing tail based
@@ -464,6 +592,45 @@ type Config struct {
 		// This list of ignored prefixes itself is not reported outside the agent.
 		IgnoredPrefixes []string
 	}
+
+	// Profiling Configuration
+	Profiling struct {
+		// Enabled controls whether the profiler is running.
+		Enabled bool
+		// MatchSpans controls whether the profiler attempts to try to match up instrumented spans and traces
+		// with profile samples. If we don't have the span and trace IDs directly, we can try to match them
+		// up (if this option is enabled) by looking for any span/trace that was active at the same time
+		// as the profile sample was collected and go with that. It's not as accurate but if the preferred
+		// signal isn't available, it may be an option to attempt as a backup plan.
+		MatchSpans bool
+		// Delay controls how long to wait before starting the profiler.
+		Delay time.Duration
+		// Duration controls how long to run the profiler before automatically stopping it. If this is
+		// zero (the default), the profiler runs until explicitly stopped.
+		Duration time.Duration
+		// SelectedProfiles indicates which kinds of profiles we're collecting and reporting.
+		SelectedProfiles ProfilingType
+		// Interval is the rate at which the profiler gathers and reports non-CPU profile data.
+		// This is not exposed normally as a user-configurable adjustment and is set to 60 seconds.
+		Interval time.Duration
+		// CPUReportInterval is the rate at which we stop the CPU profiler to let it report
+		// out the data it's collected so far, after which we restart it again to collect more
+		// data. If this is zero, we won't interrupt the profiler to report anything
+		// until we shut down the whole agent profiler.
+		CPUReportInterval time.Duration
+		// CPUSampleRateHz is the internal collection speed at which the CPU profiler is running
+		// to collect CPU stats.
+		CPUSampleRateHz int
+		// BlockRate is the rate at which we collect block profile data. If <=0, we stop collecting
+		// block profiles altogether. Otherwise, we try to get 1/n. By default we set this to 1, which
+		// tries to collect them all.
+		BlockRate int
+		// MutexRate is the rate at which we collect Mutex profile data. If 0, we stop collecting
+		// mutex profiles altogether. Otherwise, we try to get 1/n. By default we set this to 1, which
+		// tries to collect them all.
+		MutexRate int
+	}
+
 	// Security is used to post security configuration on UI.
 	Security interface{} `json:"Security,omitempty"`
 }
@@ -592,6 +759,8 @@ type ApplicationLogging struct {
 	LocalDecorating struct {
 		// Toggles whether the agent enriches local logs printed to console so they can be sent to new relic for ingestion
 		Enabled bool
+		// Toggles whether the agent enriches local logs in the message field or appends to the end of the message (default)
+		WithinMessageField bool
 	}
 	// We want to enable this when your app collects fewer logs, or if your app can afford to compile the json
 	// during log collection, slowing down the execution of the line of code that will write the log. If your
@@ -643,6 +812,7 @@ func defaultConfig() Config {
 	c.TransactionEvents.Enabled = true
 	c.TransactionEvents.Attributes.Enabled = true
 	c.TransactionEvents.MaxSamplesStored = internal.MaxTxnEvents
+
 	c.HighSecurity = false
 	c.ErrorCollector.Enabled = true
 	c.ErrorCollector.CaptureEvents = true
@@ -653,6 +823,7 @@ func defaultConfig() Config {
 		http.StatusNotFound, // 404
 	}
 	c.ErrorCollector.Attributes.Enabled = true
+	c.ErrorCollector.MaxSamplesStored = internal.MaxErrorEvents
 	c.Utilization.DetectAWS = true
 	c.Utilization.DetectAzure = true
 	c.Utilization.DetectPCF = true
@@ -686,8 +857,11 @@ func defaultConfig() Config {
 	c.CrossApplicationTracer.Enabled = false
 	c.DistributedTracer.Enabled = true
 	c.DistributedTracer.ReservoirLimit = internal.MaxSpanEvents
+	c.DistributedTracer.Sampler.RemoteParentSampled = Default.String()
+	c.DistributedTracer.Sampler.RemoteParentNotSampled = Default.String()
 	c.SpanEvents.Enabled = true
 	c.SpanEvents.Attributes.Enabled = true
+	c.SpanEvents.MaxSamplesStored = internal.MaxSpanEvents
 
 	c.DatastoreTracer.InstanceReporting.Enabled = true
 	c.DatastoreTracer.DatabaseNameReporting.Enabled = true
@@ -717,6 +891,14 @@ func defaultConfig() Config {
 	// Module Dependency Metrics
 	c.ModuleDependencyMetrics.Enabled = true
 	c.ModuleDependencyMetrics.RedactIgnoredPrefixes = true
+
+	// Profiling settings
+	c.Profiling.CPUSampleRateHz = 100
+	c.Profiling.Interval = 60 * time.Second
+	c.Profiling.BlockRate = 1
+	c.Profiling.MutexRate = 1
+	// Cloud AWS
+	c.CloudAWS.AccountDecoding.Enabled = true
 	return c
 }
 
@@ -783,34 +965,67 @@ func (c Config) validateTraceObserverConfig() (*observerURL, error) {
 	}, nil
 }
 
-// maxTxnEvents returns the configured maximum number of Transaction Events if it has been configured
-// and is less than the default maximum; otherwise it returns the default max.
-func (c Config) maxTxnEvents() int {
-	configured := c.TransactionEvents.MaxSamplesStored
+// maxTxnEvents returns the configured maximum number of Transaction Events if it
+// is less than the default maximum; otherwise it returns the default max.
+func maxTxnEvents(configured int) int {
 	if configured < 0 || configured > internal.MaxTxnEvents {
 		return internal.MaxTxnEvents
 	}
 	return configured
 }
 
-// maxCustomEvents returns the configured maximum number of Custom Events if it has been configured
-// and is less than the default maximum; otherwise it returns the default max.
-func (c Config) maxCustomEvents() int {
-	configured := c.CustomInsightsEvents.MaxSamplesStored
+// maxSpanEvents returns the configured maximum number of Span Events if it
+// is less than the default maximum; otherwise it returns the default max.
+func maxSpanEvents(configured int) int {
+	if configured < 0 || configured > internal.MaxSpanEvents {
+		return internal.MaxSpanEvents
+	}
+	return configured
+}
+
+// maxCustomEvents returns the configured maximum number of Custom Events if it
+// is less than the default maximum; otherwise it returns the default max.
+func maxCustomEvents(configured int) int {
 	if configured < 0 || configured > internal.MaxCustomEvents {
 		return internal.MaxCustomEvents
 	}
 	return configured
 }
 
-// maxLogEvents returns the configured maximum number of Log Events if it has been configured
-// and is less than the default maximum; otherwise it returns the default max.
-func (c Config) maxLogEvents() int {
-	configured := c.ApplicationLogging.Forwarding.MaxSamplesStored
+// maxErrorEvents returns the configured maximum number of Error Events if it
+// is less than the default maximum; otherwise it returns the default max.
+func maxErrorEvents(configured int) int {
+	if configured < 0 || configured > internal.MaxErrorEvents {
+		return internal.MaxErrorEvents
+	}
+	return configured
+}
+
+// maxLogEvents returns the configured maximum number of Log Events if it
+// is less than the default maximum; otherwise it returns the default max.
+func maxLogEvents(configured int) int {
 	if configured < 0 || configured > internal.MaxLogEvents {
 		return internal.MaxLogEvents
 	}
 	return configured
+}
+
+// validateAWSAccountID returns an empty string and an error if the
+// accountID passed in is not a 12 digit number as specified by the AWS docs:
+// https://docs.aws.amazon.com/accounts/latest/reference/manage-acct-identifiers.html#awsaccountid
+// otherwise it returns the passed in accountID
+func validateAWSAccountID(accountID string) (string, error) {
+	if len(accountID) != 12 {
+		return "", fmt.Errorf("improper aws accountID format.  12 digit number required")
+	}
+	i, err := strconv.Atoi(accountID)
+	if err != nil {
+		return "", fmt.Errorf("improper aws accountID format.  12 digit number required")
+	}
+	if i < 0 {
+		return "", fmt.Errorf("improper aws accountID format.  12 digit number required")
+	}
+	return accountID, nil
 }
 
 func copyDestConfig(c AttributeDestinationConfig) AttributeDestinationConfig {
@@ -995,7 +1210,7 @@ func configConnectJSONInternal(c Config, pid int, util *utilization.Data, e envi
 		Util:             util,
 		SecurityPolicies: securityPolicies,
 		Metadata:         metadata,
-		EventData:        internal.DefaultEventHarvestConfigWithDT(c.TransactionEvents.MaxSamplesStored, c.ApplicationLogging.Forwarding.MaxSamplesStored, c.CustomInsightsEvents.MaxSamplesStored, c.DistributedTracer.ReservoirLimit, c.DistributedTracer.Enabled),
+		EventData:        internal.DefaultEventHarvestConfigWithDT(c.TransactionEvents.MaxSamplesStored, c.ApplicationLogging.Forwarding.MaxSamplesStored, c.CustomInsightsEvents.MaxSamplesStored, c.SpanEvents.MaxSamplesStored, c.DistributedTracer.Enabled),
 	}})
 }
 

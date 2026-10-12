@@ -132,27 +132,8 @@ func New() Service {
 		return dbInstance
 	}
 
-	// Read DB config from environment at runtime
-	database := os.Getenv("DB_DATABASE")
-	password := os.Getenv("DB_PASSWORD")
-	username := os.Getenv("DB_USERNAME")
-	port := os.Getenv("DB_PORT")
-	host := os.Getenv("DB_HOST")
-	schema := os.Getenv("DB_SCHEMA")
-
-	// Set default schema if not provided
-	searchPath := schema
-	if searchPath == "" {
-		searchPath = "public"
-	}
-
 	// Create DSN string for PostgreSQL
-	dsn := fmt.Sprintf("host=%s user=%s dbname=%s port=%s sslmode=disable search_path=%s",
-		host, username, database, port, searchPath)
-	if password != "" {
-		dsn = fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable search_path=%s",
-			host, username, password, database, port, searchPath)
-	}
+	dsn := buildPostgresDSN()
 
 	// Check for GORM_LOG_LEVEL env var
 	logLevel := logger.Info
@@ -202,6 +183,38 @@ func New() Service {
 	seed.RunSeeds(dbInstance.db)
 
 	return dbInstance
+}
+
+func buildPostgresDSN() string {
+	if databaseURL := os.Getenv("DATABASE_URL"); databaseURL != "" {
+		return databaseURL
+	}
+
+	database := os.Getenv("DB_DATABASE")
+	password := os.Getenv("DB_PASSWORD")
+	username := os.Getenv("DB_USERNAME")
+	port := os.Getenv("DB_PORT")
+	host := os.Getenv("DB_HOST")
+	schema := os.Getenv("DB_SCHEMA")
+	sslMode := os.Getenv("DB_SSLMODE")
+
+	// Set default schema if not provided
+	searchPath := schema
+	if searchPath == "" {
+		searchPath = "public"
+	}
+	if sslMode == "" {
+		sslMode = "disable"
+	}
+
+	dsn := fmt.Sprintf("host=%s user=%s dbname=%s port=%s sslmode=%s search_path=%s",
+		host, username, database, port, sslMode, searchPath)
+	if password != "" {
+		dsn = fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=%s search_path=%s",
+			host, username, password, database, port, sslMode, searchPath)
+	}
+
+	return dsn
 }
 
 // AutoMigrate automatically migrates the schema

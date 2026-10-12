@@ -363,8 +363,9 @@ func (txn *txn) MergeIntoHarvest(h *harvest) {
 
 	if txn.shouldSaveTrace() {
 		h.TxnTraces.Witness(harvestTrace{
-			txnEvent: txn.txnEvent,
-			Trace:    txn.TxnTrace,
+			txnEvent:  txn.txnEvent,
+			Trace:     txn.TxnTrace,
+			asyncWork: len(txn.asyncThreads) > 0,
 		})
 	}
 
@@ -397,6 +398,7 @@ func headersJustWritten(thd *thread, code int, hdr http.Header) {
 		e := txnErrorFromResponseCode(time.Now(), code)
 		e.Stack = getStackTrace()
 		expect := txn.appRun.responseCodeIsExpected(code)
+		e.Expect = expect
 		thd.noticeErrorInternal(e, nil, expect)
 	}
 }
@@ -1158,7 +1160,6 @@ func (thd *thread) CreateDistributedTracePayload(hdrs http.Header) {
 	p.Account = txn.Reply.AccountID
 	p.App = txn.Reply.PrimaryAppID
 	p.TracedID = txn.BetterCAT.TraceID
-	p.Priority = txn.BetterCAT.Priority
 	p.Timestamp.Set(txn.Reply.DistributedTraceTimestampGenerator())
 	p.TrustedAccountKey = txn.Reply.TrustedAccountKey
 	p.TransactionID = txn.TxnID // Set the transaction ID to the transaction guid.
@@ -1172,6 +1173,35 @@ func (thd *thread) CreateDistributedTracePayload(hdrs http.Header) {
 	p.SetSampled(false)
 	if txn.numPayloadsCreated < maxSampledDistributedPayloads {
 		p.SetSampled(sampled)
+	}
+
+	if p.isSampled() { // trace parent exists and is sampled
+		switch txn.Config.DistributedTracer.Sampler.RemoteParentSampled {
+		case "always_on":
+			p.Priority = 2.0
+			txn.BetterCAT.Priority = p.Priority
+		case "always_off":
+			p.Priority = 0.0
+			txn.BetterCAT.Priority = p.Priority
+		default:
+			// If the remote parent is sampled, we use the priority from the
+			// transaction's adaptive sampler.
+			p.Priority = txn.BetterCAT.Priority
+		}
+	} else {
+		switch txn.Config.DistributedTracer.Sampler.RemoteParentNotSampled {
+		case "always_on":
+			p.Priority = 2.0
+			txn.BetterCAT.Priority = p.Priority
+
+		case "always_off":
+			p.Priority = 0.0
+			txn.BetterCAT.Priority = p.Priority
+		default:
+			// If the remote parent is not sampled, we use the priority from the
+			// transaction's adaptive sampler.
+			p.Priority = txn.BetterCAT.Priority
+		}
 	}
 
 	support.TraceContextCreateSuccess = true
@@ -1236,7 +1266,7 @@ func (txn *txn) acceptDistributedTraceHeadersLocked(t TransportType, hdrs http.H
 		return errAlreadyAccepted
 	}
 
-	if nil == hdrs {
+	if hdrs == nil {
 		support.AcceptPayloadNullPayload = true
 		return nil
 	}
@@ -1251,11 +1281,11 @@ func (txn *txn) acceptDistributedTraceHeadersLocked(t TransportType, hdrs http.H
 	txn.BetterCAT.TransportType = t.toString()
 
 	payload, err := acceptPayload(hdrs, txn.Reply.TrustedAccountKey, support)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
-	if nil == payload {
+	if payload == nil {
 		return nil
 	}
 

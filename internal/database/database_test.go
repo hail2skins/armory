@@ -38,6 +38,44 @@ func init() {
 	}
 }
 
+func TestBuildPostgresDSNUsesConfiguredSSLMode(t *testing.T) {
+	t.Setenv("DATABASE_URL", "")
+	t.Setenv("DB_DATABASE", "armory_test")
+	t.Setenv("DB_USERNAME", "armory_user")
+	t.Setenv("DB_PASSWORD", "secret")
+	t.Setenv("DB_PORT", "5432")
+	t.Setenv("DB_HOST", "localhost")
+	t.Setenv("DB_SCHEMA", "custom_schema")
+	t.Setenv("DB_SSLMODE", "require")
+
+	dsn := buildPostgresDSN()
+
+	assert.Contains(t, dsn, "host=localhost")
+	assert.Contains(t, dsn, "user=armory_user")
+	assert.Contains(t, dsn, "password=secret")
+	assert.Contains(t, dsn, "dbname=armory_test")
+	assert.Contains(t, dsn, "port=5432")
+	assert.Contains(t, dsn, "sslmode=require")
+	assert.Contains(t, dsn, "search_path=custom_schema")
+}
+
+func TestBuildPostgresDSNDefaultsSSLModeAndSchema(t *testing.T) {
+	t.Setenv("DATABASE_URL", "")
+	t.Setenv("DB_DATABASE", "armory_test")
+	t.Setenv("DB_USERNAME", "armory_user")
+	t.Setenv("DB_PASSWORD", "")
+	t.Setenv("DB_PORT", "5432")
+	t.Setenv("DB_HOST", "localhost")
+	t.Setenv("DB_SCHEMA", "")
+	t.Setenv("DB_SSLMODE", "")
+
+	dsn := buildPostgresDSN()
+
+	assert.Contains(t, dsn, "sslmode=disable")
+	assert.Contains(t, dsn, "search_path=public")
+	assert.NotContains(t, dsn, "password=")
+}
+
 // NewContext creates a new context for testing
 func NewContext() context.Context {
 	return context.Background()

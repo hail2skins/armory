@@ -44,11 +44,22 @@ func securityHeaders() gin.HandlerFunc {
 func getCorsOrigins() []string {
 	corsOrigins := os.Getenv("CORS_ORIGINS")
 	if corsOrigins != "" {
-		return strings.Split(corsOrigins, ",")
+		origins := strings.Split(corsOrigins, ",")
+		for i, origin := range origins {
+			origins[i] = normalizeURLValue(origin)
+		}
+		return origins
 	}
 
 	// Default local development origins
 	return []string{"http://localhost:5173", "http://localhost:3000", "http://localhost:8080"}
+}
+
+func normalizeURLValue(value string) string {
+	value = strings.TrimSpace(value)
+	value = strings.TrimPrefix(value, "@url:`")
+	value = strings.TrimSuffix(value, "`")
+	return value
 }
 
 // RegisterMiddleware sets up all middleware for the application
